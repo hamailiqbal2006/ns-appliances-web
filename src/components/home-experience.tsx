@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
@@ -13,6 +13,14 @@ gsap.registerPlugin(ScrollTrigger);
 
 const css = (values: Record<string, string | number>) => values as React.CSSProperties;
 
+const subscribeToHeroDock = (callback: () => void) => {
+  window.addEventListener("scroll", callback, { passive: true });
+  return () => window.removeEventListener("scroll", callback);
+};
+
+const getHeroDockSnapshot = () => window.scrollY >= 126;
+const getHeroDockServerSnapshot = () => false;
+
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
@@ -21,6 +29,26 @@ export function HomeExperience() {
   const [activeHero, setActiveHero] = useState(0);
   const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
+  const [hasHeroTitleEntered, setHasHeroTitleEntered] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+  const isHeroTitleDocked = useSyncExternalStore(
+    subscribeToHeroDock,
+    getHeroDockSnapshot,
+    getHeroDockServerSnapshot
+  );
+  const { scrollY } = useScroll();
+  const heroTitleY = useTransform(scrollY, (value) => {
+    if (shouldReduceMotion) return 0;
+    const progress = Math.min(value / 126, 1);
+    const viewportHeight = typeof window === "undefined" ? 900 : window.innerHeight;
+    return -(viewportHeight * 0.4 * progress);
+  });
+  const heroTitleScale = useTransform(scrollY, (value) => {
+    if (shouldReduceMotion) return 1;
+    const viewportWidth = typeof window === "undefined" ? 1440 : window.innerWidth;
+    const compactScale = viewportWidth <= 760 ? 0.29 : 0.14;
+    return 1 - (1 - compactScale) * Math.min(value / 126, 1);
+  });
 
   useLayoutEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -58,21 +86,37 @@ export function HomeExperience() {
   const category = categories[activeCategory];
   const product = products[activeProduct];
 
-  return <div className="showroom" ref={root}>
-    <SiteNav />
+  return <LayoutGroup id="home-navigation"><div className="showroom" ref={root}>
+    <SiteNav heroTitleDocked={isHeroTitleDocked} />
     <main>
-      <section className="hero-track" aria-labelledby="hero-title">
+      <section className="hero-track" aria-label="NS Home Appliances showroom introduction">
         <div className="hero-stage">
           <div className="hero-ambient" aria-hidden />
-          <div className="hero-copy">
-            <p className="eyebrow">Pakistan · digital showroom</p>
-            <h1 id="hero-title">NS <em>Home</em><br />Appliances</h1>
-            <p>Thoughtfully selected home appliances. Explore the collection, then book the product you want to see in store.</p>
-          </div>
+          {!isHeroTitleDocked && (
+            <div className="hero-title-anchor">
+              <motion.div
+                className="hero-title-reveal"
+                initial={shouldReduceMotion || hasHeroTitleEntered ? false : { opacity: 0, y: 18, clipPath: "inset(0 0 100% 0)" }}
+                animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
+                transition={{ duration: shouldReduceMotion ? 0.001 : 0.82, delay: shouldReduceMotion ? 0 : 0.12, ease: [0.22, 1, 0.36, 1] }}
+                onAnimationComplete={() => setHasHeroTitleEntered(true)}
+              >
+                <motion.h1
+                  id="hero-title"
+                  layoutId="ns-home-title"
+                  className="hero-title"
+                  style={{ y: heroTitleY, scale: heroTitleScale }}
+                  transition={{ layout: { duration: shouldReduceMotion ? 0.001 : 0.42, ease: [0.22, 1, 0.36, 1] } }}
+                >
+                  NS Home Appliances
+                </motion.h1>
+              </motion.div>
+            </div>
+          )}
           <p className="hero-index">Scroll to enter <span>↓</span></p>
           <div className="product-rail" ref={rail} aria-label="Featured temporary products">
             {products.map((item, index) => <motion.button key={item.slug} className={`hero-product ${activeHero === index ? "is-active" : ""}`} onMouseEnter={() => setActiveHero(index)} onFocus={() => setActiveHero(index)} whileHover={{ y: -18 }} whileTap={{ scale: 0.98 }} aria-label={`Explore ${item.name}`}>
-              <span className="hero-product-label">0{index + 1}<small>{item.name}</small></span>
+              <span className="sr-only">{item.name}</span>
               <Image src={item.image} alt="Temporary product cutout" fill sizes="(max-width: 700px) 45vw, 20vw" priority={index < 2} style={{ objectFit: "contain", transform: `translate(${item.art.x}%, ${item.art.y}%) scale(${item.art.scale}) rotate(${item.art.rotation ?? 0}deg)` }} />
             </motion.button>)}
           </div>
@@ -102,5 +146,5 @@ export function HomeExperience() {
 
       <section id="visit" className="visit-panel cover-panel"><p className="eyebrow">03 / next step</p><h2>See it<br /><em>in person.</em></h2><p>This digital showroom is ready for real inventory, model information, booking contact details and the final NS Appliances photography.</p><a href="#hero-title">Back to the collection <span>↑</span></a></section>
     </main>
-  </div>;
+  </div></LayoutGroup>;
 }

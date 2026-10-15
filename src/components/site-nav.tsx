@@ -7,6 +7,7 @@ import { categories, products } from "@/data/catalog";
 
 interface SiteNavProps {
   detail?: boolean;
+  heroTitleDocked?: boolean;
 }
 
 const subscribeScroll = (callback: () => void) => {
@@ -17,7 +18,7 @@ const subscribeScroll = (callback: () => void) => {
 const getScrollSnapshot = () => window.scrollY > 18;
 const getServerSnapshot = () => false;
 
-export function SiteNav({ detail = false }: SiteNavProps) {
+export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProps) {
   const root = detail ? "/" : "";
   const isScrolled = useSyncExternalStore(
     subscribeScroll,
@@ -73,7 +74,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   };
 
   // Motion variants for parent navigation container
-  const navVariants = {
+  const navVariants = detail ? {
     top: {
       backgroundColor: "rgba(12, 18, 20, 0)",
       borderColor: "rgba(255, 255, 255, 0)",
@@ -88,6 +89,22 @@ export function SiteNav({ detail = false }: SiteNavProps) {
         "0 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)",
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)",
+    },
+  } : {
+    top: {
+      backgroundColor: "rgba(237, 242, 240, 0)",
+      borderColor: "rgba(255, 255, 255, 0)",
+      boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
+      backdropFilter: "blur(0px)",
+      WebkitBackdropFilter: "blur(0px)",
+    },
+    scrolled: {
+      backgroundColor: "rgba(237, 242, 240, 0.58)",
+      borderColor: "rgba(255, 255, 255, 0.42)",
+      boxShadow:
+        "0 18px 42px -18px rgba(6, 22, 24, 0.48), inset 0 1px 0 0 rgba(255, 255, 255, 0.38)",
+      backdropFilter: "blur(24px) saturate(135%)",
+      WebkitBackdropFilter: "blur(24px) saturate(135%)",
     },
   };
 
@@ -118,7 +135,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   return (
     <>
       <motion.header
-        className={`site-nav ${isScrolled ? "is-scrolled" : "is-top"}`}
+        className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"} ${isScrolled ? "is-scrolled" : "is-top"}`}
         aria-label="Primary navigation"
         initial="top"
         animate={isScrolled ? "scrolled" : "top"}
@@ -187,23 +204,34 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             </button>
           </div>
 
-          {/* ZONE 2: CENTER BRAND (Mathematically Centered) */}
+          {/* The homepage brand occupies this slot only once the shared hero title docks. */}
           <div className="site-nav-center">
-            <Link
-              href={detail ? "/" : "#"}
-              className="nav-brand"
-              aria-label="NS Home Appliances home"
-              onClick={(e) => {
-                if (!detail) {
-                  e.preventDefault();
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-            >
-              <span className="brand-ns">NS</span>
-              <span className="brand-home">Home</span>
-              <span className="brand-appliances">Appliances</span>
-            </Link>
+            {(detail || heroTitleDocked) && (
+              <motion.div
+                layoutId={detail ? undefined : "ns-home-title"}
+                className="nav-brand-wrap"
+                transition={{
+                  layout: {
+                    duration: shouldReduceMotion ? 0.001 : 0.42,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                }}
+              >
+                <Link
+                  href={detail ? "/" : "#hero-title"}
+                  className="nav-brand"
+                  aria-label="NS Home Appliances home"
+                  onClick={(e) => {
+                    if (!detail) {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                >
+                  NS Home Appliances
+                </Link>
+              </motion.div>
+            )}
           </div>
 
           {/* ZONE 3: RIGHT GROUP */}

@@ -2,13 +2,12 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
-import "./site-intro.module.css";
+import styles from "./site-intro.module.css";
 
 const SESSION_KEY = "ns-home-intro-seen";
 const WORDS = ["NS Home Appliances", "Search", "Products", "Categories", "Visit"];
 const WORD_CUES = [0, 620, 1120, 1620, 2120];
 const EASE = [0.22, 1, 0.36, 1] as const;
-const REPLAY_ON_RELOAD = process.env.NODE_ENV === "development";
 
 type IntroPhase = "sequence" | "orb" | "reveal";
 
@@ -20,19 +19,15 @@ export function SiteIntro() {
   const timeouts = useRef<number[]>([]);
 
   useLayoutEffect(() => {
-    if (!REPLAY_ON_RELOAD) {
-      if (sessionStorage.getItem(SESSION_KEY)) {
-        const closeTimeout = window.setTimeout(() => setOpen(false));
-        return () => window.clearTimeout(closeTimeout);
-      }
-
-      sessionStorage.setItem(SESSION_KEY, "true");
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      setOpen(false);
+      return;
     }
 
-    const scheduledTimeouts = timeouts.current;
+    sessionStorage.setItem(SESSION_KEY, "true");
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const schedule = (callback: () => void, delay: number) => {
-      scheduledTimeouts.push(window.setTimeout(callback, delay));
+      timeouts.current.push(window.setTimeout(callback, delay));
     };
 
     if (reduceMotion) {
@@ -46,7 +41,7 @@ export function SiteIntro() {
       schedule(() => setOpen(false), 3_820);
     }
 
-    return () => scheduledTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+    return () => timeouts.current.forEach((timeout) => window.clearTimeout(timeout));
   }, []);
 
   useLayoutEffect(() => {
@@ -75,15 +70,15 @@ export function SiteIntro() {
   const isRevealing = phase === "reveal";
 
   return (
-    <div className={`site-intro${isRevealing ? " is-revealing" : ""}`} aria-label="Opening NS Home Appliances" role="status">
-      <div className="site-intro-noise" aria-hidden="true" />
-      <div className="site-intro-frame" aria-hidden="true" />
-      <div className="site-intro-content" aria-hidden="true">
+    <div className={`${styles.intro}${isRevealing ? ` ${styles.revealing}` : ""}`} aria-label="Opening NS Home Appliances" role="status">
+      <div className={styles.noise} aria-hidden="true" />
+      <div className={styles.frame} aria-hidden="true" />
+      <div className={styles.content} aria-hidden="true">
         <AnimatePresence initial={false} mode="sync">
           {!isOrb && (
             <motion.div
               key={WORDS[wordIndex]}
-              className={`site-intro-word${wordIndex === 0 ? " is-brand" : ""}`}
+              className={`${styles.word}${wordIndex === 0 ? ` ${styles.brand}` : ""}`}
               initial={{ opacity: 0, y: "0.72em", filter: "blur(2px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: "-0.66em", filter: "blur(1px)" }}
@@ -93,11 +88,11 @@ export function SiteIntro() {
             </motion.div>
           )}
         </AnimatePresence>
-        <motion.div className="site-intro-orb" initial={false} animate={isOrb ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.28 }} transition={{ duration: 0.26, ease: EASE }} />
+        <motion.div className={styles.orb} initial={false} animate={isOrb ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.28 }} transition={{ duration: 0.26, ease: EASE }} />
       </div>
-      <div className="site-intro-meta" aria-hidden="true">
-        <span className="site-intro-counter">{String(wordIndex + 1).padStart(2, "0")} / 05</span>
-        <motion.span className="site-intro-rule" animate={{ scaleX: isOrb ? 1 : (wordIndex + 1) / WORDS.length }} transition={{ duration: 0.36, ease: EASE }} />
+      <div className={styles.meta} aria-hidden="true">
+        <span className={styles.counter}>{String(wordIndex + 1).padStart(2, "0")} / 05</span>
+        <motion.span className={styles.rule} animate={{ scaleX: isOrb ? 1 : (wordIndex + 1) / WORDS.length }} transition={{ duration: 0.36, ease: EASE }} />
       </div>
       <span className="sr-only">Opening NS Home Appliances.</span>
     </div>

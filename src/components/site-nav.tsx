@@ -15,7 +15,7 @@ const subscribeScroll = (callback: () => void) => {
   return () => window.removeEventListener("scroll", callback);
 };
 
-const getScrollSnapshot = () => window.scrollY > 20;
+const getScrollSnapshot = () => window.scrollY > 120;
 const getServerSnapshot = () => false;
 
 export function SiteNav({ detail = false }: SiteNavProps) {
@@ -34,8 +34,8 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
   // Dynamic hero-to-nav geometry measurement
   const [geometry, setGeometry] = useState({
-    deltaY: 278,
-    heroScale: 3.5,
+    deltaY: 265,
+    heroScale: 3.1,
   });
 
   useEffect(() => {
@@ -48,15 +48,19 @@ export function SiteNav({ detail = false }: SiteNavProps) {
       const navHeight = isMobile ? 72 : 88;
       const navCenterY = navTop + navHeight / 2;
 
-      // Hero optical center between nav and bottom cutouts
-      const heroCenterY = vh * (isMobile ? 0.38 : 0.39);
+      // Hero optical center between top nav and bottom product rail
+      const heroCenterY = isMobile
+        ? vh * 0.36
+        : Math.min(350, Math.max(290, vh * 0.375));
       const dY = Math.max(0, heroCenterY - navCenterY);
 
       // Desired hero font size vs docked navbar font size
-      const navFontSize = isMobile ? 15 : 20;
+      // Docked navbar brand: 25px desktop, 18px mobile
+      // Hero font size: ~76-82px desktop, ~34-40px mobile
+      const navFontSize = isMobile ? 18 : 25;
       const heroFontSize = isMobile
-        ? Math.min(48, Math.max(32, vw * 0.086))
-        : Math.min(76, Math.max(46, vw * 0.052));
+        ? Math.min(42, Math.max(32, vw * 0.082))
+        : Math.min(82, Math.max(62, vw * 0.054));
       const hScale = heroFontSize / navFontSize;
 
       setGeometry({ deltaY: dY, heroScale: hScale });
@@ -68,28 +72,72 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   }, []);
 
   const { scrollY } = useScroll();
-  const dockDistance = 160;
+  const startScroll = 28;
+  const dockDistance = 142;
 
   // Smoothstep easing for zero-velocity arrival and departure
   const easeSmooth = (t: number) => t * t * (3 - 2 * t);
 
   const titleY = useTransform(
     scrollY,
-    [0, dockDistance],
+    [startScroll, dockDistance],
     detail || shouldReduceMotion ? [0, 0] : [geometry.deltaY, 0],
     { ease: easeSmooth }
   );
 
   const titleScale = useTransform(
     scrollY,
-    [0, dockDistance],
+    [startScroll, dockDistance],
     detail || shouldReduceMotion ? [1, 1] : [geometry.heroScale, 1],
     { ease: easeSmooth }
   );
 
   const titleColor = useTransform(
     scrollY,
-    [0, dockDistance],
+    [startScroll, dockDistance],
+    detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
+  );
+
+  // Synchronized navbar shell styling across scroll range [28, 142]
+  const navBg = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail
+      ? ["rgba(12, 18, 20, 0.82)", "rgba(12, 18, 20, 0.82)"]
+      : ["rgba(225, 232, 229, 0)", "rgba(225, 232, 229, 0.46)"]
+  );
+
+  const navBorderColor = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail
+      ? ["rgba(255, 255, 255, 0.14)", "rgba(255, 255, 255, 0.14)"]
+      : ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.36)"]
+  );
+
+  const navShadow = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail
+      ? [
+          "0 20px 48px -12px rgba(0, 0, 0, 0.45)",
+          "0 20px 48px -12px rgba(0, 0, 0, 0.45)",
+        ]
+      : [
+          "0 0 0 rgba(10, 28, 30, 0)",
+          "0 18px 44px -12px rgba(10, 28, 30, 0.20)",
+        ]
+  );
+
+  const navGlassOpacity = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail ? [1, 1] : [0, 1]
+  );
+
+  const navTextColor = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
     detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
   );
 
@@ -155,10 +203,29 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
   return (
     <>
-      <header
+      <motion.header
         className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"} ${isScrolled ? "is-scrolled" : "is-top"}`}
         aria-label="Primary navigation"
+        style={
+          detail || shouldReduceMotion
+            ? undefined
+            : {
+                backgroundColor: navBg,
+                borderColor: navBorderColor,
+                boxShadow: navShadow,
+                color: navTextColor,
+              }
+        }
       >
+        <motion.div
+          className="site-nav-glass"
+          style={
+            detail || shouldReduceMotion
+              ? undefined
+              : { opacity: navGlassOpacity }
+          }
+          aria-hidden
+        />
         <div className="site-nav-grid">
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
@@ -238,10 +305,24 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             >
               <motion.div
                 className="nav-brand-entrance"
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={
+                  shouldReduceMotion
+                    ? false
+                    : {
+                        opacity: 0,
+                        y: 30,
+                        clipPath: "inset(0 0 100% 0)",
+                        letterSpacing: "0.02em",
+                      }
+                }
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  clipPath: "inset(0 0 0% 0)",
+                  letterSpacing: "-0.01em",
+                }}
                 transition={{
-                  duration: shouldReduceMotion ? 0.001 : 0.85,
+                  duration: shouldReduceMotion ? 0.001 : 0.95,
                   delay: shouldReduceMotion ? 0 : 0.12,
                   ease: [0.22, 1, 0.36, 1],
                 }}
@@ -333,7 +414,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             </motion.nav>
           )}
         </AnimatePresence>
-      </header>
+      </motion.header>
 
       {/* SEARCH MODAL OVERLAY */}
       <AnimatePresence>

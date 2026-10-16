@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -22,6 +22,10 @@ export function HomeExperience() {
   const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
   const shouldReduceMotion = useReducedMotion();
+
+  const { scrollY } = useScroll();
+  const sublineOpacity = useTransform(scrollY, [15, 65], [1, 0]);
+  const sublineY = useTransform(scrollY, [15, 65], [0, -10]);
 
   useLayoutEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -65,35 +69,94 @@ export function HomeExperience() {
       <section className="hero-track" aria-label="NS Home Appliances showroom introduction">
         <div className="hero-stage">
           <div className="hero-ambient" aria-hidden />
+          <div className="hero-grain" aria-hidden />
           <span id="hero-title" className="sr-only">NS Home Appliances Showroom</span>
-          <p className="hero-index">Scroll to enter <span>↓</span></p>
-          <div className="product-rail" ref={rail} aria-label="Featured appliances collection">
-            {products.map((item, index) => (
-              <motion.button
-                key={item.slug}
-                className={`hero-product ${activeHero === index ? "is-active" : ""}`}
-                onClick={() => setActiveHero(index)}
-                onMouseEnter={() => setActiveHero(index)}
-                onFocus={() => setActiveHero(index)}
-                whileHover={shouldReduceMotion ? undefined : { y: -12, scale: 1.025 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                aria-label={`Explore ${item.name}`}
+
+          {/* Hero Editorial Supporting Composition */}
+          <div
+            className="hero-editorial-center"
+            style={{
+              position: "absolute",
+              zIndex: 4,
+              left: "50%",
+              top: "clamp(370px, 43vh, 420px)",
+              transform: "translateX(-50%)",
+              width: "min(520px, 90vw)",
+              textAlign: "center",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+            aria-hidden
+          >
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: shouldReduceMotion ? 0.001 : 0.88,
+                delay: shouldReduceMotion ? 0 : 0.35,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              <motion.div
+                className="hero-editorial-copy"
+                style={shouldReduceMotion ? undefined : { opacity: sublineOpacity, y: sublineY }}
               >
-                <span className="sr-only">{item.name}</span>
-                <Image
-                  src={item.image}
-                  alt={`${item.name} front cutout`}
-                  fill
-                  sizes="(max-width: 760px) 56vw, 24vw"
-                  priority={index < 2}
-                  style={{
-                    objectFit: "contain",
-                    objectPosition: "bottom center",
-                  }}
-                />
-              </motion.button>
-            ))}
+                <p className="hero-subline">
+                  Thoughtfully selected appliances<br className="hero-subline-br" /> for modern everyday living.
+                </p>
+                <span className="hero-scroll-cue">Explore the collection ↓</span>
+              </motion.div>
+            </motion.div>
+          </div>
+
+          <p className="hero-index">Scroll to enter <span>↓</span></p>
+
+          <div className="product-rail" ref={rail} aria-label="Featured appliances collection">
+            {products.map((item, index) => {
+              let itemScale = 1.0;
+              if (item.slug === "pedestal-fan") itemScale = 1.16;
+              else if (item.slug === "front-load-washer") itemScale = 1.03;
+              else if (item.slug === "kitchen-blender") itemScale = 0.96;
+              else if (item.slug === "electric-geyser") itemScale = 1.03;
+
+              return (
+                <motion.button
+                  key={item.slug}
+                  className={`hero-product ${activeHero === index ? "is-active" : ""}`}
+                  onClick={() => setActiveHero(index)}
+                  onMouseEnter={() => setActiveHero(index)}
+                  onFocus={() => setActiveHero(index)}
+                  whileHover={shouldReduceMotion ? undefined : { y: -12, scale: 1.025 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  aria-label={`Explore ${item.name}`}
+                >
+                  <span className="sr-only">{item.name}</span>
+                  <div
+                    className="hero-product-img-wrap"
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      height: "100%",
+                      transform: `scale(${itemScale})`,
+                      transformOrigin: "center bottom",
+                    }}
+                  >
+                    <Image
+                      src={item.image}
+                      alt={`${item.name} front cutout`}
+                      fill
+                      sizes="(max-width: 760px) 56vw, 24vw"
+                      priority={index < 2}
+                      style={{
+                        objectFit: "contain",
+                        objectPosition: "bottom center",
+                      }}
+                    />
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </section>

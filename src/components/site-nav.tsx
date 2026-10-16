@@ -32,70 +32,27 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
-  // Dynamic hero-to-nav geometry measurement
-  const [geometry, setGeometry] = useState({
-    deltaY: 265,
-    heroScale: 3.1,
-  });
-
-  useEffect(() => {
-    const calculateGeometry = () => {
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const isMobile = vw <= 760;
-
-      const navTop = isMobile ? 12 : 18;
-      const navHeight = isMobile ? 72 : 88;
-      const navCenterY = navTop + navHeight / 2;
-
-      // Hero optical center between top nav and bottom product rail
-      const heroCenterY = isMobile
-        ? vh * 0.36
-        : Math.min(350, Math.max(290, vh * 0.375));
-      const dY = Math.max(0, heroCenterY - navCenterY);
-
-      // Desired hero font size vs docked navbar font size
-      // Docked navbar brand: 25px desktop, 18px mobile
-      // Hero font size: ~76-82px desktop, ~34-40px mobile
-      const navFontSize = isMobile ? 18 : 25;
-      const heroFontSize = isMobile
-        ? Math.min(42, Math.max(32, vw * 0.082))
-        : Math.min(82, Math.max(62, vw * 0.054));
-      const hScale = heroFontSize / navFontSize;
-
-      setGeometry({ deltaY: dY, heroScale: hScale });
-    };
-
-    calculateGeometry();
-    window.addEventListener("resize", calculateGeometry, { passive: true });
-    return () => window.removeEventListener("resize", calculateGeometry);
-  }, []);
-
   const { scrollY } = useScroll();
   const startScroll = 28;
   const dockDistance = 142;
 
-  // Smoothstep easing for zero-velocity arrival and departure
-  const easeSmooth = (t: number) => t * t * (3 - 2 * t);
-
-  const titleY = useTransform(
+  // Center brand docking animation
+  const brandOpacity = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [0, 0] : [geometry.deltaY, 0],
-    { ease: easeSmooth }
+    detail || shouldReduceMotion ? [1, 1] : [0, 1]
   );
 
-  const titleScale = useTransform(
+  const brandScale = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [1, 1] : [geometry.heroScale, 1],
-    { ease: easeSmooth }
+    detail || shouldReduceMotion ? [1, 1] : [0.94, 1]
   );
 
-  const titleColor = useTransform(
+  const brandY = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
+    detail || shouldReduceMotion ? [0, 0] : [6, 0]
   );
 
   // Synchronized navbar shell styling across scroll range [28, 142]
@@ -288,7 +245,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             </button>
           </div>
 
-          {/* ZONE 2: CENTER TITLE (Continuous morph between hero and navbar) */}
+          {/* ZONE 2: CENTER TITLE */}
           <div className="site-nav-center">
             <motion.div
               className="nav-brand-wrap"
@@ -296,9 +253,10 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 detail || shouldReduceMotion
                   ? undefined
                   : {
-                      y: titleY,
-                      scale: titleScale,
-                      color: titleColor,
+                      opacity: brandOpacity,
+                      scale: brandScale,
+                      y: brandY,
+                      color: navTextColor,
                       transformOrigin: "center center",
                     }
               }

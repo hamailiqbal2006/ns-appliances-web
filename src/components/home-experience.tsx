@@ -2,187 +2,486 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
+import { HeroDistortion } from "@/components/hero-distortion";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const css = (values: Record<string, string | number>) => values as React.CSSProperties;
 
+export interface HeroBannerSlide {
+  id: string;
+  index: string;
+  tabLabel: string;
+  eyebrow: string;
+  titleLine1: string;
+  titleLine2: string;
+  isAccentItalic: boolean;
+  tagline: string;
+  badges: string[];
+  ctaText: string;
+  ctaLink: string;
+  palette: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    ambientClass: string;
+  };
+}
+
+export const heroBanners: HeroBannerSlide[] = [
+  {
+    id: "brand",
+    index: "01",
+    tabLabel: "Showroom",
+    eyebrow: "FLAGSHIP DIGITAL SHOWROOM · EST. 1998",
+    titleLine1: "NS Home",
+    titleLine2: "Appliances",
+    isAccentItalic: true,
+    tagline:
+      "Objects of quiet performance and architectural simplicity, thoughtfully curated for modern everyday living.",
+    badges: [
+      "100% Genuine Inventory",
+      "White Glove Support",
+      "Lifetime Craft Guarantee",
+    ],
+    ctaText: "Explore Collection ↓",
+    ctaLink: "#categories",
+    palette: {
+      primary: "rgba(142, 178, 126, 0.32)",
+      secondary: "rgba(68, 138, 125, 0.22)",
+      accent: "rgba(225, 238, 200, 0.28)",
+      ambientClass: "hero-ambient-slide-1",
+    },
+  },
+  {
+    id: "climate",
+    index: "02",
+    tabLabel: "Climate",
+    eyebrow: "AIR MOVEMENT & HEATING SYSTEMS",
+    titleLine1: "Atmospheric",
+    titleLine2: "Equilibrium",
+    isAccentItalic: true,
+    tagline:
+      "Aerodynamic stillness and instant thermal precision engineered to harmonize silently with contemporary interiors.",
+    badges: [
+      "Whisper-Quiet Acoustics",
+      "Instant Core Heat",
+      "Balanced Induction",
+    ],
+    ctaText: "Discover Climate & Home ↓",
+    ctaLink: "#categories",
+    palette: {
+      primary: "rgba(110, 185, 205, 0.30)",
+      secondary: "rgba(42, 115, 130, 0.22)",
+      accent: "rgba(195, 235, 245, 0.26)",
+      ambientClass: "hero-ambient-slide-2",
+    },
+  },
+  {
+    id: "utility",
+    index: "03",
+    tabLabel: "Utility",
+    eyebrow: "CULINARY & LAUNDRY PRECISION",
+    titleLine1: "Everyday Craft",
+    titleLine2: "Precision Care",
+    isAccentItalic: false,
+    tagline:
+      "High-torque culinary extraction and fabric-protecting laundry care, engineered for generational endurance.",
+    badges: [
+      "Direct Drive Motors",
+      "Borosilicate Vessels",
+      "Low-Decibel Cycles",
+    ],
+    ctaText: "Explore Kitchen & Care ↓",
+    ctaLink: "#categories",
+    palette: {
+      primary: "rgba(205, 165, 110, 0.28)",
+      secondary: "rgba(125, 95, 60, 0.20)",
+      accent: "rgba(245, 225, 185, 0.24)",
+      ambientClass: "hero-ambient-slide-3",
+    },
+  },
+];
+
+const BANNER_DURATION = 5200; // 5.2 seconds per slide
+const PROGRESS_TICK = 50;
+
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
-  const rail = useRef<HTMLDivElement>(null);
-  const [activeHero, setActiveHero] = useState(0);
   const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
   const shouldReduceMotion = useReducedMotion();
 
-  const { scrollY } = useScroll();
-  const sublineOpacity = useTransform(scrollY, [15, 65], [1, 0]);
-  const sublineY = useTransform(scrollY, [15, 65], [0, -10]);
+  // 3-Banner Rotating Hero state
+  const [activeBanner, setActiveBanner] = useState(0);
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
 
+  const selectBanner = useCallback((index: number) => {
+    setActiveBanner(index);
+    setProgress(0);
+  }, []);
+
+  const nextBanner = useCallback(() => {
+    setActiveBanner((curr) => (curr + 1) % heroBanners.length);
+    setProgress(0);
+  }, []);
+
+  // Autoplay timer with pause on hover
+  useEffect(() => {
+    if (shouldReduceMotion || isBannerPaused) return;
+
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + (PROGRESS_TICK / BANNER_DURATION) * 100;
+        if (next >= 100) {
+          nextBanner();
+          return 0;
+        }
+        return next;
+      });
+    }, PROGRESS_TICK);
+
+    return () => clearInterval(timer);
+  }, [isBannerPaused, shouldReduceMotion, nextBanner]);
+
+  // GSAP ScrollTrigger setup for category and product showcase sections below hero
   useLayoutEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const context = gsap.context(() => {
-      const indexFrom = (progress: number, size: number) => Math.min(size - 1, Math.floor(progress * size + 0.0001));
-      if (categoryTrack.current) ScrollTrigger.create({
-        trigger: categoryTrack.current, start: "top top", end: "bottom bottom", scrub: true,
-        onUpdate: ({ progress }) => setActiveCategory(indexFrom(progress, categories.length)),
-      });
-      if (productTrack.current) ScrollTrigger.create({
-        trigger: productTrack.current, start: "top top", end: "bottom bottom", scrub: true,
-        onUpdate: ({ progress }) => setActiveProduct(indexFrom(progress, products.length)),
-      });
+      const indexFrom = (p: number, size: number) =>
+        Math.min(size - 1, Math.floor(p * size + 0.0001));
+      if (categoryTrack.current)
+        ScrollTrigger.create({
+          trigger: categoryTrack.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: true,
+          onUpdate: ({ progress: p }) =>
+            setActiveCategory(indexFrom(p, categories.length)),
+        });
+      if (productTrack.current)
+        ScrollTrigger.create({
+          trigger: productTrack.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: true,
+          onUpdate: ({ progress: p }) =>
+            setActiveProduct(indexFrom(p, products.length)),
+        });
     }, root);
     return () => context.revert();
   }, []);
 
-  useEffect(() => {
-    const node = rail.current;
-    if (!node) return;
-    const update = () => {
-      const center = node.scrollLeft + node.clientWidth / 2;
-      const next = Array.from(node.children).reduce((best, child, index) => {
-        const item = child as HTMLElement;
-        const distance = Math.abs(item.offsetLeft + item.offsetWidth / 2 - center);
-        return distance < best.distance ? { index, distance } : best;
-      }, { index: 0, distance: Infinity }).index;
-      setActiveHero(next);
-    };
-    node.addEventListener("scroll", update, { passive: true });
-    update();
-    return () => node.removeEventListener("scroll", update);
-  }, []);
-
   const category = categories[activeCategory];
   const product = products[activeProduct];
+  const currentBanner = heroBanners[activeBanner];
 
-  return <div className="showroom" ref={root}>
-    <SiteNav />
-    <main>
-      <section className="hero-track" aria-label="NS Home Appliances showroom introduction">
-        <div className="hero-stage">
-          <div className="hero-ambient" aria-hidden />
-          <div className="hero-grain" aria-hidden />
-          <span id="hero-title" className="sr-only">NS Home Appliances Showroom</span>
+  return (
+    <div className="showroom" ref={root}>
+      <SiteNav />
+      <main>
+        {/* REFINED 3-BANNER ROTATING HERO */}
+        <section
+          className="hero-track"
+          aria-label="NS Home Appliances showroom introduction"
+          onMouseEnter={() => setIsBannerPaused(true)}
+          onMouseLeave={() => setIsBannerPaused(false)}
+        >
+          <div className="hero-stage">
+            {/* Atmospheric Background Layers */}
+            <div
+              className={`hero-ambient ${currentBanner.palette.ambientClass}`}
+              aria-hidden="true"
+            />
+            <div className="hero-grain" aria-hidden="true" />
 
-          {/* Hero Editorial Supporting Composition */}
-          <div
-            className="hero-editorial-center"
-            style={{
-              position: "absolute",
-              zIndex: 4,
-              left: "50%",
-              top: "clamp(370px, 43vh, 420px)",
-              transform: "translateX(-50%)",
-              width: "min(520px, 90vw)",
-              textAlign: "center",
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-            aria-hidden
-          >
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: shouldReduceMotion ? 0.001 : 0.88,
-                delay: shouldReduceMotion ? 0 : 0.35,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              <motion.div
-                className="hero-editorial-copy"
-                style={shouldReduceMotion ? undefined : { opacity: sublineOpacity, y: sublineY }}
-              >
-                <p className="hero-subline">
-                  Thoughtfully selected appliances<br className="hero-subline-br" /> for modern everyday living.
-                </p>
-                <span className="hero-scroll-cue">Explore the collection ↓</span>
-              </motion.div>
-            </motion.div>
-          </div>
+            {/* Interactive Liquid Cursor Distortion Engine (Banner only, desktop fine pointer) */}
+            <HeroDistortion activePalette={currentBanner.palette} />
 
-          <p className="hero-index">Scroll to enter <span>↓</span></p>
+            <span id="hero-title" className="sr-only">
+              NS Home Appliances Showroom
+            </span>
 
-          <div className="product-rail" ref={rail} aria-label="Featured appliances collection">
-            {products.map((item, index) => {
-              let itemScale = 1.0;
-              if (item.slug === "pedestal-fan") itemScale = 1.16;
-              else if (item.slug === "front-load-washer") itemScale = 1.03;
-              else if (item.slug === "kitchen-blender") itemScale = 0.96;
-              else if (item.slug === "electric-geyser") itemScale = 1.03;
+            {/* Top Meta Indicator Row */}
+            <div className="hero-top-meta" aria-hidden="true">
+              <span className="hero-meta-badge">
+                <span className="hero-meta-dot" />
+                DIGITAL FLAGSHIP
+              </span>
+              <span className="hero-meta-status">
+                COLLECTION / {currentBanner.index} OF 03
+              </span>
+            </div>
 
-              return (
-                <motion.button
-                  key={item.slug}
-                  className={`hero-product ${activeHero === index ? "is-active" : ""}`}
-                  onClick={() => setActiveHero(index)}
-                  onMouseEnter={() => setActiveHero(index)}
-                  onFocus={() => setActiveHero(index)}
-                  whileHover={shouldReduceMotion ? undefined : { y: -12, scale: 1.025 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                  aria-label={`Explore ${item.name}`}
+            {/* Main Editorial Hero Slide Content */}
+            <div className="hero-editorial-stage">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentBanner.id}
+                  className="hero-slide-content"
+                  initial={
+                    shouldReduceMotion
+                      ? false
+                      : { opacity: 0, y: 16, filter: "blur(3px)" }
+                  }
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={
+                    shouldReduceMotion
+                      ? undefined
+                      : { opacity: 0, y: -16, filter: "blur(3px)" }
+                  }
+                  transition={{
+                    duration: shouldReduceMotion ? 0.001 : 0.62,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
                 >
-                  <span className="sr-only">{item.name}</span>
-                  <div
-                    className="hero-product-img-wrap"
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      height: "100%",
-                      transform: `scale(${itemScale})`,
-                      transformOrigin: "center bottom",
-                    }}
-                  >
-                    <Image
-                      src={item.image}
-                      alt={`${item.name} front cutout`}
-                      fill
-                      sizes="(max-width: 760px) 56vw, 24vw"
-                      priority={index < 2}
-                      style={{
-                        objectFit: "contain",
-                        objectPosition: "bottom center",
-                      }}
-                    />
+                  {/* Eyebrow Label */}
+                  <div className="hero-banner-eyebrow-wrap">
+                    <span className="hero-banner-eyebrow">
+                      {currentBanner.eyebrow}
+                    </span>
                   </div>
-                </motion.button>
-              );
-            })}
+
+                  {/* Grand Editorial Headline */}
+                  <h1 className="hero-banner-title">
+                    <span className="hero-title-line">
+                      {currentBanner.titleLine1}
+                    </span>
+                    <span
+                      className={`hero-title-line ${
+                        currentBanner.isAccentItalic ? "hero-title-accent" : ""
+                      }`}
+                    >
+                      {currentBanner.titleLine2}
+                    </span>
+                  </h1>
+
+                  {/* Refined Subtitle */}
+                  <p className="hero-banner-tagline">
+                    {currentBanner.tagline}
+                  </p>
+
+                  {/* Curated Meta Badges */}
+                  <div className="hero-banner-badges">
+                    {currentBanner.badges.map((badge, idx) => (
+                      <span key={idx} className="hero-banner-badge">
+                        <span className="hero-badge-bullet">·</span>
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Refined Minimal CTA Cue */}
+                  <a
+                    href={currentBanner.ctaLink}
+                    className="hero-banner-cta"
+                    aria-label={currentBanner.ctaText}
+                  >
+                    <span>{currentBanner.ctaText}</span>
+                  </a>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Dock: Left scroll prompt & Right 3-tab progress dock */}
+            <div className="hero-bottom-dock">
+              <div className="hero-scroll-prompt">
+                <span className="hero-scroll-arrow">↓</span>
+                <span className="hero-scroll-text">Scroll to explore</span>
+              </div>
+
+              {/* 3-Banner Progress Tabs */}
+              <div
+                className="hero-slider-dock"
+                role="tablist"
+                aria-label="Hero banner slides"
+              >
+                {heroBanners.map((banner, index) => {
+                  const isActive = activeBanner === index;
+                  return (
+                    <button
+                      key={banner.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-label={`Slide ${banner.index}: ${banner.tabLabel}`}
+                      className={`hero-dock-tab ${isActive ? "is-active" : ""}`}
+                      onClick={() => selectBanner(index)}
+                    >
+                      <div className="hero-dock-tab-header">
+                        <span className="hero-dock-tab-num">{banner.index}</span>
+                        <span className="hero-dock-tab-title">{banner.tabLabel}</span>
+                      </div>
+                      <div className="hero-dock-progress-track">
+                        <div
+                          className="hero-dock-progress-bar"
+                          style={{
+                            width: isActive
+                              ? `${shouldReduceMotion ? 100 : progress}%`
+                              : "0%",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="category-intro cover-panel" aria-labelledby="category-intro-title">
-        <div className="intro-sticky"><p className="eyebrow">01 / discover by room</p><h2 id="category-intro-title">Shop by<br /><em>Category</em></h2><p>Objects for a calmer, more capable home.</p><span className="intro-arrow" aria-hidden>↓</span></div>
-      </section>
+        {/* SHOP BY CATEGORY SECTION (UNTOUCHED) */}
+        <section className="category-intro cover-panel" aria-labelledby="category-intro-title">
+          <div className="intro-sticky">
+            <p className="eyebrow">01 / discover by room</p>
+            <h2 id="category-intro-title">
+              Shop by<br />
+              <em>Category</em>
+            </h2>
+            <p>Objects for a calmer, more capable home.</p>
+            <span className="intro-arrow" aria-hidden>
+              ↓
+            </span>
+          </div>
+        </section>
 
-      <section id="categories" className="category-track cover-panel" ref={categoryTrack} aria-label="Shop by category" style={{ height: `${categories.length * 105}svh` }}>
-        <div className="category-scene" style={css({ "--scene-base": category.palette.base, "--scene-panel": category.palette.panel, "--scene-ink": category.palette.ink })}>
-          <div className="category-left"><p className="scene-number">0{activeCategory + 1} / 04</p><h2>{category.name}</h2><p className="category-signal">Scroll-led selection</p></div>
-          <div className="category-cutout"><Image key={category.slug} src={category.image} alt={`Temporary ${category.name} appliance cutout`} fill sizes="(max-width: 760px) 85vw, 46vw" style={{ objectFit: "contain", transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)` }} /></div>
-          <div className="category-right"><p className="eyebrow">Explore</p><ul>{category.subcategories.map((sub, index) => <li key={sub.slug}><Link href={`/category/${category.slug}/${sub.slug}`}><span>0{index + 1}</span>{sub.name}<b>↗</b></Link></li>)}</ul><p className="temporary-note">Temporary cutout / final NS product image to replace</p></div>
-          <div className="scene-dots" aria-hidden>{categories.map((_, index) => <i key={index} className={index === activeCategory ? "active" : ""} />)}</div>
-        </div>
-      </section>
+        <section
+          id="categories"
+          className="category-track cover-panel"
+          ref={categoryTrack}
+          aria-label="Shop by category"
+          style={{ height: `${categories.length * 105}svh` }}
+        >
+          <div
+            className="category-scene"
+            style={css({
+              "--scene-base": category.palette.base,
+              "--scene-panel": category.palette.panel,
+              "--scene-ink": category.palette.ink,
+            })}
+          >
+            <div className="category-left">
+              <p className="scene-number">0{activeCategory + 1} / 04</p>
+              <h2>{category.name}</h2>
+              <p className="category-signal">Scroll-led selection</p>
+            </div>
+            <div className="category-cutout">
+              <Image
+                key={category.slug}
+                src={category.image}
+                alt={`Temporary ${category.name} appliance cutout`}
+                fill
+                sizes="(max-width: 760px) 85vw, 46vw"
+                style={{
+                  objectFit: "contain",
+                  transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
+                }}
+              />
+            </div>
+            <div className="category-right">
+              <p className="eyebrow">Explore</p>
+              <ul>
+                {category.subcategories.map((sub, index) => (
+                  <li key={sub.slug}>
+                    <Link href={`/category/${category.slug}/${sub.slug}`}>
+                      <span>0{index + 1}</span>
+                      {sub.name}
+                      <b>↗</b>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
+            </div>
+            <div className="scene-dots" aria-hidden>
+              {categories.map((_, index) => (
+                <i key={index} className={index === activeCategory ? "active" : ""} />
+              ))}
+            </div>
+          </div>
+        </section>
 
-      <section id="products" className="products-track cover-panel" ref={productTrack} aria-labelledby="products-heading" style={{ height: `${products.length * 110}svh` }}>
-        <div className="product-scene" style={css({ "--product-base": product.palette.base, "--product-panel": product.palette.panel, "--product-ink": product.palette.ink, "--product-accent": product.palette.accent })}>
-          <div className="product-visual"><Link href={`/products/${product.slug}`} aria-label={`View ${product.name}`}><Image key={product.slug} src={product.image} alt={`Temporary ${product.name} cutout`} fill sizes="(max-width: 760px) 85vw, 52vw" style={{ objectFit: "contain", transform: `translate(${product.art.x}%, ${product.art.y}%) scale(${product.art.scale}) rotate(${product.art.rotation ?? 0}deg)` }} /></Link></div>
-          <div className="product-info"><p className="eyebrow">02 / product {String(activeProduct + 1).padStart(2, "0")}</p><p className="product-kind">{product.kind}</p><h2 id="products-heading">{product.name}</h2><p>{product.note}</p><Link className="view-product" href={`/products/${product.slug}`}>View product <span>↗</span></Link></div>
-          <div className="product-pagination" aria-label="Product sequence">{products.map((item, index) => <button onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })} key={item.slug} className={index === activeProduct ? "active" : ""} aria-label={`Product ${index + 1}`} />)}</div>
-        </div>
-      </section>
+        {/* PRODUCT SHOWCASE TRACK (UNTOUCHED) */}
+        <section
+          id="products"
+          className="products-track cover-panel"
+          ref={productTrack}
+          aria-labelledby="products-heading"
+          style={{ height: `${products.length * 110}svh` }}
+        >
+          <div
+            className="product-scene"
+            style={css({
+              "--product-base": product.palette.base,
+              "--product-panel": product.palette.panel,
+              "--product-ink": product.palette.ink,
+              "--product-accent": product.palette.accent,
+            })}
+          >
+            <div className="product-visual">
+              <Link href={`/products/${product.slug}`} aria-label={`View ${product.name}`}>
+                <Image
+                  key={product.slug}
+                  src={product.image}
+                  alt={`Temporary ${product.name} cutout`}
+                  fill
+                  sizes="(max-width: 760px) 85vw, 52vw"
+                  style={{
+                    objectFit: "contain",
+                    transform: `translate(${product.art.x}%, ${product.art.y}%) scale(${product.art.scale}) rotate(${product.art.rotation ?? 0}deg)`,
+                  }}
+                />
+              </Link>
+            </div>
+            <div className="product-info">
+              <p className="eyebrow">02 / product {String(activeProduct + 1).padStart(2, "0")}</p>
+              <p className="product-kind">{product.kind}</p>
+              <h2 id="products-heading">{product.name}</h2>
+              <p>{product.note}</p>
+              <Link className="view-product" href={`/products/${product.slug}`}>
+                View product <span>↗</span>
+              </Link>
+            </div>
+            <div className="product-pagination" aria-label="Product sequence">
+              {products.map((item, index) => (
+                <button
+                  onClick={() =>
+                    document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  key={item.slug}
+                  className={index === activeProduct ? "active" : ""}
+                  aria-label={`Product ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
 
-      <section id="visit" className="visit-panel cover-panel"><p className="eyebrow">03 / next step</p><h2>See it<br /><em>in person.</em></h2><p>This digital showroom is ready for real inventory, model information, booking contact details and the final NS Appliances photography.</p><a href="#hero-title">Back to the collection <span>↑</span></a></section>
-    </main>
-  </div>;
+        {/* VISIT PANEL (UNTOUCHED) */}
+        <section id="visit" className="visit-panel cover-panel">
+          <p className="eyebrow">03 / next step</p>
+          <h2>
+            See it<br />
+            <em>in person.</em>
+          </h2>
+          <p>
+            This digital showroom is ready for real inventory, model information, booking contact
+            details and the final NS Appliances photography.
+          </p>
+          <a href="#hero-title">
+            Back to top <span>↑</span>
+          </a>
+        </section>
+      </main>
+    </div>
+  );
 }

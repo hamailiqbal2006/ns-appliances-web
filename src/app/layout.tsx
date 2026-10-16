@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Geist } from "next/font/google";
+import { Bodoni_Moda, Geist } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
-const instrumentSerif = Instrument_Serif({
+const bodoniModa = Bodoni_Moda({
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
   variable: "--font-brand",
   display: "swap",
 });
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${bodoniModa.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );

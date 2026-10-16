@@ -9,6 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { HeroDistortion } from "@/components/hero-distortion";
+import { SiteIntro } from "@/components/site-intro";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,16 +17,11 @@ const css = (values: Record<string, string | number>) => values as React.CSSProp
 
 export interface HeroBannerSlide {
   id: string;
-  index: string;
   tabLabel: string;
-  eyebrow: string;
   titleLine1: string;
   titleLine2: string;
   isAccentItalic: boolean;
   tagline: string;
-  badges: string[];
-  ctaText: string;
-  ctaLink: string;
   palette: {
     primary: string;
     secondary: string;
@@ -37,21 +33,12 @@ export interface HeroBannerSlide {
 export const heroBanners: HeroBannerSlide[] = [
   {
     id: "brand",
-    index: "01",
     tabLabel: "Showroom",
-    eyebrow: "FLAGSHIP DIGITAL SHOWROOM · EST. 1998",
     titleLine1: "NS Home",
     titleLine2: "Appliances",
     isAccentItalic: true,
     tagline:
       "Objects of quiet performance and architectural simplicity, thoughtfully curated for modern everyday living.",
-    badges: [
-      "100% Genuine Inventory",
-      "White Glove Support",
-      "Lifetime Craft Guarantee",
-    ],
-    ctaText: "Explore Collection ↓",
-    ctaLink: "#categories",
     palette: {
       primary: "rgba(142, 178, 126, 0.32)",
       secondary: "rgba(68, 138, 125, 0.22)",
@@ -61,21 +48,12 @@ export const heroBanners: HeroBannerSlide[] = [
   },
   {
     id: "climate",
-    index: "02",
     tabLabel: "Climate",
-    eyebrow: "AIR MOVEMENT & HEATING SYSTEMS",
     titleLine1: "Atmospheric",
     titleLine2: "Equilibrium",
     isAccentItalic: true,
     tagline:
       "Aerodynamic stillness and instant thermal precision engineered to harmonize silently with contemporary interiors.",
-    badges: [
-      "Whisper-Quiet Acoustics",
-      "Instant Core Heat",
-      "Balanced Induction",
-    ],
-    ctaText: "Discover Climate & Home ↓",
-    ctaLink: "#categories",
     palette: {
       primary: "rgba(110, 185, 205, 0.30)",
       secondary: "rgba(42, 115, 130, 0.22)",
@@ -85,21 +63,12 @@ export const heroBanners: HeroBannerSlide[] = [
   },
   {
     id: "utility",
-    index: "03",
     tabLabel: "Utility",
-    eyebrow: "CULINARY & LAUNDRY PRECISION",
     titleLine1: "Everyday Craft",
     titleLine2: "Precision Care",
     isAccentItalic: false,
     tagline:
       "High-torque culinary extraction and fabric-protecting laundry care, engineered for generational endurance.",
-    badges: [
-      "Direct Drive Motors",
-      "Borosilicate Vessels",
-      "Low-Decibel Cycles",
-    ],
-    ctaText: "Explore Kitchen & Care ↓",
-    ctaLink: "#categories",
     palette: {
       primary: "rgba(205, 165, 110, 0.28)",
       secondary: "rgba(125, 95, 60, 0.20)",
@@ -124,11 +93,14 @@ export function HomeExperience() {
   const [activeBanner, setActiveBanner] = useState(0);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [navbarRevealed, setNavbarRevealed] = useState(false);
 
   const selectBanner = useCallback((index: number) => {
     setActiveBanner(index);
     setProgress(0);
   }, []);
+
+  const revealNavbar = useCallback(() => setNavbarRevealed(true), []);
 
   const nextBanner = useCallback(() => {
     setActiveBanner((curr) => (curr + 1) % heroBanners.length);
@@ -187,7 +159,7 @@ export function HomeExperience() {
 
   return (
     <div className="showroom" ref={root}>
-      <SiteNav />
+      <SiteNav introReady={navbarRevealed} />
       <main>
         {/* REFINED 3-BANNER ROTATING HERO */}
         <section
@@ -211,17 +183,6 @@ export function HomeExperience() {
               NS Home Appliances Showroom
             </span>
 
-            {/* Top Meta Indicator Row */}
-            <div className="hero-top-meta" aria-hidden="true">
-              <span className="hero-meta-badge">
-                <span className="hero-meta-dot" />
-                DIGITAL FLAGSHIP
-              </span>
-              <span className="hero-meta-status">
-                COLLECTION / {currentBanner.index} OF 03
-              </span>
-            </div>
-
             {/* Main Editorial Hero Slide Content */}
             <div className="hero-editorial-stage">
               <AnimatePresence mode="wait">
@@ -244,13 +205,6 @@ export function HomeExperience() {
                     ease: [0.22, 1, 0.36, 1],
                   }}
                 >
-                  {/* Eyebrow Label */}
-                  <div className="hero-banner-eyebrow-wrap">
-                    <span className="hero-banner-eyebrow">
-                      {currentBanner.eyebrow}
-                    </span>
-                  </div>
-
                   {/* Grand Editorial Headline */}
                   <h1 className="hero-banner-title">
                     <span className="hero-title-line">
@@ -270,36 +224,12 @@ export function HomeExperience() {
                     {currentBanner.tagline}
                   </p>
 
-                  {/* Curated Meta Badges */}
-                  <div className="hero-banner-badges">
-                    {currentBanner.badges.map((badge, idx) => (
-                      <span key={idx} className="hero-banner-badge">
-                        <span className="hero-badge-bullet">·</span>
-                        {badge}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Refined Minimal CTA Cue */}
-                  <a
-                    href={currentBanner.ctaLink}
-                    className="hero-banner-cta"
-                    aria-label={currentBanner.ctaText}
-                  >
-                    <span>{currentBanner.ctaText}</span>
-                  </a>
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            {/* Bottom Dock: Left scroll prompt & Right 3-tab progress dock */}
+            {/* Bottom dock preserves access to the three-banner rotation. */}
             <div className="hero-bottom-dock">
-              <div className="hero-scroll-prompt">
-                <span className="hero-scroll-arrow">↓</span>
-                <span className="hero-scroll-text">Scroll to explore</span>
-              </div>
-
-              {/* 3-Banner Progress Tabs */}
               <div
                 className="hero-slider-dock"
                 role="tablist"
@@ -313,12 +243,11 @@ export function HomeExperience() {
                       type="button"
                       role="tab"
                       aria-selected={isActive}
-                      aria-label={`Slide ${banner.index}: ${banner.tabLabel}`}
+                      aria-label={`Show ${banner.tabLabel} banner`}
                       className={`hero-dock-tab ${isActive ? "is-active" : ""}`}
                       onClick={() => selectBanner(index)}
                     >
                       <div className="hero-dock-tab-header">
-                        <span className="hero-dock-tab-num">{banner.index}</span>
                         <span className="hero-dock-tab-title">{banner.tabLabel}</span>
                       </div>
                       <div className="hero-dock-progress-track">
@@ -482,6 +411,7 @@ export function HomeExperience() {
           </a>
         </section>
       </main>
+      <SiteIntro onNavbarReveal={revealNavbar} />
     </div>
   );
 }

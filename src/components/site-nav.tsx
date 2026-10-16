@@ -7,7 +7,7 @@ import { categories, products } from "@/data/catalog";
 
 interface SiteNavProps {
   detail?: boolean;
-  heroTitleDocked?: boolean;
+  introReady?: boolean;
 }
 
 const subscribeScroll = (callback: () => void) => {
@@ -18,7 +18,7 @@ const subscribeScroll = (callback: () => void) => {
 const getScrollSnapshot = () => window.scrollY > 120;
 const getServerSnapshot = () => false;
 
-export function SiteNav({ detail = false }: SiteNavProps) {
+export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
   const root = detail ? "/" : "";
   const isScrolled = useSyncExternalStore(
     subscribeScroll,
@@ -186,20 +186,26 @@ export function SiteNav({ detail = false }: SiteNavProps) {
         <div className="site-nav-grid">
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
-            <nav className="site-nav-desktop-links" aria-label="Section links">
+            <motion.nav
+              className="site-nav-desktop-links"
+              aria-label="Section links"
+              initial={false}
+              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
+              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <a href={`${root}#products`} className="nav-pill-btn">
+                Products
+              </a>
               <a href={`${root}#categories`} className="nav-pill-btn">
                 Categories
-              </a>
-              <a href={`${root}#products`} className="nav-pill-btn">
-                Showroom
               </a>
               <a href={`${root}#visit`} className="nav-pill-btn">
                 Visit
               </a>
-            </nav>
+            </motion.nav>
 
             {/* Mobile menu toggle */}
-            <button
+            <motion.button
               type="button"
               className="nav-pill-btn nav-mobile-menu-btn"
               aria-label={
@@ -208,6 +214,9 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-nav-panel"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
+              initial={false}
+              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
+              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
             >
               {mobileMenuOpen ? (
                 <svg
@@ -242,7 +251,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 </svg>
               )}
               <span className="nav-mobile-menu-text">Menu</span>
-            </button>
+            </motion.button>
           </div>
 
           {/* ZONE 2: CENTER TITLE */}
@@ -250,7 +259,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             <motion.div
               className="nav-brand-wrap"
               style={
-                detail || shouldReduceMotion
+                detail || shouldReduceMotion || introReady
                   ? undefined
                   : {
                       opacity: brandOpacity,
@@ -264,7 +273,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               <motion.div
                 className="nav-brand-entrance"
                 initial={
-                  shouldReduceMotion
+                  shouldReduceMotion || introReady
                     ? false
                     : {
                         opacity: 0,
@@ -274,14 +283,14 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                       }
                 }
                 animate={{
-                  opacity: 1,
-                  y: 0,
-                  clipPath: "inset(0 0 0% 0)",
+                  opacity: detail || introReady ? 1 : 0,
+                  y: detail || introReady ? 0 : 20,
+                  clipPath: detail || introReady ? "inset(0 0 0% 0)" : "inset(100% 0 0 0)",
                   letterSpacing: "-0.01em",
                 }}
                 transition={{
                   duration: shouldReduceMotion ? 0.001 : 0.95,
-                  delay: shouldReduceMotion ? 0 : 0.12,
+                  delay: shouldReduceMotion ? 0 : introReady && !detail ? 0.13 : 0.12,
                   ease: [0.22, 1, 0.36, 1],
                 }}
               >
@@ -304,11 +313,14 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
           {/* ZONE 3: RIGHT GROUP */}
           <div className="site-nav-right">
-            <button
+            <motion.button
               type="button"
               className="nav-pill-btn nav-search-btn"
               aria-label="Search showroom collection"
               onClick={openSearch}
+              initial={false}
+              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
+              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
             >
               <svg
                 className="nav-search-svg"
@@ -326,7 +338,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <span className="nav-search-text">Search</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -343,21 +355,21 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               transition={{ duration: shouldReduceMotion ? 0.001 : 0.2 }}
             >
               <a
-                href={`${root}#categories`}
-                className="nav-mobile-link"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <span className="mobile-link-num">01</span>
-                <span className="mobile-link-text">Categories</span>
-                <span className="mobile-link-arrow">↓</span>
-              </a>
-              <a
                 href={`${root}#products`}
                 className="nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <span className="mobile-link-num">01</span>
+                <span className="mobile-link-text">Products</span>
+                <span className="mobile-link-arrow">↓</span>
+              </a>
+              <a
+                href={`${root}#categories`}
+                className="nav-mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 <span className="mobile-link-num">02</span>
-                <span className="mobile-link-text">Showroom</span>
+                <span className="mobile-link-text">Categories</span>
                 <span className="mobile-link-arrow">↓</span>
               </a>
               <a
@@ -366,7 +378,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <span className="mobile-link-num">03</span>
-                <span className="mobile-link-text">Visit Store</span>
+                <span className="mobile-link-text">Visit</span>
                 <span className="mobile-link-arrow">↓</span>
               </a>
             </motion.nav>

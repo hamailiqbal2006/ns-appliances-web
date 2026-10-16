@@ -1,0 +1,6 @@
+.intro{position:fixed;z-index:100;inset:0;display:grid;place-items:center;overflow:hidden;background:#080909;color:#f4f1e8;pointer-events:none}
+.stage{position:relative;display:grid;min-height:1.16em;min-width:min(88vw,960px);place-items:center;overflow:visible}
+.word{grid-area:1/1;margin:0;font-family:var(--font-brand),"Bodoni Moda",Didot,Georgia,serif;font-size:clamp(48px,8vw,132px);font-weight:500;line-height:.9;letter-spacing:-.055em;text-align:center;white-space:nowrap}
+.brand{font-size:clamp(46px,7.2vw,120px);letter-spacing:-.065em}
+.arrow{position:absolute;left:50%;top:calc(100% + clamp(22px,3vh,36px));font-family:var(--font-brand),Georgia,serif;font-size:clamp(32px,4vw,52px);line-height:1;transform:translateX(-50%)}
+@media(max-width:760px){.stage{min-width:100%}.word{font-size:clamp(42px,13vw,70px);white-space:normal;padding:0 20px}.brand{font-size:clamp(38px,11vw,62px)}.arrow{top:calc(100% + 26px)}}

@@ -8,8 +8,6 @@ const SESSION_KEY = "ns-home-intro-seen";
 const WORDS = ["NS Home Appliances", "Search", "Products", "Categories", "Visit"];
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-let playedDuringThisPageSession = false;
-
 interface SiteIntroProps {
   onNavbarReveal: () => void;
 }
@@ -17,6 +15,10 @@ interface SiteIntroProps {
 /** A homepage-only, client-side opening overlay. The storefront stays mounted underneath. */
 export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
   const reduceMotion = useReducedMotion();
+  const isDevelopment = process.env.NODE_ENV === "development";
+  // Local previews intentionally use the complete sequence on every refresh,
+  // regardless of an OS or browser reduced-motion preference.
+  const shouldReduceMotion = !isDevelopment && reduceMotion;
   const [open, setOpen] = useState(true);
   const [wordIndex, setWordIndex] = useState(0);
   const [arrowVisible, setArrowVisible] = useState(false);
@@ -24,9 +26,7 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
 
   useEffect(() => {
     const isProduction = process.env.NODE_ENV === "production";
-    const hasSeenIntro = isProduction
-      ? sessionStorage.getItem(SESSION_KEY) === "true"
-      : playedDuringThisPageSession;
+    const hasSeenIntro = isProduction && sessionStorage.getItem(SESSION_KEY) === "true";
 
     const timerIds: number[] = [];
     const schedule = (callback: () => void, delay: number) => {
@@ -39,10 +39,9 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
       return () => timerIds.forEach((timer) => window.clearTimeout(timer));
     }
 
-    playedDuringThisPageSession = true;
     if (isProduction) sessionStorage.setItem(SESSION_KEY, "true");
 
-    if (reduceMotion) {
+    if (shouldReduceMotion) {
       schedule(() => setArrowVisible(true), 160);
       schedule(() => {
         setArrowRising(true);
@@ -62,7 +61,7 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
     }
 
     return () => timerIds.forEach((timer) => window.clearTimeout(timer));
-  }, [onNavbarReveal, reduceMotion]);
+  }, [isDevelopment, onNavbarReveal, shouldReduceMotion]);
 
   useEffect(() => {
     if (!open) return;
@@ -92,7 +91,7 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
       aria-label="Opening NS Home Appliances"
       role="status"
       animate={arrowRising ? { opacity: 0, y: -16 } : { opacity: 1, y: 0 }}
-      transition={{ duration: reduceMotion ? 0.18 : 0.46, delay: arrowRising ? 0.18 : 0 }}
+      transition={{ duration: shouldReduceMotion ? 0.18 : 0.46, delay: arrowRising ? 0.18 : 0 }}
     >
       <div className={styles.stage} aria-hidden="true">
         <AnimatePresence initial={false} mode="sync">
@@ -103,7 +102,7 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
               initial={{ opacity: 0, y: "0.76em", clipPath: "inset(100% 0 0 0)" }}
               animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" }}
               exit={{ opacity: 0, y: "-0.72em", clipPath: "inset(0 0 100% 0)" }}
-              transition={{ duration: reduceMotion ? 0.001 : 0.34, ease: EASE }}
+              transition={{ duration: shouldReduceMotion ? 0.001 : 0.34, ease: EASE }}
             >
               {WORDS[wordIndex]}
             </motion.p>
@@ -118,7 +117,7 @@ export function SiteIntro({ onNavbarReveal }: SiteIntroProps) {
               ? { opacity: 1, y: "calc(-50svh + 72px)", scale: 0.76 }
               : { opacity: arrowVisible ? 1 : 0, y: arrowVisible ? 0 : 12, scale: 1 }
           }
-          transition={{ duration: reduceMotion ? 0.12 : 0.56, ease: EASE }}
+          transition={{ duration: shouldReduceMotion ? 0.12 : 0.56, ease: EASE }}
         >
           ↑
         </motion.span>

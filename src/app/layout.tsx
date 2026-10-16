@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Cormorant_Garamond, Geist } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-brand",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "NS Home Appliances — Digital Showroom",
@@ -11,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={geist.variable} suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${cormorant.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { categories, products } from "@/data/catalog";
 
 interface SiteNavProps {
@@ -15,10 +15,10 @@ const subscribeScroll = (callback: () => void) => {
   return () => window.removeEventListener("scroll", callback);
 };
 
-const getScrollSnapshot = () => window.scrollY > 18;
+const getScrollSnapshot = () => window.scrollY > 20;
 const getServerSnapshot = () => false;
 
-export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProps) {
+export function SiteNav({ detail = false }: SiteNavProps) {
   const root = detail ? "/" : "";
   const isScrolled = useSyncExternalStore(
     subscribeScroll,
@@ -31,6 +31,67 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const shouldReduceMotion = useReducedMotion();
+
+  // Dynamic hero-to-nav geometry measurement
+  const [geometry, setGeometry] = useState({
+    deltaY: 278,
+    heroScale: 3.5,
+  });
+
+  useEffect(() => {
+    const calculateGeometry = () => {
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const isMobile = vw <= 760;
+
+      const navTop = isMobile ? 12 : 18;
+      const navHeight = isMobile ? 72 : 88;
+      const navCenterY = navTop + navHeight / 2;
+
+      // Hero optical center between nav and bottom cutouts
+      const heroCenterY = vh * (isMobile ? 0.38 : 0.39);
+      const dY = Math.max(0, heroCenterY - navCenterY);
+
+      // Desired hero font size vs docked navbar font size
+      const navFontSize = isMobile ? 15 : 20;
+      const heroFontSize = isMobile
+        ? Math.min(48, Math.max(32, vw * 0.086))
+        : Math.min(76, Math.max(46, vw * 0.052));
+      const hScale = heroFontSize / navFontSize;
+
+      setGeometry({ deltaY: dY, heroScale: hScale });
+    };
+
+    calculateGeometry();
+    window.addEventListener("resize", calculateGeometry, { passive: true });
+    return () => window.removeEventListener("resize", calculateGeometry);
+  }, []);
+
+  const { scrollY } = useScroll();
+  const dockDistance = 160;
+
+  // Smoothstep easing for zero-velocity arrival and departure
+  const easeSmooth = (t: number) => t * t * (3 - 2 * t);
+
+  const titleY = useTransform(
+    scrollY,
+    [0, dockDistance],
+    detail || shouldReduceMotion ? [0, 0] : [geometry.deltaY, 0],
+    { ease: easeSmooth }
+  );
+
+  const titleScale = useTransform(
+    scrollY,
+    [0, dockDistance],
+    detail || shouldReduceMotion ? [1, 1] : [geometry.heroScale, 1],
+    { ease: easeSmooth }
+  );
+
+  const titleColor = useTransform(
+    scrollY,
+    [0, dockDistance],
+    detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
+  );
 
   // Close mobile menu when user scrolls
   useEffect(() => {
@@ -73,46 +134,6 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
     setMobileMenuOpen(false);
   };
 
-  // Motion variants for parent navigation container
-  const navVariants = detail ? {
-    top: {
-      backgroundColor: "rgba(12, 18, 20, 0)",
-      borderColor: "rgba(255, 255, 255, 0)",
-      boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
-      backdropFilter: "blur(0px)",
-      WebkitBackdropFilter: "blur(0px)",
-    },
-    scrolled: {
-      backgroundColor: "rgba(12, 18, 20, 0.82)",
-      borderColor: "rgba(255, 255, 255, 0.14)",
-      boxShadow:
-        "0 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-    },
-  } : {
-    top: {
-      backgroundColor: "rgba(237, 242, 240, 0)",
-      borderColor: "rgba(255, 255, 255, 0)",
-      boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
-      backdropFilter: "blur(0px)",
-      WebkitBackdropFilter: "blur(0px)",
-    },
-    scrolled: {
-      backgroundColor: "rgba(237, 242, 240, 0.58)",
-      borderColor: "rgba(255, 255, 255, 0.42)",
-      boxShadow:
-        "0 18px 42px -18px rgba(6, 22, 24, 0.48), inset 0 1px 0 0 rgba(255, 255, 255, 0.38)",
-      backdropFilter: "blur(24px) saturate(135%)",
-      WebkitBackdropFilter: "blur(24px) saturate(135%)",
-    },
-  };
-
-  const navTransition = {
-    duration: shouldReduceMotion ? 0.001 : 0.32,
-    ease: [0.22, 1, 0.36, 1] as const,
-  };
-
   // Search filtering
   const cleanQuery = searchQuery.trim().toLowerCase();
   const filteredProducts = cleanQuery
@@ -134,13 +155,9 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
 
   return (
     <>
-      <motion.header
+      <header
         className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"} ${isScrolled ? "is-scrolled" : "is-top"}`}
         aria-label="Primary navigation"
-        initial="top"
-        animate={isScrolled ? "scrolled" : "top"}
-        variants={navVariants}
-        transition={navTransition}
       >
         <div className="site-nav-grid">
           {/* ZONE 1: LEFT GROUP */}
@@ -204,17 +221,29 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
             </button>
           </div>
 
-          {/* The homepage brand occupies this slot only once the shared hero title docks. */}
+          {/* ZONE 2: CENTER TITLE (Continuous morph between hero and navbar) */}
           <div className="site-nav-center">
-            {(detail || heroTitleDocked) && (
+            <motion.div
+              className="nav-brand-wrap"
+              style={
+                detail || shouldReduceMotion
+                  ? undefined
+                  : {
+                      y: titleY,
+                      scale: titleScale,
+                      color: titleColor,
+                      transformOrigin: "center center",
+                    }
+              }
+            >
               <motion.div
-                layoutId={detail ? undefined : "ns-home-title"}
-                className="nav-brand-wrap"
+                className="nav-brand-entrance"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  layout: {
-                    duration: shouldReduceMotion ? 0.001 : 0.42,
-                    ease: [0.22, 1, 0.36, 1],
-                  },
+                  duration: shouldReduceMotion ? 0.001 : 0.85,
+                  delay: shouldReduceMotion ? 0 : 0.12,
+                  ease: [0.22, 1, 0.36, 1],
                 }}
               >
                 <Link
@@ -231,7 +260,7 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
                   NS Home Appliances
                 </Link>
               </motion.div>
-            )}
+            </motion.div>
           </div>
 
           {/* ZONE 3: RIGHT GROUP */}
@@ -304,7 +333,7 @@ export function SiteNav({ detail = false, heroTitleDocked = false }: SiteNavProp
             </motion.nav>
           )}
         </AnimatePresence>
-      </motion.header>
+      </header>
 
       {/* SEARCH MODAL OVERLAY */}
       <AnimatePresence>

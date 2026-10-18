@@ -1,6 +1,9 @@
 .intro{position:fixed;z-index:100;inset:0;display:grid;place-items:center;overflow:hidden;background:transparent;color:#f4f1e8;pointer-events:none}
-.stage{position:relative;display:grid;height:clamp(88px,12vw,174px);min-width:min(88vw,960px);place-items:center;overflow:visible}
-.word{grid-area:1/1;margin:0;font-family:var(--font-brand),"Bodoni Moda",Didot,Georgia,serif;font-size:clamp(48px,8vw,132px);font-weight:500;line-height:.9;letter-spacing:-.055em;text-align:center;white-space:nowrap;will-change:transform,opacity,clip-path}
+.stage{position:relative;width:min(92vw,1080px);display:grid;place-items:center}
+.wordMask{--intro-word-window:190px;position:relative;display:grid;place-items:center;width:100%;height:var(--intro-word-window);overflow:hidden}
+.word{grid-area:1/1;width:100%;box-sizing:border-box;margin:0;padding:.12em .06em .16em;opacity:0;font-family:var(--font-brand),"Bodoni Moda",Didot,Georgia,serif;font-size:clamp(50px,8vw,132px);font-weight:500;line-height:1.08;letter-spacing:-.055em;text-align:center;white-space:nowrap;will-change:transform,opacity}
+.word:first-child{opacity:1}
 .brand{font-size:clamp(46px,7.2vw,120px);letter-spacing:-.065em}
-.arrow{position:absolute;left:50%;top:calc(100% + clamp(22px,3vh,36px));font-family:var(--font-brand),Georgia,serif;font-size:clamp(32px,4vw,52px);line-height:1;transform:translateX(-50%);will-change:transform,opacity}
-@media(max-width:760px){.stage{height:clamp(76px,22vw,116px);min-width:100%}.word{font-size:clamp(38px,10.5vw,70px);white-space:nowrap;padding:0 16px}.brand{font-size:clamp(33px,9.4vw,62px)}.arrow{top:calc(100% + 26px)}}
+.arrow{position:fixed;z-index:1;left:0;top:0;width:30px;height:58px;overflow:visible;will-change:transform,opacity}
+.arrow path{fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:760px){.stage{width:min(100%,560px)}.word{padding:.14em 16px .2em;font-size:clamp(38px,10.5vw,70px);line-height:1.1;white-space:nowrap}.brand{max-width:22rem;font-size:clamp(33px,9.4vw,62px);letter-spacing:-.058em;white-space:normal}.arrow{width:26px;height:52px}}

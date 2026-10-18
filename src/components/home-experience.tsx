@@ -94,6 +94,7 @@ export function HomeExperience() {
   const [isBannerPaused, setIsBannerPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [navbarRevealed, setNavbarRevealed] = useState(false);
+  const [introActive, setIntroActive] = useState(true);
 
   const selectBanner = useCallback((index: number) => {
     setActiveBanner(index);
@@ -101,6 +102,7 @@ export function HomeExperience() {
   }, []);
 
   const revealNavbar = useCallback(() => setNavbarRevealed(true), []);
+  const completeIntro = useCallback(() => setIntroActive(false), []);
 
   const nextBanner = useCallback(() => {
     setActiveBanner((curr) => (curr + 1) % heroBanners.length);
@@ -158,7 +160,7 @@ export function HomeExperience() {
   const currentBanner = heroBanners[activeBanner];
 
   return (
-    <div className="showroom" ref={root}>
+    <div className={`showroom${introActive ? " intro-active" : ""}`} ref={root}>
       <SiteNav introReady={navbarRevealed} />
       <main>
         {/* REFINED 3-BANNER ROTATING HERO */}
@@ -411,7 +413,7 @@ export function HomeExperience() {
           </a>
         </section>
       </main>
-      <SiteIntro onNavbarReveal={revealNavbar} />
+      <SiteIntro onNavbarReveal={revealNavbar} onComplete={completeIntro} />
     </div>
   );
 }

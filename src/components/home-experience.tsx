@@ -111,7 +111,9 @@ export function HomeExperience() {
 
   // Autoplay timer with pause on hover
   useEffect(() => {
-    if (shouldReduceMotion || isBannerPaused) return;
+    // Keep the live first banner steady through the opening overlay; the
+    // existing rotation starts unchanged as soon as the intro hands off.
+    if (introActive || shouldReduceMotion || isBannerPaused) return;
 
     const timer = setInterval(() => {
       setProgress((prev) => {
@@ -125,7 +127,7 @@ export function HomeExperience() {
     }, PROGRESS_TICK);
 
     return () => clearInterval(timer);
-  }, [isBannerPaused, shouldReduceMotion, nextBanner]);
+  }, [introActive, isBannerPaused, shouldReduceMotion, nextBanner]);
 
   // GSAP ScrollTrigger setup for category and product showcase sections below hero
   useLayoutEffect(() => {

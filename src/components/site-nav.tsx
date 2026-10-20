@@ -7,7 +7,6 @@ import { categories, products } from "@/data/catalog";
 
 interface SiteNavProps {
   detail?: boolean;
-  introReady?: boolean;
 }
 
 const subscribeScroll = (callback: () => void) => {
@@ -15,10 +14,10 @@ const subscribeScroll = (callback: () => void) => {
   return () => window.removeEventListener("scroll", callback);
 };
 
-const getScrollSnapshot = () => window.scrollY > 120;
+const getScrollSnapshot = () => window.scrollY > 80;
 const getServerSnapshot = () => false;
 
-export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
+export function SiteNav({ detail = false }: SiteNavProps) {
   const root = detail ? "/" : "";
   const isScrolled = useSyncExternalStore(
     subscribeScroll,
@@ -33,35 +32,29 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
   const shouldReduceMotion = useReducedMotion();
 
   const { scrollY } = useScroll();
-  const startScroll = 28;
-  const dockDistance = 142;
+  const startScroll = 15;
+  const dockDistance = 120;
 
   // Center brand docking animation
   const brandOpacity = useTransform(
     scrollY,
-    [startScroll, dockDistance],
+    [startScroll + 20, dockDistance],
     detail || shouldReduceMotion ? [1, 1] : [0, 1]
-  );
-
-  const brandScale = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [1, 1] : [0.94, 1]
   );
 
   const brandY = useTransform(
     scrollY,
-    [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [0, 0] : [6, 0]
+    [startScroll + 20, dockDistance],
+    detail || shouldReduceMotion ? [0, 0] : [4, 0]
   );
 
-  // Synchronized navbar shell styling across scroll range [28, 142]
+  // Synchronized navbar shell styling across scroll range [startScroll, dockDistance]
   const navBg = useTransform(
     scrollY,
     [startScroll, dockDistance],
     detail
       ? ["rgba(12, 18, 20, 0.82)", "rgba(12, 18, 20, 0.82)"]
-      : ["rgba(225, 232, 229, 0)", "rgba(225, 232, 229, 0.46)"]
+      : ["rgba(238, 242, 240, 0)", "rgba(238, 242, 240, 0.52)"]
   );
 
   const navBorderColor = useTransform(
@@ -69,7 +62,7 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
     [startScroll, dockDistance],
     detail
       ? ["rgba(255, 255, 255, 0.14)", "rgba(255, 255, 255, 0.14)"]
-      : ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.36)"]
+      : ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.42)"]
   );
 
   const navShadow = useTransform(
@@ -77,12 +70,12 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
     [startScroll, dockDistance],
     detail
       ? [
-          "0 20px 48px -12px rgba(0, 0, 0, 0.45)",
-          "0 20px 48px -12px rgba(0, 0, 0, 0.45)",
+          "0px 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08)",
+          "0px 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08)",
         ]
       : [
-          "0 0 0 rgba(10, 28, 30, 0)",
-          "0 18px 44px -12px rgba(10, 28, 30, 0.20)",
+          "0px 0px 0px 0px rgba(10, 28, 30, 0), inset 0px 0px 0px 0px rgba(255, 255, 255, 0)",
+          "0px 20px 48px -12px rgba(10, 28, 30, 0.18), inset 0px 1px 1px 0px rgba(255, 255, 255, 0.7)",
         ]
   );
 
@@ -96,6 +89,23 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
     scrollY,
     [startScroll, dockDistance],
     detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
+  );
+
+  // Floating button pill backing at top, transitioning cleanly inside formed navbar
+  const pillBg = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail
+      ? ["rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.06)"]
+      : ["rgba(255, 255, 255, 0.08)", "rgba(20, 34, 37, 0)"]
+  );
+
+  const pillBorder = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail
+      ? ["rgba(255, 255, 255, 0.14)", "rgba(255, 255, 255, 0.09)"]
+      : ["rgba(255, 255, 255, 0.14)", "rgba(20, 34, 37, 0)"]
   );
 
   // Close mobile menu when user scrolls
@@ -186,23 +196,75 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
         <div className="site-nav-grid">
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
-            <motion.nav
-              className="site-nav-desktop-links"
-              aria-label="Section links"
-              initial={false}
-              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
-              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <a href={`${root}#products`} className="nav-pill-btn">
+            <nav className="site-nav-desktop-links" aria-label="Section links">
+              <motion.a
+                href={`${root}#products`}
+                className="nav-pill-btn"
+                style={
+                  detail || shouldReduceMotion
+                    ? undefined
+                    : {
+                        backgroundColor: pillBg,
+                        borderColor: pillBorder,
+                        color: navTextColor,
+                      }
+                }
+              >
                 Products
-              </a>
-              <a href={`${root}#categories`} className="nav-pill-btn">
+              </motion.a>
+              <motion.span
+                className="nav-link-dot"
+                aria-hidden
+                style={
+                  detail || shouldReduceMotion
+                    ? undefined
+                    : { opacity: navGlassOpacity }
+                }
+              >
+                ·
+              </motion.span>
+              <motion.a
+                href={`${root}#categories`}
+                className="nav-pill-btn"
+                style={
+                  detail || shouldReduceMotion
+                    ? undefined
+                    : {
+                        backgroundColor: pillBg,
+                        borderColor: pillBorder,
+                        color: navTextColor,
+                      }
+                }
+              >
                 Categories
-              </a>
-              <a href={`${root}#visit`} className="nav-pill-btn">
+              </motion.a>
+              <motion.span
+                className="nav-link-dot"
+                aria-hidden
+                style={
+                  detail || shouldReduceMotion
+                    ? undefined
+                    : { opacity: navGlassOpacity }
+                }
+              >
+                ·
+              </motion.span>
+              <motion.a
+                href={`${root}#visit`}
+                className="nav-pill-btn"
+                style={
+                  detail || shouldReduceMotion
+                    ? undefined
+                    : {
+                        backgroundColor: pillBg,
+                        borderColor: pillBorder,
+                        color: navTextColor,
+                      }
+                }
+              >
                 Visit
-              </a>
-            </motion.nav>
+              </motion.a>
+            </nav>
 
             {/* Mobile menu toggle */}
             <motion.button
@@ -214,9 +276,15 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-nav-panel"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              initial={false}
-              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
-              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
+              style={
+                detail || shouldReduceMotion
+                  ? undefined
+                  : {
+                      backgroundColor: pillBg,
+                      borderColor: pillBorder,
+                      color: navTextColor,
+                    }
+              }
             >
               {mobileMenuOpen ? (
                 <svg
@@ -258,56 +326,27 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
           <div className="site-nav-center">
             <motion.div
               className="nav-brand-wrap"
-              style={
-                detail || shouldReduceMotion || introReady
-                  ? undefined
-                  : {
-                      opacity: brandOpacity,
-                      scale: brandScale,
-                      y: brandY,
-                      color: navTextColor,
-                      transformOrigin: "center center",
-                    }
-              }
+              style={{
+                opacity: detail || shouldReduceMotion ? 1 : brandOpacity,
+                y: detail || shouldReduceMotion ? 0 : brandY,
+                color: navTextColor,
+                pointerEvents: detail || isScrolled ? "auto" : "none",
+              }}
             >
-              <motion.div
-                className="nav-brand-entrance"
-                initial={
-                  shouldReduceMotion || introReady
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: 30,
-                        clipPath: "inset(0 0 100% 0)",
-                        letterSpacing: "0.02em",
-                      }
-                }
-                animate={{
-                  opacity: detail || introReady ? 1 : 0,
-                  y: detail || introReady ? 0 : 20,
-                  clipPath: detail || introReady ? "inset(0 0 0% 0)" : "inset(100% 0 0 0)",
-                  letterSpacing: "-0.01em",
-                }}
-                transition={{
-                  duration: shouldReduceMotion ? 0.001 : 0.95,
-                  delay: shouldReduceMotion ? 0 : introReady && !detail ? 0.13 : 0.12,
-                  ease: [0.22, 1, 0.36, 1],
+              <Link
+                href={detail ? "/" : "#hero-title"}
+                className="nav-brand"
+                aria-label="NS Home Appliances home"
+                tabIndex={detail || isScrolled ? 0 : -1}
+                onClick={(e) => {
+                  if (!detail) {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
                 }}
               >
-                <Link
-                  href={detail ? "/" : "#hero-title"}
-                  className="nav-brand"
-                  aria-label="NS Home Appliances home"
-                  onClick={(e) => {
-                    if (!detail) {
-                      e.preventDefault();
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                >
-                  NS Home Appliances
-                </Link>
-              </motion.div>
+                NS Home Appliances
+              </Link>
             </motion.div>
           </div>
 
@@ -318,9 +357,15 @@ export function SiteNav({ detail = false, introReady = true }: SiteNavProps) {
               className="nav-pill-btn nav-search-btn"
               aria-label="Search showroom collection"
               onClick={openSearch}
-              initial={false}
-              animate={detail || introReady ? { opacity: 1, y: 0, clipPath: "inset(0 0 0 0)" } : { opacity: 0, y: 10, clipPath: "inset(100% 0 0 0)" }}
-              transition={{ duration: shouldReduceMotion ? 0.001 : 0.42, delay: introReady && !detail ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
+              style={
+                detail || shouldReduceMotion
+                  ? undefined
+                  : {
+                      backgroundColor: pillBg,
+                      borderColor: pillBorder,
+                      color: navTextColor,
+                    }
+              }
             >
               <svg
                 className="nav-search-svg"

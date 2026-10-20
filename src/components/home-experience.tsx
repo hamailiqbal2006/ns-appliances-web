@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { useReducedMotion } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { HeroDistortion } from "@/components/hero-distortion";
-import { SiteIntro } from "@/components/site-intro";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,69 +16,45 @@ const css = (values: Record<string, string | number>) => values as React.CSSProp
 
 export interface HeroBannerSlide {
   id: string;
-  tabLabel: string;
-  titleLine1: string;
-  titleLine2: string;
-  isAccentItalic: boolean;
-  tagline: string;
+  className: string;
   palette: {
     primary: string;
     secondary: string;
     accent: string;
-    ambientClass: string;
   };
 }
 
 export const heroBanners: HeroBannerSlide[] = [
   {
     id: "brand",
-    tabLabel: "Showroom",
-    titleLine1: "NS Home",
-    titleLine2: "Appliances",
-    isAccentItalic: true,
-    tagline:
-      "Objects of quiet performance and architectural simplicity, thoughtfully curated for modern everyday living.",
+    className: "hero-ambient-slide-1",
     palette: {
       primary: "rgba(142, 178, 126, 0.32)",
       secondary: "rgba(68, 138, 125, 0.22)",
       accent: "rgba(225, 238, 200, 0.28)",
-      ambientClass: "hero-ambient-slide-1",
     },
   },
   {
     id: "climate",
-    tabLabel: "Climate",
-    titleLine1: "Atmospheric",
-    titleLine2: "Equilibrium",
-    isAccentItalic: true,
-    tagline:
-      "Aerodynamic stillness and instant thermal precision engineered to harmonize silently with contemporary interiors.",
+    className: "hero-ambient-slide-2",
     palette: {
       primary: "rgba(110, 185, 205, 0.30)",
       secondary: "rgba(42, 115, 130, 0.22)",
       accent: "rgba(195, 235, 245, 0.26)",
-      ambientClass: "hero-ambient-slide-2",
     },
   },
   {
     id: "utility",
-    tabLabel: "Utility",
-    titleLine1: "Everyday Craft",
-    titleLine2: "Precision Care",
-    isAccentItalic: false,
-    tagline:
-      "High-torque culinary extraction and fabric-protecting laundry care, engineered for generational endurance.",
+    className: "hero-ambient-slide-3",
     palette: {
       primary: "rgba(205, 165, 110, 0.28)",
       secondary: "rgba(125, 95, 60, 0.20)",
       accent: "rgba(245, 225, 185, 0.24)",
-      ambientClass: "hero-ambient-slide-3",
     },
   },
 ];
 
-const BANNER_DURATION = 5200; // 5.2 seconds per slide
-const PROGRESS_TICK = 50;
+const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
@@ -89,45 +64,19 @@ export function HomeExperience() {
   const [activeProduct, setActiveProduct] = useState(0);
   const shouldReduceMotion = useReducedMotion();
 
-  // 3-Banner Rotating Hero state
+  // Exactly 3 automatic rotating banners
   const [activeBanner, setActiveBanner] = useState(0);
-  const [isBannerPaused, setIsBannerPaused] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [navbarRevealed, setNavbarRevealed] = useState(false);
-  const [introActive, setIntroActive] = useState(true);
 
-  const selectBanner = useCallback((index: number) => {
-    setActiveBanner(index);
-    setProgress(0);
-  }, []);
-
-  const revealNavbar = useCallback(() => setNavbarRevealed(true), []);
-  const completeIntro = useCallback(() => setIntroActive(false), []);
-
-  const nextBanner = useCallback(() => {
-    setActiveBanner((curr) => (curr + 1) % heroBanners.length);
-    setProgress(0);
-  }, []);
-
-  // Autoplay timer with pause on hover
+  // Automatic continuous loop: Banner 1 -> Banner 2 -> Banner 3 -> Banner 1
   useEffect(() => {
-    // Keep the live first banner steady through the opening overlay; the
-    // existing rotation starts unchanged as soon as the intro hands off.
-    if (introActive || shouldReduceMotion || isBannerPaused) return;
+    if (shouldReduceMotion) return;
 
     const timer = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + (PROGRESS_TICK / BANNER_DURATION) * 100;
-        if (next >= 100) {
-          nextBanner();
-          return 0;
-        }
-        return next;
-      });
-    }, PROGRESS_TICK);
+      setActiveBanner((curr) => (curr + 1) % heroBanners.length);
+    }, BANNER_DURATION);
 
     return () => clearInterval(timer);
-  }, [introActive, isBannerPaused, shouldReduceMotion, nextBanner]);
+  }, [shouldReduceMotion]);
 
   // GSAP ScrollTrigger setup for category and product showcase sections below hero
   useLayoutEffect(() => {
@@ -162,113 +111,45 @@ export function HomeExperience() {
   const currentBanner = heroBanners[activeBanner];
 
   return (
-    <div className={`showroom${introActive ? " intro-active" : ""}`} ref={root}>
-      <SiteNav introReady={navbarRevealed} />
+    <div className="showroom" ref={root}>
+      <SiteNav />
       <main>
-        {/* REFINED 3-BANNER ROTATING HERO */}
+        {/* THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
         <section
           className="hero-track"
           aria-label="NS Home Appliances showroom introduction"
-          onMouseEnter={() => setIsBannerPaused(true)}
-          onMouseLeave={() => setIsBannerPaused(false)}
         >
           <div className="hero-stage">
-            {/* Atmospheric Background Layers */}
-            <div
-              className={`hero-ambient ${currentBanner.palette.ambientClass}`}
-              aria-hidden="true"
-            />
+            {/* Atmospheric Background Layers with smooth crossfade */}
+            <div className="hero-banners" aria-hidden="true">
+              {heroBanners.map((banner, index) => {
+                const isActive = activeBanner === index;
+                return (
+                  <div
+                    key={banner.id}
+                    className={`hero-ambient hero-banner-layer ${banner.className} ${isActive ? "is-active" : ""}`}
+                    style={{
+                      opacity: isActive ? 1 : 0,
+                      zIndex: isActive ? 2 : 1,
+                      transition: shouldReduceMotion
+                        ? "none"
+                        : "opacity 1600ms cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Subtle grain texture overlay */}
             <div className="hero-grain" aria-hidden="true" />
 
             {/* Interactive Liquid Cursor Distortion Engine (Banner only, desktop fine pointer) */}
             <HeroDistortion activePalette={currentBanner.palette} />
 
-            <span id="hero-title" className="sr-only">
-              NS Home Appliances Showroom
-            </span>
-
-            {/* Main Editorial Hero Slide Content */}
-            <div className="hero-editorial-stage">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentBanner.id}
-                  className="hero-slide-content"
-                  initial={
-                    shouldReduceMotion
-                      ? false
-                      : { opacity: 0, y: 16, filter: "blur(3px)" }
-                  }
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={
-                    shouldReduceMotion
-                      ? undefined
-                      : { opacity: 0, y: -16, filter: "blur(3px)" }
-                  }
-                  transition={{
-                    duration: shouldReduceMotion ? 0.001 : 0.62,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  {/* Grand Editorial Headline */}
-                  <h1 className="hero-banner-title">
-                    <span className="hero-title-line">
-                      {currentBanner.titleLine1}
-                    </span>
-                    <span
-                      className={`hero-title-line ${
-                        currentBanner.isAccentItalic ? "hero-title-accent" : ""
-                      }`}
-                    >
-                      {currentBanner.titleLine2}
-                    </span>
-                  </h1>
-
-                  {/* Refined Subtitle */}
-                  <p className="hero-banner-tagline">
-                    {currentBanner.tagline}
-                  </p>
-
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Bottom dock preserves access to the three-banner rotation. */}
-            <div className="hero-bottom-dock">
-              <div
-                className="hero-slider-dock"
-                role="tablist"
-                aria-label="Hero banner slides"
-              >
-                {heroBanners.map((banner, index) => {
-                  const isActive = activeBanner === index;
-                  return (
-                    <button
-                      key={banner.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-label={`Show ${banner.tabLabel} banner`}
-                      className={`hero-dock-tab ${isActive ? "is-active" : ""}`}
-                      onClick={() => selectBanner(index)}
-                    >
-                      <div className="hero-dock-tab-header">
-                        <span className="hero-dock-tab-title">{banner.tabLabel}</span>
-                      </div>
-                      <div className="hero-dock-progress-track">
-                        <div
-                          className="hero-dock-progress-bar"
-                          style={{
-                            width: isActive
-                              ? `${shouldReduceMotion ? 100 : progress}%`
-                              : "0%",
-                          }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Semantic heading for SEO / Screen Readers (No visual text clutter) */}
+            <h1 id="hero-title" className="sr-only">
+              NS Home Appliances — Digital Showroom
+            </h1>
           </div>
         </section>
 
@@ -415,7 +296,6 @@ export function HomeExperience() {
           </a>
         </section>
       </main>
-      <SiteIntro onNavbarReveal={revealNavbar} onComplete={completeIntro} />
     </div>
   );
 }

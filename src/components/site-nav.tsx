@@ -228,8 +228,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   }
                 }}
               >
-                <span className="brand-mark-accent">NS</span>
-                <span className="brand-mark-rest">Home Appliances</span>
+                NS Home Appliances
               </Link>
             </motion.div>
           </div>

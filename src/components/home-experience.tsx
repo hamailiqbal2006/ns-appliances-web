@@ -114,11 +114,12 @@ export function HomeExperience() {
     <div className="showroom" ref={root}>
       <SiteNav />
       <main>
-        {/* THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
-        <section
-          className="hero-track"
-          aria-label="NS Home Appliances showroom introduction"
-        >
+        <div className="hero-category-stack">
+          {/* THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
+          <section
+            className="hero-track"
+            aria-label="NS Home Appliances showroom introduction"
+          >
           <div className="hero-stage">
             {/* Atmospheric Background Layers with smooth crossfade */}
             <div className="hero-banners" aria-hidden="true">
@@ -151,22 +152,23 @@ export function HomeExperience() {
               NS Home Appliances — Digital Showroom
             </h1>
           </div>
-        </section>
+          </section>
 
-        {/* SHOP BY CATEGORY SECTION (UNTOUCHED) */}
-        <section className="category-intro cover-panel" aria-labelledby="category-intro-title">
-          <div className="intro-sticky">
-            <p className="eyebrow">01 / discover by room</p>
-            <h2 id="category-intro-title">
-              Shop by<br />
-              <em>Category</em>
-            </h2>
-            <p>Objects for a calmer, more capable home.</p>
-            <span className="intro-arrow" aria-hidden>
-              ↓
-            </span>
-          </div>
-        </section>
+          <section className="category-intro cover-panel" aria-labelledby="category-intro-title">
+            <div className="intro-sticky">
+              <p className="eyebrow">01 / discover by room</p>
+              <h2 id="category-intro-title">
+                Shop by<br />
+                Category
+              </h2>
+              <p className="intro-tagline">Explore appliances by the spaces they serve.</p>
+              <p className="intro-category-cue">Cooling / Laundry / Kitchen / Home</p>
+              <span className="intro-arrow" aria-hidden>
+                ↓
+              </span>
+            </div>
+          </section>
+        </div>
 
         <section
           id="categories"

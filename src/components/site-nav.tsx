@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { categories, products } from "@/data/catalog";
+import { searchCatalog } from "@/data/catalog-search";
 
 interface SiteNavProps {
   detail?: boolean;
@@ -28,7 +28,9 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
   const { scrollY } = useScroll();
@@ -56,6 +58,17 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"]
   );
 
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    window.setTimeout(() => searchTriggerRef.current?.focus(), 0);
+  };
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    setMobileMenuOpen(false);
+  };
+
   // Close mobile menu when user scrolls
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -64,12 +77,11 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [mobileMenuOpen]);
 
-  // Handle ESC key to close search or mobile menu
+  // Handle ESC key to close search or mobile menu.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setSearchOpen(false);
-        setSearchQuery("");
+        closeSearch();
         setMobileMenuOpen(false);
       }
     };
@@ -87,34 +99,26 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     }
   }, [searchOpen]);
 
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setSearchQuery("");
+  const searchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
+
+  const cleanQuery = searchQuery.trim();
+
+  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!searchResults.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index + 1) % searchResults.length);
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index - 1 + searchResults.length) % searchResults.length);
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const result = searchResults[activeResultIndex];
+      if (result) window.location.assign(result.href);
+    }
   };
-
-  const openSearch = () => {
-    setSearchOpen(true);
-    setMobileMenuOpen(false);
-  };
-
-  // Search filtering
-  const cleanQuery = searchQuery.trim().toLowerCase();
-  const filteredProducts = cleanQuery
-    ? products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(cleanQuery) ||
-          p.category.toLowerCase().includes(cleanQuery) ||
-          p.kind.toLowerCase().includes(cleanQuery)
-      )
-    : [];
-
-  const filteredCategories = cleanQuery
-    ? categories.filter(
-        (c) =>
-          c.name.toLowerCase().includes(cleanQuery) ||
-          c.subcategories.some((s) => s.name.toLowerCase().includes(cleanQuery))
-      )
-    : [];
 
   return (
     <>
@@ -234,6 +238,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             <button
               type="button"
               className="nav-text-link nav-search-btn"
+              ref={searchTriggerRef}
               aria-label="Search showroom collection"
               onClick={openSearch}
             >
@@ -346,10 +351,15 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   ref={searchInputRef}
                   type="search"
                   className="nav-search-input"
-                  placeholder="Search appliances, categories, models..."
+                  placeholder="Search fans, pankha, juicer, geyser…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setActiveResultIndex(0);
+                  }}
+                  onKeyDown={onSearchKeyDown}
                   aria-label="Search query"
+                  aria-activedescendant={searchResults[activeResultIndex] ? `search-result-${searchResults[activeResultIndex].id}` : undefined}
                 />
                 <button
                   type="button"
@@ -364,120 +374,35 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               {/* SEARCH RESULTS OR SUGGESTIONS */}
               <div className="nav-search-results">
                 {cleanQuery ? (
-                  <>
-                    {filteredProducts.length === 0 &&
-                    filteredCategories.length === 0 ? (
-                      <p className="nav-search-empty">
-                        No appliances found matching &ldquo;{searchQuery}&rdquo;.
-                      </p>
-                    ) : (
-                      <>
-                        {filteredProducts.length > 0 && (
-                          <div className="nav-search-section">
-                            <span className="nav-search-section-label">
-                              Products
-                            </span>
-                            <div className="nav-search-list">
-                              {filteredProducts.map((p) => (
-                                <Link
-                                  key={p.slug}
-                                  href={`/products/${p.slug}`}
-                                  className="nav-search-item"
-                                  onClick={closeSearch}
-                                >
-                                  <div>
-                                    <div className="nav-search-item-title">
-                                      {p.name}
-                                    </div>
-                                    <div className="nav-search-item-sub">
-                                      {p.category} · {p.kind}
-                                    </div>
-                                  </div>
-                                  <span className="nav-search-item-action">
-                                    View ↗
-                                  </span>
-                                </Link>
-                              ))}
-                            </div>
+                  searchResults.length ? (
+                    <div className="nav-search-list" role="listbox" aria-label="Search results">
+                      {searchResults.map((result, index) => (
+                        <Link
+                          key={result.id}
+                          id={`search-result-${result.id}`}
+                          href={result.href}
+                          className={`nav-search-item ${index === activeResultIndex ? "is-active" : ""}`}
+                          role="option"
+                          aria-selected={index === activeResultIndex}
+                          onMouseEnter={() => setActiveResultIndex(index)}
+                          onClick={closeSearch}
+                        >
+                          <div>
+                            <div className="nav-search-item-title">{result.title}</div>
+                            <div className="nav-search-item-sub">{result.detail}</div>
                           </div>
-                        )}
-
-                        {filteredCategories.length > 0 && (
-                          <div className="nav-search-section">
-                            <span className="nav-search-section-label">
-                              Categories
-                            </span>
-                            <div className="nav-search-list">
-                              {filteredCategories.map((c) => (
-                                <a
-                                  key={c.slug}
-                                  href={`${root}#categories`}
-                                  className="nav-search-item"
-                                  onClick={closeSearch}
-                                >
-                                  <div>
-                                    <div className="nav-search-item-title">
-                                      {c.name}
-                                    </div>
-                                    <div className="nav-search-item-sub">
-                                      {c.subcategories
-                                        .map((s) => s.name)
-                                        .join(", ")}
-                                    </div>
-                                  </div>
-                                  <span className="nav-search-item-action">
-                                    Explore ↓
-                                  </span>
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <div className="nav-search-quick">
-                    <span className="nav-search-section-label">
-                      Quick Explore
-                    </span>
-                    <div className="nav-search-chips">
-                      <a
-                        href={`${root}#categories`}
-                        className="nav-search-chip"
-                        onClick={closeSearch}
-                      >
-                        Cooling & Fans
-                      </a>
-                      <a
-                        href={`${root}#categories`}
-                        className="nav-search-chip"
-                        onClick={closeSearch}
-                      >
-                        Laundry Care
-                      </a>
-                      <a
-                        href={`${root}#categories`}
-                        className="nav-search-chip"
-                        onClick={closeSearch}
-                      >
-                        Kitchen & Everyday
-                      </a>
-                      <a
-                        href={`${root}#products`}
-                        className="nav-search-chip"
-                        onClick={closeSearch}
-                      >
-                        Showroom Highlights
-                      </a>
-                      <a
-                        href={`${root}#visit`}
-                        className="nav-search-chip"
-                        onClick={closeSearch}
-                      >
-                        Visit NS Store
-                      </a>
+                          <span className="nav-search-item-action">{result.type}</span>
+                        </Link>
+                      ))}
                     </div>
+                  ) : (
+                    <p className="nav-search-empty">No matching catalog result for &ldquo;{searchQuery}&rdquo;. Try a product name, category, or Roman Urdu term such as pankha or istri.</p>
+                  )
+                ) : (
+                  <div className="nav-search-help">
+                    <span className="nav-search-section-label">Search the catalog</span>
+                    <p>Use English, Roman Urdu, or a mix — for example: ceiling fan, kapray dhone wali machine, juicer, or almirah.</p>
+                    <span className="nav-search-keyboard">↑ ↓ to choose <span>·</span> Enter to open <span>·</span> Esc to close</span>
                   </div>
                 )}
               </div>

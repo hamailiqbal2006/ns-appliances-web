@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Geist, Instrument_Serif, Fraunces } from "next/font/google";
+import { Allura, Bodoni_Moda, Geist, Instrument_Serif, Fraunces } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -24,6 +24,12 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   display: "swap",
 });
+const allura = Allura({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-script",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "NS Home Appliances — Digital Showroom",
@@ -34,7 +40,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en"
-      className={`${geist.variable} ${bodoniModa.variable} ${instrumentSerif.variable} ${fraunces.variable}`}
+      data-scroll-behavior="smooth"
+      className={`${geist.variable} ${bodoniModa.variable} ${instrumentSerif.variable} ${fraunces.variable} ${allura.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>{children}</body>

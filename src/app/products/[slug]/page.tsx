@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { productBySlug, products } from "@/data/catalog";
 import { ProductStory } from "@/components/product-story";
 
+export const instant = false;
+
 export function generateStaticParams() { return products.map(({ slug }) => ({ slug })); }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {

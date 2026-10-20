@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { categories } from "@/data/catalog";
 
+export const instant = false;
+
 export function generateStaticParams() {
   return categories.flatMap((category) =>
     category.subcategories.map((subcategory) => ({ category: category.slug, subcategory: subcategory.slug })),

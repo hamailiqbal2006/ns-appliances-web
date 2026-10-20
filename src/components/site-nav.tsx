@@ -42,70 +42,18 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     detail || shouldReduceMotion ? [1, 1] : [0, 1]
   );
 
-  const brandY = useTransform(
-    scrollY,
-    [startScroll + 20, dockDistance],
-    detail || shouldReduceMotion ? [0, 0] : [4, 0]
-  );
-
-  // Synchronized navbar shell styling across scroll range [startScroll, dockDistance]
-  const navBg = useTransform(
+  // Translucent navbar shell appearance on scroll (isolated background layer)
+  const navShellOpacity = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail
-      ? ["rgba(12, 18, 20, 0.82)", "rgba(12, 18, 20, 0.82)"]
-      : ["rgba(238, 242, 240, 0)", "rgba(238, 242, 240, 0.52)"]
+    detail || shouldReduceMotion ? [1, 1] : [0, 1]
   );
 
-  const navBorderColor = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail
-      ? ["rgba(255, 255, 255, 0.14)", "rgba(255, 255, 255, 0.14)"]
-      : ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.42)"]
-  );
-
-  const navShadow = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail
-      ? [
-          "0px 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08)",
-          "0px 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08)",
-        ]
-      : [
-          "0px 0px 0px 0px rgba(10, 28, 30, 0), inset 0px 0px 0px 0px rgba(255, 255, 255, 0)",
-          "0px 20px 48px -12px rgba(10, 28, 30, 0.18), inset 0px 1px 1px 0px rgba(255, 255, 255, 0.7)",
-        ]
-  );
-
-  const navGlassOpacity = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail ? [1, 1] : [0, 1]
-  );
-
+  // Text color transition from white over dark hero banner to deep charcoal in formed navbar
   const navTextColor = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail ? ["#ffffff", "#ffffff"] : ["#f8f7f0", "#142225"]
-  );
-
-  // Floating button pill backing at top, transitioning cleanly inside formed navbar
-  const pillBg = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail
-      ? ["rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.06)"]
-      : ["rgba(255, 255, 255, 0.08)", "rgba(20, 34, 37, 0)"]
-  );
-
-  const pillBorder = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail
-      ? ["rgba(255, 255, 255, 0.14)", "rgba(255, 255, 255, 0.09)"]
-      : ["rgba(255, 255, 255, 0.14)", "rgba(20, 34, 37, 0)"]
+    detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"]
   );
 
   // Close mobile menu when user scrolls
@@ -170,126 +118,59 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
   return (
     <>
-      <motion.header
+      <header
         className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"} ${isScrolled ? "is-scrolled" : "is-top"}`}
         aria-label="Primary navigation"
-        style={
-          detail || shouldReduceMotion
-            ? undefined
-            : {
-                backgroundColor: navBg,
-                borderColor: navBorderColor,
-                boxShadow: navShadow,
-                color: navTextColor,
-              }
-        }
       >
+        {/* 1. SEPARATE TRANSLUCENT GLASS SHELL (Blur and glass styling strictly isolated here) */}
         <motion.div
-          className="site-nav-glass"
+          className="site-nav-shell"
           style={
             detail || shouldReduceMotion
               ? undefined
-              : { opacity: navGlassOpacity }
+              : { opacity: navShellOpacity }
           }
           aria-hidden
         />
-        <div className="site-nav-grid">
+
+        {/* 2. CRISP CONTENT LAYER (Vector text, zero blur, subpixel sharp, borderless) */}
+        <motion.div
+          className="site-nav-content"
+          style={
+            detail || shouldReduceMotion
+              ? undefined
+              : { color: navTextColor }
+          }
+        >
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
-            <nav className="site-nav-desktop-links" aria-label="Section links">
-              <motion.a
-                href={`${root}#products`}
-                className="nav-pill-btn"
-                style={
-                  detail || shouldReduceMotion
-                    ? undefined
-                    : {
-                        backgroundColor: pillBg,
-                        borderColor: pillBorder,
-                        color: navTextColor,
-                      }
-                }
-              >
+            <nav className="site-nav-links" aria-label="Section links">
+              <a href={`${root}#products`} className="nav-text-link">
                 Products
-              </motion.a>
-              <motion.span
-                className="nav-link-dot"
-                aria-hidden
-                style={
-                  detail || shouldReduceMotion
-                    ? undefined
-                    : { opacity: navGlassOpacity }
-                }
-              >
-                ·
-              </motion.span>
-              <motion.a
-                href={`${root}#categories`}
-                className="nav-pill-btn"
-                style={
-                  detail || shouldReduceMotion
-                    ? undefined
-                    : {
-                        backgroundColor: pillBg,
-                        borderColor: pillBorder,
-                        color: navTextColor,
-                      }
-                }
-              >
+              </a>
+              <a href={`${root}#categories`} className="nav-text-link">
                 Categories
-              </motion.a>
-              <motion.span
-                className="nav-link-dot"
-                aria-hidden
-                style={
-                  detail || shouldReduceMotion
-                    ? undefined
-                    : { opacity: navGlassOpacity }
-                }
-              >
-                ·
-              </motion.span>
-              <motion.a
-                href={`${root}#visit`}
-                className="nav-pill-btn"
-                style={
-                  detail || shouldReduceMotion
-                    ? undefined
-                    : {
-                        backgroundColor: pillBg,
-                        borderColor: pillBorder,
-                        color: navTextColor,
-                      }
-                }
-              >
+              </a>
+              <a href={`${root}#visit`} className="nav-text-link">
                 Visit
-              </motion.a>
+              </a>
             </nav>
 
             {/* Mobile menu toggle */}
-            <motion.button
+            <button
               type="button"
-              className="nav-pill-btn nav-mobile-menu-btn"
+              className="nav-text-link nav-mobile-btn"
               aria-label={
                 mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
               }
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-nav-panel"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              style={
-                detail || shouldReduceMotion
-                  ? undefined
-                  : {
-                      backgroundColor: pillBg,
-                      borderColor: pillBorder,
-                      color: navTextColor,
-                    }
-              }
             >
               {mobileMenuOpen ? (
                 <svg
-                  width="16"
-                  height="16"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -303,8 +184,8 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 </svg>
               ) : (
                 <svg
-                  width="16"
-                  height="16"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -318,24 +199,22 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   <line x1="4" y1="17" x2="20" y2="17" />
                 </svg>
               )}
-              <span className="nav-mobile-menu-text">Menu</span>
-            </motion.button>
+              <span className="nav-mobile-text">Menu</span>
+            </button>
           </div>
 
           {/* ZONE 2: CENTER TITLE */}
           <div className="site-nav-center">
             <motion.div
-              className="nav-brand-wrap"
+              className="site-nav-brand-wrap"
               style={{
                 opacity: detail || shouldReduceMotion ? 1 : brandOpacity,
-                y: detail || shouldReduceMotion ? 0 : brandY,
-                color: navTextColor,
                 pointerEvents: detail || isScrolled ? "auto" : "none",
               }}
             >
               <Link
                 href={detail ? "/" : "#hero-title"}
-                className="nav-brand"
+                className="site-nav-brand"
                 aria-label="NS Home Appliances home"
                 tabIndex={detail || isScrolled ? 0 : -1}
                 onClick={(e) => {
@@ -352,25 +231,16 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
           {/* ZONE 3: RIGHT GROUP */}
           <div className="site-nav-right">
-            <motion.button
+            <button
               type="button"
-              className="nav-pill-btn nav-search-btn"
+              className="nav-text-link nav-search-btn"
               aria-label="Search showroom collection"
               onClick={openSearch}
-              style={
-                detail || shouldReduceMotion
-                  ? undefined
-                  : {
-                      backgroundColor: pillBg,
-                      borderColor: pillBorder,
-                      color: navTextColor,
-                    }
-              }
             >
               <svg
                 className="nav-search-svg"
-                width="14"
-                height="14"
+                width="15"
+                height="15"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -383,9 +253,9 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <span className="nav-search-text">Search</span>
-            </motion.button>
+            </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* MOBILE DROPDOWN PANEL */}
         <AnimatePresence>
@@ -429,7 +299,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             </motion.nav>
           )}
         </AnimatePresence>
-      </motion.header>
+      </header>
 
       {/* SEARCH MODAL OVERLAY */}
       <AnimatePresence>

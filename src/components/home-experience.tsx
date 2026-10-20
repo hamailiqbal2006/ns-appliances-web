@@ -58,6 +58,8 @@ const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
+  const categoryCover = useRef<HTMLElement>(null);
+  const coverEditorialBody = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
@@ -78,10 +80,49 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
-  // GSAP ScrollTrigger setup for category and product showcase sections below hero
+  // The cover is a real sheet in normal document flow; this scrub only adds the
+  // restrained depth while it passes over the sticky hero, so reverse scrolling
+  // naturally retraces the same movement.
   useLayoutEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const context = gsap.context(() => {
+      if (categoryCover.current) {
+        const coverTimeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: categoryCover.current,
+            start: "top bottom",
+            end: "top top",
+            scrub: true,
+          },
+        });
+
+        coverTimeline.fromTo(
+          categoryCover.current,
+          {
+            rotateX: 5,
+            scale: 0.985,
+            transformPerspective: 1400,
+            transformOrigin: "50% 0%",
+          },
+          {
+            rotateX: 0,
+            scale: 1,
+            duration: 1,
+            ease: "none",
+          },
+          0,
+        );
+
+        if (coverEditorialBody.current) {
+          coverTimeline.fromTo(
+            coverEditorialBody.current,
+            { autoAlpha: 0, yPercent: 10 },
+            { autoAlpha: 1, yPercent: 0, duration: 0.7, ease: "none" },
+            0.3,
+          );
+        }
+      }
+
       const indexFrom = (p: number, size: number) =>
         Math.min(size - 1, Math.floor(p * size + 0.0001));
       if (categoryTrack.current)
@@ -156,10 +197,11 @@ export function HomeExperience() {
 
           <section
             className="category-intro cover-panel"
+            ref={categoryCover}
             aria-labelledby="category-intro-title"
           >
             <div className="intro-sticky">
-              <div className="cover-editorial-body">
+              <div className="cover-editorial-body" ref={coverEditorialBody}>
                 <h2 id="category-intro-title" className="category-cover-title">
                   <span className="cover-title-line">Shop by</span>
                   <span className="cover-title-line">Category</span>

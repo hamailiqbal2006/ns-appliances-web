@@ -165,20 +165,8 @@ export function HomeExperience() {
                   <span className="cover-title-line">Category</span>
                 </h2>
                 <p className="cover-supporting-note">
-                  Four dedicated collections engineered for modern domestic living.
+                  Everything your home needs. In one place.
                 </p>
-                <div className="cover-wayfinding" aria-hidden="true">
-                  <span>Cooling</span>
-                  <span className="cover-wayfinding-dot">·</span>
-                  <span>Laundry</span>
-                  <span className="cover-wayfinding-dot">·</span>
-                  <span>Kitchen</span>
-                  <span className="cover-wayfinding-dot">·</span>
-                  <span>Home</span>
-                </div>
-              </div>
-              <div className="cover-scroll-cue" aria-hidden="true">
-                <span className="cover-arrow">↓</span>
               </div>
             </div>
           </section>

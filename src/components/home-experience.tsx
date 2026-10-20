@@ -154,18 +154,32 @@ export function HomeExperience() {
           </div>
           </section>
 
-          <section className="category-intro cover-panel" aria-labelledby="category-intro-title">
+          <section
+            className="category-intro cover-panel"
+            aria-labelledby="category-intro-title"
+          >
             <div className="intro-sticky">
-              <p className="eyebrow">01 / discover by room</p>
-              <h2 id="category-intro-title">
-                Shop by<br />
-                Category
-              </h2>
-              <p className="intro-tagline">Explore appliances by the spaces they serve.</p>
-              <p className="intro-category-cue">Cooling / Laundry / Kitchen / Home</p>
-              <span className="intro-arrow" aria-hidden>
-                ↓
-              </span>
+              <div className="cover-editorial-body">
+                <h2 id="category-intro-title" className="category-cover-title">
+                  <span className="cover-title-line">Shop by</span>
+                  <span className="cover-title-line">Category</span>
+                </h2>
+                <p className="cover-supporting-note">
+                  Four dedicated collections engineered for modern domestic living.
+                </p>
+                <div className="cover-wayfinding" aria-hidden="true">
+                  <span>Cooling</span>
+                  <span className="cover-wayfinding-dot">·</span>
+                  <span>Laundry</span>
+                  <span className="cover-wayfinding-dot">·</span>
+                  <span>Kitchen</span>
+                  <span className="cover-wayfinding-dot">·</span>
+                  <span>Home</span>
+                </div>
+              </div>
+              <div className="cover-scroll-cue" aria-hidden="true">
+                <span className="cover-arrow">↓</span>
+              </div>
             </div>
           </section>
         </div>

@@ -228,7 +228,8 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   }
                 }}
               >
-                NS Home Appliances
+                <span className="brand-mark-accent">NS</span>
+                <span className="brand-mark-rest">Home Appliances</span>
               </Link>
             </motion.div>
           </div>
@@ -351,14 +352,14 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   ref={searchInputRef}
                   type="search"
                   className="nav-search-input"
-                  placeholder="Search fans, pankha, juicer, geyser…"
+                  placeholder="Search appliances..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setActiveResultIndex(0);
                   }}
                   onKeyDown={onSearchKeyDown}
-                  aria-label="Search query"
+                  aria-label="Search appliances"
                   aria-activedescendant={searchResults[activeResultIndex] ? `search-result-${searchResults[activeResultIndex].id}` : undefined}
                 />
                 <button
@@ -367,14 +368,27 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   onClick={closeSearch}
                   aria-label="Close search dialog"
                 >
-                  ESC
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
               </div>
 
-              {/* SEARCH RESULTS OR SUGGESTIONS */}
-              <div className="nav-search-results">
-                {cleanQuery ? (
-                  searchResults.length ? (
+              {/* SEARCH RESULTS (Displayed directly below input when user types) */}
+              {cleanQuery && (
+                <div className="nav-search-results">
+                  {searchResults.length > 0 ? (
                     <div className="nav-search-list" role="listbox" aria-label="Search results">
                       {searchResults.map((result, index) => (
                         <Link
@@ -387,25 +401,21 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                           onMouseEnter={() => setActiveResultIndex(index)}
                           onClick={closeSearch}
                         >
-                          <div>
+                          <div className="nav-search-item-info">
                             <div className="nav-search-item-title">{result.title}</div>
                             <div className="nav-search-item-sub">{result.detail}</div>
                           </div>
-                          <span className="nav-search-item-action">{result.type}</span>
+                          <span className="nav-search-item-arrow" aria-hidden="true">
+                            →
+                          </span>
                         </Link>
                       ))}
                     </div>
                   ) : (
-                    <p className="nav-search-empty">No matching catalog result for &ldquo;{searchQuery}&rdquo;. Try a product name, category, or Roman Urdu term such as pankha or istri.</p>
-                  )
-                ) : (
-                  <div className="nav-search-help">
-                    <span className="nav-search-section-label">Search the catalog</span>
-                    <p>Use English, Roman Urdu, or a mix — for example: ceiling fan, kapray dhone wali machine, juicer, or almirah.</p>
-                    <span className="nav-search-keyboard">↑ ↓ to choose <span>·</span> Enter to open <span>·</span> Esc to close</span>
-                  </div>
-                )}
-              </div>
+                    <p className="nav-search-empty">No matching products or categories</p>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

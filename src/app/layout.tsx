@@ -1,13 +1,26 @@
 import type { Metadata } from "next";
-import { Allura, Bodoni_Moda, Geist, Instrument_Serif, Fraunces } from "next/font/google";
+import { Bodoni_Moda, Geist, Instrument_Serif, Fraunces, Newsreader, Sora } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sora",
+  display: "swap",
+});
 const bodoniModa = Bodoni_Moda({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   style: ["normal", "italic"],
   variable: "--font-brand",
+  display: "swap",
+});
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: "500",
+  style: "italic",
+  variable: "--font-newsreader",
   display: "swap",
 });
 const instrumentSerif = Instrument_Serif({
@@ -24,12 +37,6 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   display: "swap",
 });
-const allura = Allura({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-script",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "NS Home Appliances — Digital Showroom",
@@ -41,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geist.variable} ${bodoniModa.variable} ${instrumentSerif.variable} ${fraunces.variable} ${allura.variable}`}
+      className={`${geist.variable} ${sora.variable} ${bodoniModa.variable} ${newsreader.variable} ${instrumentSerif.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>{children}</body>

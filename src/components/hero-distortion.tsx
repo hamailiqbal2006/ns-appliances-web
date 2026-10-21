@@ -8,6 +8,7 @@ interface HeroDistortionProps {
     secondary: string;
     accent: string;
   };
+  isActive?: boolean;
 }
 
 export function HeroDistortion({
@@ -16,6 +17,7 @@ export function HeroDistortion({
     secondary: "rgba(68, 138, 125, 0.22)",
     accent: "rgba(225, 238, 200, 0.18)",
   },
+  isActive = true,
 }: HeroDistortionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -24,7 +26,7 @@ export function HeroDistortion({
     if (typeof window === "undefined") return;
     const isFinePointer = window.matchMedia("(pointer: fine)").matches;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!isFinePointer || prefersReducedMotion) return;
+    if (!isFinePointer || prefersReducedMotion || !isActive) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -243,7 +245,7 @@ export function HeroDistortion({
         heroParent.removeEventListener("mouseleave", handleMouseLeave);
       }
     };
-  }, [activePalette]);
+  }, [activePalette, isActive]);
 
   return (
     <canvas

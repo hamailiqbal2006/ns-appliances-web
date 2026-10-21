@@ -68,6 +68,7 @@ export function HomeExperience() {
   const productTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
+  const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
   // Exactly 3 automatic rotating banners
@@ -84,61 +85,32 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
-  // GSAP ScrollTrigger owns the hero-to-cover transition:
-  // 1. Entrance: Cover enters from below (yPercent 100 -> 0) with restrained 3D perspective depth
-  // 2. Settle & Pin: Cover settles flat at scale 1, rotateX 0 and remains pinned for an intentional reading interval
-  // 3. Release: Further scrolling releases the cover and proceeds into Cooling
+  // Native sticky layout owns the full-viewport sheet movement. GSAP only
+  // synchronizes the small editorial elements inside it, keeping the cover
+  // attached directly to the user's scroll instead of smoothing a giant layer.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const context = gsap.context(() => {
       if (categoryCover.current && coverTransitionTrack.current) {
-        // Entrance: deterministic 1.0 viewport worth of scroll
-        // Settled hold: 0.45 viewport worth of scroll interval
-        // Total pinned distance: 1.45 viewports
-        const entranceDuration = 1.0;
-        const holdDuration = 0.45;
-        const totalDuration = entranceDuration + holdDuration;
+        let heroIsCovered = false;
+        const setHeroCovered = (covered: boolean) => {
+          if (heroIsCovered === covered) return;
+          heroIsCovered = covered;
+          setIsHeroInteractive(!covered);
+        };
 
         const coverTimeline = gsap.timeline({
           scrollTrigger: {
             trigger: coverTransitionTrack.current,
             start: "top top",
-            end: () => `+=${Math.round(window.innerHeight * totalDuration)}`,
-            pin: true,
-            scrub: 0.1,
-            anticipatePin: 1,
+            end: () => `+=${window.innerHeight}`,
+            scrub: true,
             invalidateOnRefresh: true,
+            onUpdate: ({ progress }) => setHeroCovered(progress > 0),
           },
         });
-
-        // Completely hide cover at scroll 0, unhiding immediately as scroll begins
-        coverTimeline.fromTo(
-          categoryCover.current,
-          { autoAlpha: 0 },
-          { autoAlpha: 1, duration: 0.02, ease: "none" },
-          0
-        );
-
-        // Primary GPU transform: translateY (yPercent 100 -> 0) with subtle depth scale
-        // Smooth, responsive, lightweight with static CSS edge shadow
-        coverTimeline.fromTo(
-          categoryCover.current,
-          {
-            yPercent: 100,
-            scale: 0.992,
-            transformOrigin: "50% 50%",
-          },
-          {
-            yPercent: 0,
-            scale: 1,
-            transformOrigin: "50% 50%",
-            duration: entranceDuration,
-            ease: "none",
-          },
-          0
-        );
 
         // Heading: begins slightly lower with reduced opacity, settles smoothly
         if (coverHeading.current) {
@@ -170,9 +142,6 @@ export function HomeExperience() {
           );
         }
 
-        // Pinned settling / reading interval: cover remains pinned full screen
-        // and completely stationary during further scroll before releasing to Cooling
-        coverTimeline.to({}, { duration: holdDuration }, entranceDuration);
       }
 
       const indexFrom = (p: number, size: number) =>
@@ -238,7 +207,10 @@ export function HomeExperience() {
             <div className="hero-grain" aria-hidden="true" />
 
             {/* Interactive Liquid Cursor Distortion Engine (Banner only, desktop fine pointer) */}
-            <HeroDistortion activePalette={currentBanner.palette} />
+            <HeroDistortion
+              activePalette={currentBanner.palette}
+              isActive={isHeroInteractive}
+            />
 
             {/* Semantic heading for SEO / Screen Readers (No visual text clutter) */}
             <h1 id="hero-title" className="sr-only">

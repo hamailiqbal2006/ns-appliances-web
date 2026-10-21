@@ -14,7 +14,7 @@ const subscribeScroll = (callback: () => void) => {
   return () => window.removeEventListener("scroll", callback);
 };
 
-const getScrollSnapshot = () => window.scrollY > 80;
+const getScrollSnapshot = () => window.scrollY > 40;
 const getServerSnapshot = () => false;
 
 export function SiteNav({ detail = false }: SiteNavProps) {

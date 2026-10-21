@@ -67,38 +67,39 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
 
-  // Translucent navbar shell: constant size, revealed cleanly via opacity and subtle scale
+  // Keep the shell invisible until the travelling controls have entered its safe inset.
+  // This prevents a visible glass boundary from cutting across the floating endpoint.
   const navShellOpacity = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
+    scrollProgress,
+    [0.62, 0.82],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const navShellScale = useTransform(
-    scrollY,
-    [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [1, 1] : [0.985, 1],
+    scrollProgress,
+    [0.62, 0.82],
+    detail || shouldReduceMotion ? [1, 1] : [0.995, 1],
     { clamp: true }
   );
 
-  // Centered brand timing: appears naturally via opacity and a subtle vertical translate
+  // The brand and ink transition start only after the glass has a stable visual foundation.
   const brandOpacity = useTransform(
-    scrollY,
-    [startScroll + 25, dockDistance],
+    scrollProgress,
+    [0.76, 0.9],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const brandY = useTransform(
-    scrollY,
-    [startScroll + 25, dockDistance],
+    scrollProgress,
+    [0.76, 0.9],
     detail || shouldReduceMotion ? [0, 0] : [6, 0],
     { clamp: true }
   );
 
   // Text color transition from white over dark hero banner to deep charcoal in formed navbar
   const navTextColor = useTransform(
-    scrollY,
-    [startScroll + 10, dockDistance - 15],
+    scrollProgress,
+    [0.74, 0.86],
     detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
     { clamp: true }
   );

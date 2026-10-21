@@ -61,6 +61,8 @@ export function HomeExperience() {
   const coverTransitionTrack = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
   const coverEditorialBody = useRef<HTMLDivElement>(null);
+  const coverHeading = useRef<HTMLHeadingElement>(null);
+  const coverTagline = useRef<HTMLParagraphElement>(null);
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
@@ -82,64 +84,115 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
-  // The hero stays pinned while this independent, normal-flow sheet rises over
-  // it. The scrubbed transforms deliberately add a visible page-layer depth and
-  // settle back to a flat cover at the end of the transition.
+  // GSAP ScrollTrigger owns the hero-to-cover transition:
+  // 1. Entrance: Cover enters from below (yPercent 100 -> 0) with restrained 3D perspective depth
+  // 2. Settle & Pin: Cover settles flat at scale 1, rotateX 0 and remains pinned for an intentional reading interval
+  // 3. Release: Further scrolling releases the cover and proceeds into Cooling
   useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const isFinePointer = window.matchMedia("(pointer: fine)").matches;
+
     const context = gsap.context(() => {
-      if (categoryCover.current) {
+      if (categoryCover.current && coverTransitionTrack.current) {
+        // Entrance: deterministic 1.0 viewport worth of scroll
+        // Settled hold: 0.5 viewport worth of scroll interval
+        // Total pinned distance: 1.5 viewports
+        const entranceDuration = 1.0;
+        const holdDuration = 0.5;
+        const totalDuration = entranceDuration + holdDuration;
+        const settledProgress = entranceDuration / totalDuration; // 2/3 ≈ 0.6667
+
         const coverTimeline = gsap.timeline({
           scrollTrigger: {
-            // The stack is exactly two viewports tall, which gives the cover a
-            // deterministic one-viewport rise without measuring its own active
-            // 3D transform as a ScrollTrigger boundary.
             trigger: coverTransitionTrack.current,
             start: "top top",
-            end: "bottom bottom",
-            scrub: true,
+            end: () => `+=${Math.round(window.innerHeight * totalDuration)}`,
+            pin: true,
+            scrub: 0.5,
+            anticipatePin: 1,
             invalidateOnRefresh: true,
+            snap: isFinePointer
+              ? {
+                  snapTo: (value: number) => {
+                    // Restrained snap: gently align to settled full-screen state
+                    // if user stops scrolling close to it, never trap or jump
+                    if (value >= 0.56 && value <= 0.78) {
+                      return settledProgress;
+                    }
+                    if (value <= 0.08) {
+                      return 0;
+                    }
+                    return value;
+                  },
+                  duration: { min: 0.16, max: 0.28 },
+                  delay: 0.1,
+                  ease: "power1.out",
+                  inertia: false,
+                }
+              : undefined,
           },
         });
 
+        // Cover entrance: 3D rise from viewport bottom (yPercent 100 -> 0)
+        // with restrained depth (rotateX 3.5 -> 0, scale 0.985 -> 1, top shadow)
         coverTimeline.fromTo(
           categoryCover.current,
           {
-            yPercent: 8,
-            rotateX: 9,
-            scale: 0.98,
-            transformPerspective: 1100,
-            transformOrigin: "50% 0%",
-            boxShadow: "0 -34px 88px rgba(0, 0, 0, 0.46), inset 0 1px rgba(255, 255, 255, 0.74)",
+            yPercent: 100,
+            rotateX: 3.5,
+            scale: 0.985,
+            transformPerspective: 1400,
+            transformOrigin: "50% 50%",
+            boxShadow:
+              "0 -32px 80px rgba(0, 0, 0, 0.36), 0 -8px 24px rgba(0, 0, 0, 0.18)",
           },
           {
             yPercent: 0,
             rotateX: 0,
             scale: 1,
-            boxShadow: "0 -14px 36px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.54)",
-            duration: 1,
+            transformPerspective: 1400,
+            transformOrigin: "50% 50%",
+            boxShadow: "0 0 0 rgba(0, 0, 0, 0)",
+            duration: entranceDuration,
             ease: "none",
           },
-          0,
+          0
         );
 
-        if (coverEditorialBody.current) {
+        // Heading: begins slightly lower with reduced opacity, settles before cover finishes
+        if (coverHeading.current) {
           coverTimeline.fromTo(
-            coverEditorialBody.current,
-            { autoAlpha: 0, yPercent: 24, scale: 0.96 },
-            { autoAlpha: 1, yPercent: 0, scale: 1, duration: 0.7, ease: "none" },
-            0.24,
+            coverHeading.current,
+            { autoAlpha: 0.15, y: 36 },
+            { autoAlpha: 1, y: 0, duration: 0.65, ease: "power2.out" },
+            0.18
           );
         }
 
+        // Tagline: follows with a restrained stagger, settles before cover finishes
+        if (coverTagline.current) {
+          coverTimeline.fromTo(
+            coverTagline.current,
+            { autoAlpha: 0, y: 24 },
+            { autoAlpha: 1, y: 0, duration: 0.55, ease: "power2.out" },
+            0.32
+          );
+        }
+
+        // Settle line: subtle expand, finishes before settled hold
         if (coverSettleLine.current) {
           coverTimeline.fromTo(
             coverSettleLine.current,
-            { autoAlpha: 0, scaleX: 0.15 },
-            { autoAlpha: 1, scaleX: 1, duration: 0.48, ease: "none" },
-            0.52,
+            { autoAlpha: 0, scaleX: 0.2 },
+            { autoAlpha: 1, scaleX: 1, duration: 0.45, ease: "power2.out" },
+            0.48
           );
         }
+
+        // Pinned settling / reading interval: cover remains pinned full screen
+        // and completely stationary during further scroll before releasing to Cooling
+        coverTimeline.to({}, { duration: holdDuration }, entranceDuration);
       }
 
       const indexFrom = (p: number, size: number) =>
@@ -221,10 +274,14 @@ export function HomeExperience() {
           >
             <div className="intro-sticky">
               <div className="cover-editorial-body" ref={coverEditorialBody}>
-                <h2 id="category-intro-title" className="category-cover-title">
+                <h2
+                  id="category-intro-title"
+                  className="category-cover-title"
+                  ref={coverHeading}
+                >
                   <span className="cover-title-line">Shop by category</span>
                 </h2>
-                <p className="cover-supporting-note">
+                <p className="cover-supporting-note" ref={coverTagline}>
                   Everything your home needs. In one place.
                 </p>
                 <div className="cover-settle-line" ref={coverSettleLine} aria-hidden="true" />

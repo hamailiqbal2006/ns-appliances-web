@@ -1,29 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "motion/react";
+import {
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useMotionValueEvent,
+} from "motion/react";
 import { searchCatalog } from "@/data/catalog-search";
 
 interface SiteNavProps {
   detail?: boolean;
 }
 
-const subscribeScroll = (callback: () => void) => {
-  window.addEventListener("scroll", callback, { passive: true });
-  return () => window.removeEventListener("scroll", callback);
-};
-
-const getScrollSnapshot = () => window.scrollY > 40;
-const getServerSnapshot = () => false;
-
 export function SiteNav({ detail = false }: SiteNavProps) {
   const root = detail ? "/" : "";
-  const isScrolled = useSyncExternalStore(
-    subscribeScroll,
-    getScrollSnapshot,
-    getServerSnapshot
-  );
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -31,32 +26,155 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const prodRef = useRef<HTMLAnchorElement>(null);
+  const catRef = useRef<HTMLAnchorElement>(null);
+  const visRef = useRef<HTMLAnchorElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
   const { scrollY } = useScroll();
   const startScroll = 15;
   const dockDistance = 120;
 
-  // Center brand docking animation
-  const brandOpacity = useTransform(
+  // Single deterministic continuous scroll progress from 0 (at 15px) to 1 (at 120px)
+  const scrollProgress = useTransform(
     scrollY,
-    [startScroll + 20, dockDistance],
-    detail || shouldReduceMotion ? [1, 1] : [0, 1]
+    [startScroll, dockDistance],
+    [0, 1],
+    { clamp: true }
   );
 
-  // Translucent navbar shell appearance on scroll (isolated background layer)
+  // Dynamic floating-to-formed deltas (measured on mount and resize, cached in MotionValues)
+  const deltaProd = useMotionValue(0);
+  const deltaCat = useMotionValue(0);
+  const deltaVis = useMotionValue(0);
+  const deltaSearch = useMotionValue(0);
+
+  // Smooth compositor-driven transforms (1:1 with scroll, no React re-render, no layout reflow)
+  const xProd = useTransform(
+    [scrollProgress, deltaProd],
+    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
+  );
+  const xCat = useTransform(
+    [scrollProgress, deltaCat],
+    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
+  );
+  const xVis = useTransform(
+    [scrollProgress, deltaVis],
+    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
+  );
+  const xSearch = useTransform(
+    [scrollProgress, deltaSearch],
+    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
+  );
+
+  // Translucent navbar shell: constant size, revealed cleanly via opacity and subtle scale
   const navShellOpacity = useTransform(
     scrollY,
     [startScroll, dockDistance],
-    detail || shouldReduceMotion ? [1, 1] : [0, 1]
+    detail || shouldReduceMotion ? [1, 1] : [0, 1],
+    { clamp: true }
+  );
+  const navShellScale = useTransform(
+    scrollY,
+    [startScroll, dockDistance],
+    detail || shouldReduceMotion ? [1, 1] : [0.985, 1],
+    { clamp: true }
+  );
+
+  // Centered brand timing: appears naturally via opacity and a subtle vertical translate
+  const brandOpacity = useTransform(
+    scrollY,
+    [startScroll + 25, dockDistance],
+    detail || shouldReduceMotion ? [1, 1] : [0, 1],
+    { clamp: true }
+  );
+  const brandY = useTransform(
+    scrollY,
+    [startScroll + 25, dockDistance],
+    detail || shouldReduceMotion ? [0, 0] : [6, 0],
+    { clamp: true }
   );
 
   // Text color transition from white over dark hero banner to deep charcoal in formed navbar
   const navTextColor = useTransform(
     scrollY,
-    [startScroll, dockDistance],
-    detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"]
+    [startScroll + 10, dockDistance - 15],
+    detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
+    { clamp: true }
   );
+
+  // Enable brand link interactivity only when visible (does not re-render during intermediate scrolling)
+  const [brandInteractive, setBrandInteractive] = useState(detail);
+  useMotionValueEvent(brandOpacity, "change", (latest) => {
+    if (detail) return;
+    const isInteractive = latest > 0.5;
+    setBrandInteractive((prev) => (prev !== isInteractive ? isInteractive : prev));
+  });
+
+  // Calculate target floating offsets relative to the formed navbar layout
+  useEffect(() => {
+    if (detail || typeof window === "undefined") return;
+
+    const updateDeltas = () => {
+      const vw = window.innerWidth;
+      // On mobile screens (<= 760px), mobile menu and search stay compact within the pill
+      if (vw <= 760) {
+        deltaProd.set(0);
+        deltaCat.set(0);
+        deltaVis.set(0);
+        deltaSearch.set(0);
+        return;
+      }
+
+      const isTablet = vw <= 1024;
+      const targetLeftEdge = vw * (isTablet ? 0.055 : 0.065);
+      const targetRightEdge = vw * (1 - (isTablet ? 0.07 : 0.075));
+      const floatingGap = isTablet
+        ? Math.min(55, Math.max(40, vw * 0.04))
+        : Math.min(75, Math.max(55, vw * 0.044));
+
+      const formedNavWidth = Math.min(1200, vw - 48);
+      const formedNavLeft = (vw - formedNavWidth) / 2;
+      const padding = Math.min(36, Math.max(24, vw * 0.026));
+      const formedGap = Math.min(38, Math.max(32, vw * 0.024));
+
+      const prodW = prodRef.current?.getBoundingClientRect().width || 74;
+      const catW = catRef.current?.getBoundingClientRect().width || 85;
+
+      const formedProdLeft = formedNavLeft + padding;
+      const formedCatLeft = formedProdLeft + prodW + formedGap;
+      const formedVisLeft = formedCatLeft + catW + formedGap;
+      const formedSearchRight = formedNavLeft + formedNavWidth - padding;
+
+      const floatProdLeft = targetLeftEdge;
+      const floatCatLeft = floatProdLeft + prodW + floatingGap;
+      const floatVisLeft = floatCatLeft + catW + floatingGap;
+      const floatSearchRight = targetRightEdge;
+
+      deltaProd.set(floatProdLeft - formedProdLeft);
+      deltaCat.set(floatCatLeft - formedCatLeft);
+      deltaVis.set(floatVisLeft - formedVisLeft);
+      deltaSearch.set(floatSearchRight - formedSearchRight);
+    };
+
+    updateDeltas();
+
+    let rAF = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rAF);
+      rAF = requestAnimationFrame(updateDeltas);
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(updateDeltas).catch(() => {});
+    }
+
+    return () => {
+      cancelAnimationFrame(rAF);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [detail, deltaProd, deltaCat, deltaVis, deltaSearch]);
 
   const closeSearch = () => {
     setSearchOpen(false);
@@ -123,16 +241,16 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   return (
     <>
       <header
-        className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"} ${isScrolled ? "is-scrolled" : "is-top"}`}
+        className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"}`}
         aria-label="Primary navigation"
       >
-        {/* 1. SEPARATE TRANSLUCENT GLASS SHELL (Blur and glass styling strictly isolated here) */}
+        {/* 1. SEPARATE TRANSLUCENT GLASS SHELL (Constant dimensions, revealed cleanly via opacity and subtle scale) */}
         <motion.div
           className="site-nav-shell"
           style={
             detail || shouldReduceMotion
               ? undefined
-              : { opacity: navShellOpacity }
+              : { opacity: navShellOpacity, scale: navShellScale }
           }
           aria-hidden
         />
@@ -149,15 +267,30 @@ export function SiteNav({ detail = false }: SiteNavProps) {
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
             <nav className="site-nav-links" aria-label="Section links">
-              <a href={`${root}#products`} className="nav-text-link">
+              <motion.a
+                ref={prodRef}
+                href={`${root}#products`}
+                className="nav-text-link"
+                style={{ x: xProd }}
+              >
                 Products
-              </a>
-              <a href={`${root}#categories`} className="nav-text-link">
+              </motion.a>
+              <motion.a
+                ref={catRef}
+                href={`${root}#categories`}
+                className="nav-text-link"
+                style={{ x: xCat }}
+              >
                 Categories
-              </a>
-              <a href={`${root}#visit`} className="nav-text-link">
+              </motion.a>
+              <motion.a
+                ref={visRef}
+                href={`${root}#visit`}
+                className="nav-text-link"
+                style={{ x: xVis }}
+              >
                 Visit
-              </a>
+              </motion.a>
             </nav>
 
             {/* Mobile menu toggle */}
@@ -213,14 +346,15 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               className="site-nav-brand-wrap"
               style={{
                 opacity: detail || shouldReduceMotion ? 1 : brandOpacity,
-                pointerEvents: detail || isScrolled ? "auto" : "none",
+                y: detail || shouldReduceMotion ? 0 : brandY,
+                pointerEvents: brandInteractive ? "auto" : "none",
               }}
             >
               <Link
                 href={detail ? "/" : "#hero-title"}
                 className="site-nav-brand"
                 aria-label="NS Home Appliances home"
-                tabIndex={detail || isScrolled ? 0 : -1}
+                tabIndex={brandInteractive ? 0 : -1}
                 onClick={(e) => {
                   if (!detail) {
                     e.preventDefault();
@@ -235,12 +369,13 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
           {/* ZONE 3: RIGHT GROUP */}
           <div className="site-nav-right">
-            <button
+            <motion.button
               type="button"
               className="nav-text-link nav-search-btn"
               ref={searchTriggerRef}
               aria-label="Search showroom collection"
               onClick={openSearch}
+              style={{ x: xSearch }}
             >
               <svg
                 className="nav-search-svg"
@@ -258,7 +393,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <span className="nav-search-text">Search</span>
-            </button>
+            </motion.button>
           </div>
         </motion.div>
 

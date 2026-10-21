@@ -7,7 +7,6 @@ import {
   AnimatePresence,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
   useMotionValue,
   useMotionValueEvent,
@@ -34,34 +33,17 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
   const { scrollY } = useScroll();
 
-  // Clamp raw scroll position to the transition active zone [0, 320]
-  // This prevents spring wind-up when scrolled deep into the page.
-  const clampedScrollY = useTransform(
-    scrollY,
-    [0, 320],
-    [0, 320],
-    { clamp: true }
-  );
-
-  // Single spring-smoothed scroll signal for all navbar elements
-  // Overdamped (zeta > 1.25), zero overshoot, zero bounce, Apple-smooth tracking.
-  const smoothScrollY = useSpring(clampedScrollY, {
-    stiffness: 165,
-    damping: 32,
-    mass: 0.9,
-    restDelta: 0.001,
-  });
-
   // Dynamic floating-to-formed deltas (measured on mount and resize, cached in MotionValues)
   const deltaProd = useMotionValue(0);
   const deltaCat = useMotionValue(0);
   const deltaVis = useMotionValue(0);
   const deltaSearch = useMotionValue(0);
 
-  // Stage 1 & 2: Navigation controls glide inward (20px -> 200px)
+  // Direct compositor-driven scroll progress (zero latency, zero trailing delay)
+  // Stage 1 & 2: Navigation controls glide inward (15px -> 150px)
   const buttonProgress = useTransform(
-    smoothScrollY,
-    [20, 200],
+    scrollY,
+    [15, 150],
     [0, 1],
     { clamp: true }
   );
@@ -83,38 +65,38 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
 
-  // Stage 3: Rounded glass navbar shell emerges ONLY once controls are safely within boundaries (125px -> 250px)
+  // Stage 3: Rounded glass navbar shell emerges ONLY once controls are safely within boundaries (90px -> 175px)
   const navShellOpacity = useTransform(
-    smoothScrollY,
-    [125, 250],
+    scrollY,
+    [90, 175],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const navShellScale = useTransform(
-    smoothScrollY,
-    [125, 250],
+    scrollY,
+    [90, 175],
     detail || shouldReduceMotion ? [1, 1] : [0.99, 1],
     { clamp: true }
   );
 
-  // Stage 4: Store brand fades in with subtle 5px upward entrance (170px -> 270px)
+  // Stage 4: Store brand fades in with subtle 5px upward entrance (125px -> 195px)
   const brandOpacity = useTransform(
-    smoothScrollY,
-    [170, 270],
+    scrollY,
+    [125, 195],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const brandY = useTransform(
-    smoothScrollY,
-    [170, 270],
+    scrollY,
+    [125, 195],
     detail || shouldReduceMotion ? [0, 0] : [5, 0],
     { clamp: true }
   );
 
-  // Stage 5: Text color transitions from white (over dark hero) to deep charcoal (over frosted glass) (140px -> 240px)
+  // Stage 5: Text color transitions from white (over dark hero) to deep charcoal (over frosted glass) (100px -> 175px)
   const navTextColor = useTransform(
-    smoothScrollY,
-    [140, 240],
+    scrollY,
+    [100, 175],
     detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
     { clamp: true }
   );

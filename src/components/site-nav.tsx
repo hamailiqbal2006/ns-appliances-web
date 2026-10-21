@@ -7,6 +7,7 @@ import {
   AnimatePresence,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
   useMotionValue,
   useMotionValueEvent,
@@ -32,16 +33,24 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const shouldReduceMotion = useReducedMotion();
 
   const { scrollY } = useScroll();
-  const startScroll = 15;
-  const dockDistance = 120;
 
-  // Single deterministic continuous scroll progress from 0 (at 15px) to 1 (at 120px)
-  const scrollProgress = useTransform(
+  // Clamp raw scroll position to the transition active zone [0, 320]
+  // This prevents spring wind-up when scrolled deep into the page.
+  const clampedScrollY = useTransform(
     scrollY,
-    [startScroll, dockDistance],
-    [0, 1],
+    [0, 320],
+    [0, 320],
     { clamp: true }
   );
+
+  // Single spring-smoothed scroll signal for all navbar elements
+  // Overdamped (zeta > 1.25), zero overshoot, zero bounce, Apple-smooth tracking.
+  const smoothScrollY = useSpring(clampedScrollY, {
+    stiffness: 165,
+    damping: 32,
+    mass: 0.9,
+    restDelta: 0.001,
+  });
 
   // Dynamic floating-to-formed deltas (measured on mount and resize, cached in MotionValues)
   const deltaProd = useMotionValue(0);
@@ -49,57 +58,63 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const deltaVis = useMotionValue(0);
   const deltaSearch = useMotionValue(0);
 
-  // Smooth compositor-driven transforms (1:1 with scroll, no React re-render, no layout reflow)
+  // Stage 1 & 2: Navigation controls glide inward (20px -> 200px)
+  const buttonProgress = useTransform(
+    smoothScrollY,
+    [20, 200],
+    [0, 1],
+    { clamp: true }
+  );
+
   const xProd = useTransform(
-    [scrollProgress, deltaProd],
+    [buttonProgress, deltaProd],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xCat = useTransform(
-    [scrollProgress, deltaCat],
+    [buttonProgress, deltaCat],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xVis = useTransform(
-    [scrollProgress, deltaVis],
+    [buttonProgress, deltaVis],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xSearch = useTransform(
-    [scrollProgress, deltaSearch],
+    [buttonProgress, deltaSearch],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
 
-  // Keep the shell invisible until the travelling controls have entered its safe inset.
-  // This prevents a visible glass boundary from cutting across the floating endpoint.
+  // Stage 3: Rounded glass navbar shell emerges ONLY once controls are safely within boundaries (125px -> 250px)
   const navShellOpacity = useTransform(
-    scrollProgress,
-    [0.62, 0.82],
+    smoothScrollY,
+    [125, 250],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const navShellScale = useTransform(
-    scrollProgress,
-    [0.62, 0.82],
-    detail || shouldReduceMotion ? [1, 1] : [0.995, 1],
+    smoothScrollY,
+    [125, 250],
+    detail || shouldReduceMotion ? [1, 1] : [0.99, 1],
     { clamp: true }
   );
 
-  // The brand and ink transition start only after the glass has a stable visual foundation.
+  // Stage 4: Store brand fades in with subtle 5px upward entrance (170px -> 270px)
   const brandOpacity = useTransform(
-    scrollProgress,
-    [0.76, 0.9],
+    smoothScrollY,
+    [170, 270],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const brandY = useTransform(
-    scrollProgress,
-    [0.76, 0.9],
-    detail || shouldReduceMotion ? [0, 0] : [6, 0],
+    smoothScrollY,
+    [170, 270],
+    detail || shouldReduceMotion ? [0, 0] : [5, 0],
     { clamp: true }
   );
 
-  // Text color transition from white over dark hero banner to deep charcoal in formed navbar
+  // Stage 5: Text color transitions from white (over dark hero) to deep charcoal (over frosted glass) (140px -> 240px)
   const navTextColor = useTransform(
-    scrollProgress,
-    [0.74, 0.86],
+    smoothScrollY,
+    [140, 240],
     detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
     { clamp: true }
   );

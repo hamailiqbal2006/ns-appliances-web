@@ -39,64 +39,84 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const deltaVis = useMotionValue(0);
   const deltaSearch = useMotionValue(0);
 
-  // Direct compositor-driven scroll progress (zero latency, zero trailing delay)
-  // Stage 1 & 2: Navigation controls glide inward (15px -> 150px)
-  const buttonProgress = useTransform(
+  // One direct scroll signal controls the entire morph. It intentionally has no
+  // spring: the old spring added visual latency on slow/reversed wheel input.
+  // Everything below is a cached transform of this single 12px -> 215px range.
+  const morphProgress = useTransform(
     scrollY,
-    [15, 150],
+    [12, 215],
     [0, 1],
     { clamp: true }
   );
 
+  // The controls arrive in a restrained cascade rather than all travelling at
+  // the same rate. The values are still strictly scroll-linked (not delayed).
+  const productProgress = useTransform(morphProgress, [0, 0.72], [0, 1], { clamp: true });
+  const categoryProgress = useTransform(morphProgress, [0.025, 0.78], [0, 1], { clamp: true });
+  const visitProgress = useTransform(morphProgress, [0.055, 0.84], [0, 1], { clamp: true });
+  const searchProgress = useTransform(morphProgress, [0, 0.76], [0, 1], { clamp: true });
+
   const xProd = useTransform(
-    [buttonProgress, deltaProd],
+    [productProgress, deltaProd],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xCat = useTransform(
-    [buttonProgress, deltaCat],
+    [categoryProgress, deltaCat],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xVis = useTransform(
-    [buttonProgress, deltaVis],
+    [visitProgress, deltaVis],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
   const xSearch = useTransform(
-    [buttonProgress, deltaSearch],
+    [searchProgress, deltaSearch],
     ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
   );
 
-  // Stage 3: Rounded glass navbar shell emerges ONLY once controls are safely within boundaries (90px -> 175px)
+  // A 1-2px vertical settle keeps the glide intentional without ever scaling text.
+  const yProd = useTransform(morphProgress, [0, 0.38, 0.76], [0, 1.4, 0], { clamp: true });
+  const yCat = useTransform(morphProgress, [0.025, 0.42, 0.8], [0, 1.1, 0], { clamp: true });
+  const yVis = useTransform(morphProgress, [0.055, 0.47, 0.84], [0, 0.8, 0], { clamp: true });
+  const ySearch = useTransform(morphProgress, [0, 0.4, 0.78], [0, 1.2, 0], { clamp: true });
+
+  // The ribbon appears only while the controls have already cleared the shell
+  // inset. The real shell always retains its final full geometry, so an opaque
+  // glass boundary can never cut through an outlying control.
+  const ribbonOpacity = useTransform(morphProgress, [0.38, 0.54, 0.74], [0, 0.72, 0], { clamp: true });
+  const ribbonScaleX = useTransform(morphProgress, [0.38, 0.74], [0.22, 1], { clamp: true });
   const navShellOpacity = useTransform(
-    scrollY,
-    [90, 175],
+    morphProgress,
+    [0.6, 0.9],
     detail || shouldReduceMotion ? [1, 1] : [0, 1],
     { clamp: true }
   );
   const navShellScale = useTransform(
-    scrollY,
-    [90, 175],
-    detail || shouldReduceMotion ? [1, 1] : [0.99, 1],
+    morphProgress,
+    [0.6, 0.9],
+    detail || shouldReduceMotion ? [1, 1] : [0.992, 1],
     { clamp: true }
   );
+  const shellSweepX = useTransform(morphProgress, [0.66, 0.96], ["-62%", "142%"], { clamp: true });
+  const shellSweepOpacity = useTransform(morphProgress, [0.62, 0.72, 0.96, 1], [0, 0.52, 0.16, 0], { clamp: true });
 
-  // Stage 4: Store brand fades in with subtle 5px upward entrance (125px -> 195px)
+  // The brand rises through a real overflow mask once the glass is established.
   const brandOpacity = useTransform(
-    scrollY,
-    [125, 195],
-    detail || shouldReduceMotion ? [1, 1] : [0, 1],
+    morphProgress,
+    [0.68, 0.82, 1],
+    detail || shouldReduceMotion ? [1, 1, 1] : [0, 0.9, 1],
     { clamp: true }
   );
   const brandY = useTransform(
-    scrollY,
-    [125, 195],
-    detail || shouldReduceMotion ? [0, 0] : [5, 0],
+    morphProgress,
+    [0.68, 0.82, 1],
+    detail || shouldReduceMotion ? [0, 0, 0] : [13, 2, 0],
     { clamp: true }
   );
 
-  // Stage 5: Text color transitions from white (over dark hero) to deep charcoal (over frosted glass) (100px -> 175px)
+  // Ink changes only while the full-width glass is visibly forming.
   const navTextColor = useTransform(
-    scrollY,
-    [100, 175],
+    morphProgress,
+    [0.62, 0.9],
     detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
     { clamp: true }
   );
@@ -242,7 +262,18 @@ export function SiteNav({ detail = false }: SiteNavProps) {
         className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"}`}
         aria-label="Primary navigation"
       >
-        {/* 1. SEPARATE TRANSLUCENT GLASS SHELL (Constant dimensions, revealed cleanly via opacity and subtle scale) */}
+        {/* The seam is a lightweight bridge between floating controls and glass. */}
+        <motion.div
+          className="site-nav-ribbon"
+          style={
+            detail || shouldReduceMotion
+              ? { opacity: 0 }
+              : { opacity: ribbonOpacity, scaleX: ribbonScaleX }
+          }
+          aria-hidden
+        />
+
+        {/* Constant-geometry glass shell: only opacity/transform are animated. */}
         <motion.div
           className="site-nav-shell"
           style={
@@ -251,7 +282,16 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               : { opacity: navShellOpacity, scale: navShellScale }
           }
           aria-hidden
-        />
+        >
+          <motion.span
+            className="site-nav-shell-sweep"
+            style={
+              detail || shouldReduceMotion
+                ? undefined
+                : { x: shellSweepX, opacity: shellSweepOpacity }
+            }
+          />
+        </motion.div>
 
         {/* 2. CRISP CONTENT LAYER (Vector text, zero blur, subpixel sharp, borderless) */}
         <motion.div
@@ -269,7 +309,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 ref={prodRef}
                 href={`${root}#products`}
                 className="nav-text-link"
-                style={{ x: xProd }}
+                style={{ x: xProd, y: yProd }}
               >
                 Products
               </motion.a>
@@ -277,7 +317,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 ref={catRef}
                 href={`${root}#categories`}
                 className="nav-text-link"
-                style={{ x: xCat }}
+                style={{ x: xCat, y: yCat }}
               >
                 Categories
               </motion.a>
@@ -285,7 +325,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 ref={visRef}
                 href={`${root}#visit`}
                 className="nav-text-link"
-                style={{ x: xVis }}
+                style={{ x: xVis, y: yVis }}
               >
                 Visit
               </motion.a>
@@ -348,20 +388,22 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 pointerEvents: brandInteractive ? "auto" : "none",
               }}
             >
-              <Link
-                href={detail ? "/" : "#hero-title"}
-                className="site-nav-brand"
-                aria-label="NS Home Appliances home"
-                tabIndex={brandInteractive ? 0 : -1}
-                onClick={(e) => {
-                  if (!detail) {
-                    e.preventDefault();
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }
-                }}
-              >
-                NS Home Appliances
-              </Link>
+              <span className="site-nav-brand-mask">
+                <Link
+                  href={detail ? "/" : "#hero-title"}
+                  className="site-nav-brand"
+                  aria-label="NS Home Appliances home"
+                  tabIndex={brandInteractive ? 0 : -1}
+                  onClick={(e) => {
+                    if (!detail) {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                >
+                  NS Home Appliances
+                </Link>
+              </span>
             </motion.div>
           </div>
 
@@ -373,7 +415,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               ref={searchTriggerRef}
               aria-label="Search showroom collection"
               onClick={openSearch}
-              style={{ x: xSearch }}
+              style={{ x: xSearch, y: ySearch }}
             >
               <svg
                 className="nav-search-svg"

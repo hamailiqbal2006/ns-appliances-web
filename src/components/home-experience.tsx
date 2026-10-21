@@ -58,8 +58,10 @@ const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
+  const coverTransitionTrack = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
   const coverEditorialBody = useRef<HTMLDivElement>(null);
+  const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
@@ -80,33 +82,41 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
-  // The cover is a real sheet in normal document flow; this scrub only adds the
-  // restrained depth while it passes over the sticky hero, so reverse scrolling
-  // naturally retraces the same movement.
+  // The hero stays pinned while this independent, normal-flow sheet rises over
+  // it. The scrubbed transforms deliberately add a visible page-layer depth and
+  // settle back to a flat cover at the end of the transition.
   useLayoutEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const context = gsap.context(() => {
       if (categoryCover.current) {
         const coverTimeline = gsap.timeline({
           scrollTrigger: {
-            trigger: categoryCover.current,
-            start: "top bottom",
-            end: "top top",
+            // The stack is exactly two viewports tall, which gives the cover a
+            // deterministic one-viewport rise without measuring its own active
+            // 3D transform as a ScrollTrigger boundary.
+            trigger: coverTransitionTrack.current,
+            start: "top top",
+            end: "bottom bottom",
             scrub: true,
+            invalidateOnRefresh: true,
           },
         });
 
         coverTimeline.fromTo(
           categoryCover.current,
           {
-            rotateX: 5,
-            scale: 0.985,
-            transformPerspective: 1400,
+            yPercent: 8,
+            rotateX: 9,
+            scale: 0.98,
+            transformPerspective: 1100,
             transformOrigin: "50% 0%",
+            boxShadow: "0 -34px 88px rgba(0, 0, 0, 0.46), inset 0 1px rgba(255, 255, 255, 0.74)",
           },
           {
+            yPercent: 0,
             rotateX: 0,
             scale: 1,
+            boxShadow: "0 -14px 36px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.54)",
             duration: 1,
             ease: "none",
           },
@@ -116,9 +126,18 @@ export function HomeExperience() {
         if (coverEditorialBody.current) {
           coverTimeline.fromTo(
             coverEditorialBody.current,
-            { autoAlpha: 0, yPercent: 10 },
-            { autoAlpha: 1, yPercent: 0, duration: 0.7, ease: "none" },
-            0.3,
+            { autoAlpha: 0, yPercent: 24, scale: 0.96 },
+            { autoAlpha: 1, yPercent: 0, scale: 1, duration: 0.7, ease: "none" },
+            0.24,
+          );
+        }
+
+        if (coverSettleLine.current) {
+          coverTimeline.fromTo(
+            coverSettleLine.current,
+            { autoAlpha: 0, scaleX: 0.15 },
+            { autoAlpha: 1, scaleX: 1, duration: 0.48, ease: "none" },
+            0.52,
           );
         }
       }
@@ -155,7 +174,7 @@ export function HomeExperience() {
     <div className="showroom" ref={root}>
       <SiteNav />
       <main>
-        <div className="hero-category-stack">
+        <div className="hero-category-stack" ref={coverTransitionTrack}>
           {/* THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
           <section
             className="hero-track"
@@ -203,12 +222,12 @@ export function HomeExperience() {
             <div className="intro-sticky">
               <div className="cover-editorial-body" ref={coverEditorialBody}>
                 <h2 id="category-intro-title" className="category-cover-title">
-                  <span className="cover-title-line">Shop by</span>
-                  <span className="cover-title-line">Category</span>
+                  <span className="cover-title-line">Shop by category</span>
                 </h2>
                 <p className="cover-supporting-note">
                   Everything your home needs. In one place.
                 </p>
+                <div className="cover-settle-line" ref={coverSettleLine} aria-hidden="true" />
               </div>
             </div>
           </section>

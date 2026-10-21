@@ -406,7 +406,7 @@ export function HomeExperience() {
               "--product-accent": product.palette.accent,
             })}
           >
-            <div className="product-visual">
+            <div key={`visual-${product.slug}`} className="product-visual product-state-enter">
               <Link href={`/products/${product.slug}`} aria-label={`View ${product.name}`}>
                 <Image
                   key={product.slug}
@@ -421,7 +421,7 @@ export function HomeExperience() {
                 />
               </Link>
             </div>
-            <div className="product-info">
+            <div key={`info-${product.slug}`} className="product-info product-state-enter">
               <p className="eyebrow">02 / product {String(activeProduct + 1).padStart(2, "0")}</p>
               <p className="product-kind">{product.kind}</p>
               <h2 id="products-heading">{product.name}</h2>

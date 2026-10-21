@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, Fragment } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
@@ -58,15 +58,13 @@ const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
-  const coverTransitionTrack = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
   const coverEditorialBody = useRef<HTMLDivElement>(null);
   const coverHeading = useRef<HTMLHeadingElement>(null);
+  const coverHeadingInteractive = useRef<HTMLSpanElement>(null);
   const coverTagline = useRef<HTMLParagraphElement>(null);
   const coverSettleLine = useRef<HTMLDivElement>(null);
-  const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
-  const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -85,15 +83,108 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
-  // Native sticky layout owns the full-viewport sheet movement. GSAP only
-  // synchronizes the small editorial elements inside it, keeping the cover
-  // attached directly to the user's scroll instead of smoothing a giant layer.
+  // Subtle cursor-responsive movement for the Shop by Category heading
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isFinePointer = window.matchMedia("(pointer: fine)").matches;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!isFinePointer || prefersReduced) return;
+
+    const coverEl = categoryCover.current;
+    const targetEl = coverHeadingInteractive.current;
+    if (!coverEl || !targetEl) return;
+
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let rafId: number | null = null;
+
+    const MAX_DISPLACEMENT = 10; // Subtly within the 8–12px specification
+    const DAMPING = 0.10; // Smooth, damped spring-like lerp
+
+    const animate = () => {
+      currentX += (targetX - currentX) * DAMPING;
+      currentY += (targetY - currentY) * DAMPING;
+
+      const diffX = targetX - currentX;
+      const diffY = targetY - currentY;
+
+      if (Math.abs(diffX) < 0.04 && Math.abs(diffY) < 0.04) {
+        currentX = targetX;
+        currentY = targetY;
+        targetEl.style.transform =
+          currentX === 0 && currentY === 0
+            ? ""
+            : `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0)`;
+        rafId = null;
+        return;
+      }
+
+      targetEl.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0)`;
+      rafId = requestAnimationFrame(animate);
+    };
+
+    const startAnimation = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(animate);
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      const rect = targetEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+
+      const radius = Math.max(window.innerWidth * 0.45, 450);
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < radius) {
+        const falloff = 1 - Math.pow(dist / radius, 1.5);
+        const moveX = (dx / (radius * 0.5)) * MAX_DISPLACEMENT * falloff;
+        const moveY = (dy / (radius * 0.5)) * MAX_DISPLACEMENT * falloff;
+
+        targetX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, moveX));
+        targetY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, moveY));
+      } else {
+        targetX = 0;
+        targetY = 0;
+      }
+
+      startAnimation();
+    };
+
+    const onPointerLeave = () => {
+      targetX = 0;
+      targetY = 0;
+      startAnimation();
+    };
+
+    coverEl.addEventListener("pointermove", onPointerMove, { passive: true });
+    coverEl.addEventListener("pointerleave", onPointerLeave, { passive: true });
+
+    return () => {
+      coverEl.removeEventListener("pointermove", onPointerMove);
+      coverEl.removeEventListener("pointerleave", onPointerLeave);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [shouldReduceMotion]);
+
+  // Synchronize cover editorial elements with page-over-page entrance scroll
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const context = gsap.context(() => {
-      if (categoryCover.current && coverTransitionTrack.current) {
+      if (categoryCover.current) {
+        // Initial seam prevention at scroll position 0
+        if (window.scrollY <= 5) {
+          categoryCover.current.style.visibility = "hidden";
+        }
+
         let heroIsCovered = false;
         const setHeroCovered = (covered: boolean) => {
           if (heroIsCovered === covered) return;
@@ -103,12 +194,17 @@ export function HomeExperience() {
 
         const coverTimeline = gsap.timeline({
           scrollTrigger: {
-            trigger: coverTransitionTrack.current,
-            start: "top top",
-            end: () => `+=${window.innerHeight}`,
+            trigger: categoryCover.current,
+            start: "top bottom",
+            end: "top top",
             scrub: true,
             invalidateOnRefresh: true,
-            onUpdate: ({ progress }) => setHeroCovered(progress > 0),
+            onUpdate: ({ progress }) => {
+              setHeroCovered(progress > 0.85);
+              if (categoryCover.current) {
+                categoryCover.current.style.visibility = progress <= 0 ? "hidden" : "visible";
+              }
+            },
           },
         });
 
@@ -141,21 +237,12 @@ export function HomeExperience() {
             0.42
           );
         }
-
       }
 
       const indexFrom = (p: number, size: number) =>
         Math.min(size - 1, Math.floor(p * size + 0.0001));
-      if (categoryTrack.current)
-        ScrollTrigger.create({
-          trigger: categoryTrack.current,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: ({ progress: p }) =>
-            setActiveCategory(indexFrom(p, categories.length)),
-        });
-      if (productTrack.current)
+
+      if (productTrack.current) {
         ScrollTrigger.create({
           trigger: productTrack.current,
           start: "top top",
@@ -164,26 +251,25 @@ export function HomeExperience() {
           onUpdate: ({ progress: p }) =>
             setActiveProduct(indexFrom(p, products.length)),
         });
+      }
     }, root);
+
     return () => context.revert();
   }, []);
 
-  const category = categories[activeCategory];
   const product = products[activeProduct];
   const currentBanner = heroBanners[activeBanner];
 
   return (
     <div className="showroom" ref={root}>
       <SiteNav />
-      <main>
-        <div className="hero-category-stack" ref={coverTransitionTrack}>
-          {/* THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
-          <section
-            className="hero-track"
-            aria-label="NS Home Appliances showroom introduction"
-          >
+      <main className="showroom-stack">
+        {/* LAYER 1: THREE AUTOMATIC FULL-SCREEN BANNERS (CLEAN, NO TEXT CLUTTER) */}
+        <section
+          className="hero-track"
+          aria-label="NS Home Appliances showroom introduction"
+        >
           <div className="hero-stage">
-            {/* Atmospheric Background Layers with smooth crossfade */}
             <div className="hero-banners" aria-hidden="true">
               {heroBanners.map((banner, index) => {
                 const isActive = activeBanner === index;
@@ -203,102 +289,107 @@ export function HomeExperience() {
               })}
             </div>
 
-            {/* Subtle grain texture overlay */}
             <div className="hero-grain" aria-hidden="true" />
 
-            {/* Interactive Liquid Cursor Distortion Engine (Banner only, desktop fine pointer) */}
             <HeroDistortion
               activePalette={currentBanner.palette}
               isActive={isHeroInteractive}
             />
 
-            {/* Semantic heading for SEO / Screen Readers (No visual text clutter) */}
             <h1 id="hero-title" className="sr-only">
               NS Home Appliances — Digital Showroom
             </h1>
           </div>
-          </section>
+        </section>
 
-          <section
-            className="category-intro cover-panel"
-            ref={categoryCover}
-            aria-labelledby="category-intro-title"
-          >
-            <div className="intro-sticky">
-              <div className="cover-editorial-body" ref={coverEditorialBody}>
-                <h2
-                  id="category-intro-title"
-                  className="category-cover-title"
-                  ref={coverHeading}
+        {/* LAYER 2: SHOP BY CATEGORY INTRODUCTION COVER */}
+        <section
+          className="category-intro cover-panel"
+          ref={categoryCover}
+          aria-labelledby="category-intro-title"
+        >
+          <div className="intro-sticky">
+            <div className="cover-editorial-body" ref={coverEditorialBody}>
+              <h2
+                id="category-intro-title"
+                className="category-cover-title"
+                ref={coverHeading}
+              >
+                <span
+                  className="cover-title-interactive-unit"
+                  ref={coverHeadingInteractive}
                 >
                   <span className="cover-title-line">Shop by category</span>
-                </h2>
-                <p className="cover-supporting-note" ref={coverTagline}>
-                  Everything your home needs. In one place.
-                </p>
-                <div className="cover-settle-line" ref={coverSettleLine} aria-hidden="true" />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <section
-          id="categories"
-          className="category-track cover-panel"
-          ref={categoryTrack}
-          aria-label="Shop by category"
-          style={{ height: `${categories.length * 105}svh` }}
-        >
-          <div
-            className="category-scene"
-            style={css({
-              "--scene-base": category.palette.base,
-              "--scene-panel": category.palette.panel,
-              "--scene-ink": category.palette.ink,
-            })}
-          >
-            <div className="category-left">
-              <p className="scene-number">0{activeCategory + 1} / 04</p>
-              <h2>{category.name}</h2>
-              <p className="category-signal">Scroll-led selection</p>
-            </div>
-            <div className="category-cutout">
-              <Image
-                key={category.slug}
-                src={category.image}
-                alt={`Temporary ${category.name} appliance cutout`}
-                fill
-                sizes="(max-width: 760px) 85vw, 46vw"
-                style={{
-                  objectFit: "contain",
-                  transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
-                }}
-              />
-            </div>
-            <div className="category-right">
-              <p className="eyebrow">Explore</p>
-              <ul>
-                {category.subcategories.map((sub, index) => (
-                  <li key={sub.slug}>
-                    <Link href={`/category/${category.slug}/${sub.slug}`}>
-                      <span>0{index + 1}</span>
-                      {sub.name}
-                      <b>↗</b>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
-            </div>
-            <div className="scene-dots" aria-hidden>
-              {categories.map((_, index) => (
-                <i key={index} className={index === activeCategory ? "active" : ""} />
-              ))}
+                </span>
+              </h2>
+              <p className="cover-supporting-note" ref={coverTagline}>
+                Everything your home needs. In one place.
+              </p>
+              <div className="cover-settle-line" ref={coverSettleLine} aria-hidden="true" />
             </div>
           </div>
         </section>
+        <div className="layer-spacer" aria-hidden="true" />
 
-        {/* PRODUCT SHOWCASE TRACK (UNTOUCHED) */}
+        {/* LAYERS 3 to 6: INDIVIDUAL FULL-SCREEN CATEGORY PAGES (COOLING, LAUNDRY, KITCHEN, HOME) */}
+        {categories.map((cat, idx) => (
+          <Fragment key={cat.slug}>
+            <section
+              id={idx === 0 ? "categories" : `category-${cat.slug}`}
+              className="category-sheet cover-panel"
+              style={css({
+                zIndex: 3 + idx,
+                "--scene-base": cat.palette.base,
+                "--scene-panel": cat.palette.panel,
+                "--scene-ink": cat.palette.ink,
+              })}
+              aria-label={cat.name}
+            >
+              <div className="category-scene category-scene-inner">
+                <div className="category-left">
+                  <p className="scene-number">0{idx + 1} / 04</p>
+                  <h2>{cat.name}</h2>
+                  <p className="category-signal">Scroll-led selection</p>
+                </div>
+                <div className="category-cutout">
+                  <Image
+                    src={cat.image}
+                    alt={`Temporary ${cat.name} appliance cutout`}
+                    fill
+                    sizes="(max-width: 760px) 85vw, 46vw"
+                    style={{
+                      objectFit: "contain",
+                      transform: `translate(${cat.art.x}%, ${cat.art.y}%) scale(${cat.art.scale}) rotate(${cat.art.rotation ?? 0}deg)`,
+                    }}
+                  />
+                </div>
+                <div className="category-right">
+                  <p className="eyebrow">Explore</p>
+                  <ul>
+                    {cat.subcategories.map((sub, sIdx) => (
+                      <li key={sub.slug}>
+                        <Link href={`/category/${cat.slug}/${sub.slug}`}>
+                          <span>0{sIdx + 1}</span>
+                          {sub.name}
+                          <b>↗</b>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
+                </div>
+                <div className="scene-dots" aria-hidden>
+                  {categories.map((_, dotIdx) => (
+                    <i key={dotIdx} className={dotIdx === idx ? "active" : ""} />
+                  ))}
+                </div>
+              </div>
+            </section>
+            <div className="layer-spacer" aria-hidden="true" />
+          </Fragment>
+        ))}
+
+        {/* LAYER 7: PRODUCT SHOWCASE TRACK */}
         <section
           id="products"
           className="products-track cover-panel"
@@ -354,7 +445,7 @@ export function HomeExperience() {
           </div>
         </section>
 
-        {/* VISIT PANEL (UNTOUCHED) */}
+        {/* LAYER 8: VISIT PANEL */}
         <section id="visit" className="visit-panel cover-panel">
           <p className="eyebrow">03 / next step</p>
           <h2>

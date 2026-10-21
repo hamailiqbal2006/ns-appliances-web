@@ -83,6 +83,31 @@ export function HomeExperience() {
     return () => clearInterval(timer);
   }, [shouldReduceMotion]);
 
+  // App Router hydration can occur after the browser's initial hash lookup.
+  // Re-apply only the Product anchor once the complete layered stack exists;
+  // category sheets intentionally manage their own sticky handoff positions.
+  useEffect(() => {
+    const scrollToHashTarget = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (id !== "products") return;
+
+      document.getElementById(id)?.scrollIntoView();
+    };
+
+    let frameId = 0;
+    if (window.location.hash) {
+      frameId = window.requestAnimationFrame(() => {
+        frameId = window.requestAnimationFrame(scrollToHashTarget);
+      });
+    }
+
+    window.addEventListener("hashchange", scrollToHashTarget);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("hashchange", scrollToHashTarget);
+    };
+  }, []);
+
   // Subtle cursor-responsive movement for the Shop by Category heading
   useEffect(() => {
     if (typeof window === "undefined") return;

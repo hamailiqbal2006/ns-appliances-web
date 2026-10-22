@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState, Fragment } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories, products } from "@/data/catalog";
@@ -64,7 +64,9 @@ export function HomeExperience() {
   const coverHeadingInteractive = useRef<HTMLSpanElement>(null);
   const coverTagline = useRef<HTMLParagraphElement>(null);
   const coverSettleLine = useRef<HTMLDivElement>(null);
+  const categoryTrack = useRef<HTMLElement>(null);
   const productTrack = useRef<HTMLElement>(null);
+  const [activeCategory, setActiveCategory] = useState(0);
   const [activeProduct, setActiveProduct] = useState(0);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -89,7 +91,7 @@ export function HomeExperience() {
   useEffect(() => {
     const scrollToHashTarget = () => {
       const id = decodeURIComponent(window.location.hash.slice(1));
-      if (id !== "products") return;
+      if (id !== "products" && id !== "categories") return;
 
       document.getElementById(id)?.scrollIntoView();
     };
@@ -267,14 +269,29 @@ export function HomeExperience() {
       const indexFrom = (p: number, size: number) =>
         Math.min(size - 1, Math.floor(p * size + 0.0001));
 
+      if (categoryTrack.current) {
+        ScrollTrigger.create({
+          trigger: categoryTrack.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: true,
+          onUpdate: ({ progress: p }) => {
+            const next = indexFrom(p, categories.length);
+            setActiveCategory((prev) => (prev !== next ? next : prev));
+          },
+        });
+      }
+
       if (productTrack.current) {
         ScrollTrigger.create({
           trigger: productTrack.current,
           start: "top top",
           end: "bottom bottom",
           scrub: true,
-          onUpdate: ({ progress: p }) =>
-            setActiveProduct(indexFrom(p, products.length)),
+          onUpdate: ({ progress: p }) => {
+            const next = indexFrom(p, products.length);
+            setActiveProduct((prev) => (prev !== next ? next : prev));
+          },
         });
       }
     }, root);
@@ -282,6 +299,7 @@ export function HomeExperience() {
     return () => context.revert();
   }, []);
 
+  const category = categories[activeCategory];
   const product = products[activeProduct];
   const currentBanner = heroBanners[activeBanner];
 
@@ -356,63 +374,67 @@ export function HomeExperience() {
         </section>
         <div className="layer-spacer" aria-hidden="true" />
 
-        {/* LAYERS 3 to 6: INDIVIDUAL FULL-SCREEN CATEGORY PAGES (COOLING, LAUNDRY, KITCHEN, HOME) */}
-        {categories.map((cat, idx) => (
-          <Fragment key={cat.slug}>
-            <section
-              id={idx === 0 ? "categories" : `category-${cat.slug}`}
-              className="category-sheet cover-panel"
-              style={css({
-                zIndex: 3 + idx,
-                "--scene-base": cat.palette.base,
-                "--scene-panel": cat.palette.panel,
-                "--scene-ink": cat.palette.ink,
-              })}
-              aria-label={cat.name}
-            >
-              <div className="category-scene category-scene-inner">
-                <div className="category-left">
-                  <p className="scene-number">0{idx + 1} / 04</p>
-                  <h2>{cat.name}</h2>
-                  <p className="category-signal">Scroll-led selection</p>
-                </div>
-                <div className="category-cutout">
-                  <Image
-                    src={cat.image}
-                    alt={`Temporary ${cat.name} appliance cutout`}
-                    fill
-                    sizes="(max-width: 760px) 85vw, 46vw"
-                    style={{
-                      objectFit: "contain",
-                      transform: `translate(${cat.art.x}%, ${cat.art.y}%) scale(${cat.art.scale}) rotate(${cat.art.rotation ?? 0}deg)`,
-                    }}
-                  />
-                </div>
-                <div className="category-right">
-                  <p className="eyebrow">Explore</p>
-                  <ul>
-                    {cat.subcategories.map((sub, sIdx) => (
-                      <li key={sub.slug}>
-                        <Link href={`/category/${cat.slug}/${sub.slug}`}>
-                          <span>0{sIdx + 1}</span>
-                          {sub.name}
-                          <b>↗</b>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
-                </div>
-                <div className="scene-dots" aria-hidden>
-                  {categories.map((_, dotIdx) => (
-                    <i key={dotIdx} className={dotIdx === idx ? "active" : ""} />
-                  ))}
-                </div>
+        {/* LAYER 3: STATIONARY CATEGORY SHOWCASE */}
+        <section
+          id="categories"
+          className="category-track cover-panel"
+          ref={categoryTrack}
+          aria-label="Shop by category"
+          style={{ height: `${categories.length * 105}svh` }}
+        >
+          <div
+            className="category-scene"
+            style={css({
+              "--scene-base": category.palette.base,
+              "--scene-panel": category.palette.panel,
+              "--scene-ink": category.palette.ink,
+            })}
+          >
+            <div className="category-left">
+              <div key={`cat-left-${category.slug}`} className="category-state-enter">
+                <p className="scene-number">0{activeCategory + 1} / 04</p>
+                <h2>{category.name}</h2>
+                <p className="category-signal">Scroll-led selection</p>
               </div>
-            </section>
-            <div className="layer-spacer" aria-hidden="true" />
-          </Fragment>
-        ))}
+            </div>
+            <div className="category-cutout">
+              <div key={`cat-cutout-${category.slug}`} className="category-cutout-stage category-state-enter">
+                <Image
+                  src={category.image}
+                  alt={`Temporary ${category.name} appliance cutout`}
+                  fill
+                  sizes="(max-width: 760px) 85vw, 46vw"
+                  style={{
+                    objectFit: "contain",
+                    transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="category-right">
+              <div key={`cat-right-${category.slug}`} className="category-state-enter">
+                <p className="eyebrow">Explore</p>
+                <ul>
+                  {category.subcategories.map((sub, sIdx) => (
+                    <li key={sub.slug}>
+                      <Link href={`/category/${category.slug}/${sub.slug}`}>
+                        <span>0{sIdx + 1}</span>
+                        {sub.name}
+                        <b>↗</b>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
+              </div>
+            </div>
+            <div className="scene-dots" aria-hidden>
+              {categories.map((_, dotIdx) => (
+                <i key={dotIdx} className={dotIdx === activeCategory ? "active" : ""} />
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* LAYER 7: PRODUCT SHOWCASE TRACK */}
         <section

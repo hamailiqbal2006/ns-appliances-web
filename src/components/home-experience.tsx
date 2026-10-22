@@ -73,12 +73,11 @@ export function HomeExperience() {
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
-  const visitCover = useRef<HTMLElement>(null);
+  const visitTrack = useRef<HTMLElement>(null);
+  const visitForeground = useRef<HTMLDivElement>(null);
   const visitHeading = useRef<HTMLHeadingElement>(null);
   const visitTagline = useRef<HTMLParagraphElement>(null);
   const visitSettleLine = useRef<HTMLDivElement>(null);
-  const visitActions = useRef<HTMLDivElement>(null);
-  const storefrontSection = useRef<HTMLElement>(null);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
   const currentYear = useSyncExternalStore(
@@ -107,7 +106,7 @@ export function HomeExperience() {
   useEffect(() => {
     const scrollToHashTarget = () => {
       const id = decodeURIComponent(window.location.hash.slice(1));
-      if (id !== "categories" && id !== "visit" && id !== "storefront") return;
+      if (id !== "categories" && id !== "visit") return;
 
       document.getElementById(id)?.scrollIntoView();
     };
@@ -298,70 +297,27 @@ export function HomeExperience() {
         });
       }
 
-      if (visitCover.current) {
+      if (visitTrack.current && visitHeading.current && visitTagline.current && visitSettleLine.current) {
         const visitTimeline = gsap.timeline({
           scrollTrigger: {
-            trigger: visitCover.current,
-            start: "top bottom",
-            end: "top top",
-            scrub: true,
+            trigger: visitTrack.current,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.12,
             invalidateOnRefresh: true,
           },
         });
 
-        if (visitHeading.current) {
-          visitTimeline.fromTo(
-            visitHeading.current,
-            { autoAlpha: 0.2, y: 30 },
-            { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" },
-            0.12
-          );
-        }
+        // STATE B: Only foreground text disappears smoothly, moving up slightly (~20px) and fading out
+        // Foreground text exits in the first portion of scroll, then holds empty background
+        visitTimeline
+          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.38, ease: "power2.inOut" }, 0.04)
+          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.36, ease: "power2.inOut" }, 0.08)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.30, ease: "power2.inOut" }, 0.11);
 
-        if (visitTagline.current) {
-          visitTimeline.fromTo(
-            visitTagline.current,
-            { autoAlpha: 0, y: 18 },
-            { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
-            0.26
-          );
+        if (visitForeground.current) {
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.42);
         }
-
-        if (visitSettleLine.current) {
-          visitTimeline.fromTo(
-            visitSettleLine.current,
-            { autoAlpha: 0, scaleX: 0.2 },
-            { autoAlpha: 1, scaleX: 1, duration: 0.4, ease: "power2.out" },
-            0.40
-          );
-        }
-
-        if (visitActions.current) {
-          visitTimeline.fromTo(
-            visitActions.current,
-            { autoAlpha: 0, y: 14 },
-            { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out" },
-            0.48
-          );
-        }
-      }
-
-      if (storefrontSection.current) {
-        gsap.fromTo(
-          storefrontSection.current,
-          { autoAlpha: 0.88, y: 22 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            duration: 0.7,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: storefrontSection.current,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
       }
     }, root);
 
@@ -504,117 +460,105 @@ export function HomeExperience() {
           </div>
         </section>
 
-        {/* LAYER 4: VISIT OUR STORE EDITORIAL COVER */}
+        {/* LAYER 4: VISIT OUR STORE CINEMATIC STAGE */}
         <section
           id="visit"
-          className="visit-cover cover-panel"
-          ref={visitCover}
+          className="visit-track cover-panel"
+          ref={visitTrack}
           aria-labelledby="visit-cover-title"
+          style={{ height: "230svh" }}
         >
-          <div className="visit-sticky">
-            <div className="visit-editorial-body">
-              <h2
-                id="visit-cover-title"
-                className="visit-cover-title"
-                ref={visitHeading}
-              >
-                <span className="visit-title-line">Visit our store</span>
-              </h2>
-              <p className="visit-supporting-note" ref={visitTagline}>
-                Experience the appliances in person. Find what fits your home.
-              </p>
-              <div className="visit-settle-line" ref={visitSettleLine} aria-hidden="true" />
-              <div className="visit-actions" ref={visitActions}>
-                <a href="#storefront" className="visit-primary-btn">
-                  Explore Our Store <span>↗</span>
-                </a>
-              </div>
+          <div className="visit-stage">
+            {/* Atmospheric Background Layer — Stationary throughout entire track */}
+            <div className="visit-bg" aria-hidden="true">
+              {HAS_STOREFRONT_IMAGE ? (
+                <Image
+                  src={STOREFRONT_IMAGE_PATH}
+                  alt="NS Home Appliances Storefront Exterior"
+                  fill
+                  sizes="100vw"
+                  style={{ objectFit: "cover" }}
+                  priority={false}
+                />
+              ) : (
+                <div className="visit-atmospheric-viewport">
+                  <div className="visit-ambient-base" />
+                  <div className="visit-ambient-glow" />
+                  <div className="visit-ambient-horizon" />
+                  <div className="visit-grain" />
+                </div>
+              )}
+              <div className="visit-scrim" />
             </div>
-          </div>
-        </section>
-        <div className="layer-spacer" aria-hidden="true" />
 
-        {/* LAYER 5: STOREFRONT VISUAL SECTION */}
-        <section
-          id="storefront"
-          className="storefront-section cover-panel"
-          ref={storefrontSection}
-          aria-labelledby="storefront-heading"
-        >
-          <div className="storefront-container">
-            <header className="storefront-header">
-              <h2 id="storefront-heading" className="storefront-title">Our Store</h2>
-              <p className="storefront-desc">
-                Explore NS Home Appliances in person.
-              </p>
-            </header>
-
-            <div className="storefront-frame">
-              {/* Architecture ready for future exterior photograph at /images/storefront.jpg */}
-              <div className="storefront-canvas" role="img" aria-label="NS Home Appliances Storefront">
-                {HAS_STOREFRONT_IMAGE ? (
-                  <Image
-                    src={STOREFRONT_IMAGE_PATH}
-                    alt="NS Home Appliances Storefront Exterior"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 1360px"
-                    style={{ objectFit: "cover" }}
-                    priority={false}
-                  />
-                ) : (
-                  <div className="storefront-atmospheric-viewport">
-                    <div className="storefront-ambient-deep" />
-                    <div className="storefront-ambient-glow" />
-                    <div className="storefront-ambient-horizon" />
-                  </div>
-                )}
+            {/* Foreground Content Layer — Exits on scroll while background stays stationary */}
+            <div className="visit-foreground" ref={visitForeground}>
+              <div className="visit-editorial-body">
+                <h2
+                  id="visit-cover-title"
+                  className="visit-cover-title"
+                  ref={visitHeading}
+                >
+                  <span className="visit-title-line">Visit our store</span>
+                </h2>
+                <p className="visit-supporting-note" ref={visitTagline}>
+                  Experience the appliances in person. Find what fits your home.
+                </p>
+                <div className="visit-settle-line" ref={visitSettleLine} aria-hidden="true" />
               </div>
             </div>
           </div>
         </section>
 
-        {/* LAYER 6: FINAL REFINED FOOTER */}
+        {/* LAYER 5: FULL-SCREEN CINEMATIC FOOTER */}
         <footer className="site-footer cover-panel" role="contentinfo">
-          <div className="footer-container">
-            <div className="footer-main">
-              {/* Confident Brand Presentation */}
-              <div className="footer-brand">
-                <span className="footer-brand-title">NS Home Appliances</span>
-                <p className="footer-brand-tagline">Comfort made better.</p>
-              </div>
-
-              {/* Clean Working Navigation */}
-              <nav className="footer-nav" aria-label="Footer navigation">
-                <ul className="footer-links">
-                  <li>
-                    <Link href="/" className="footer-link">
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <a href="#categories" className="footer-link">
-                      Categories
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#categories" className="footer-link">
-                      Products
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#visit" className="footer-link">
-                      Visit Our Store
-                    </a>
-                  </li>
-                </ul>
-              </nav>
+          <div className="footer-full-container">
+            {/* Upper Region: Final Brand Statement */}
+            <div className="footer-hero-brand-wrap">
+              <span className="footer-hero-label">Comfort made better.</span>
+              <h2 className="footer-hero-title">NS Home Appliances</h2>
             </div>
 
-            <div className="footer-bottom">
-              <p className="footer-copyright">
+            {/* Middle Region: Editorial Navigation */}
+            <nav className="footer-full-nav" aria-label="Footer navigation">
+              <ul className="footer-full-links">
+                <li>
+                  <Link href="/" className="footer-full-link">
+                    <span>01</span>
+                    <b>Home</b>
+                    <i>↗</i>
+                  </Link>
+                </li>
+                <li>
+                  <a href="#categories" className="footer-full-link">
+                    <span>02</span>
+                    <b>Categories</b>
+                    <i>↗</i>
+                  </a>
+                </li>
+                <li>
+                  <a href="#categories" className="footer-full-link">
+                    <span>03</span>
+                    <b>Products</b>
+                    <i>↗</i>
+                  </a>
+                </li>
+                <li>
+                  <a href="#visit" className="footer-full-link">
+                    <span>04</span>
+                    <b>Visit Our Store</b>
+                    <i>↗</i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
+            {/* Bottom Region: Dynamic Copyright & Back to Top */}
+            <div className="footer-full-bottom">
+              <p className="footer-full-copyright">
                 &copy; {currentYear} NS Home Appliances. All rights reserved.
               </p>
-              <a href="#hero-title" className="footer-back-top">
+              <a href="#hero-title" className="footer-full-back-top">
                 Back to top <span>↑</span>
               </a>
             </div>

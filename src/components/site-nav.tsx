@@ -190,40 +190,47 @@ export function SiteNav({ detail = false }: SiteNavProps) {
       const geom = calculateDeltas();
 
       // State A baseline initialization
-      gsap.set(prodRef.current, { x: geom.deltaProd, y: 0 });
-      gsap.set(catRef.current, { x: geom.deltaCat, y: 0 });
-      gsap.set(visRef.current, { x: geom.deltaVis, y: 0 });
-      gsap.set(searchTriggerRef.current, { x: geom.deltaSearch, y: 0 });
+      gsap.set(prodRef.current, { x: geom.deltaProd, y: 0, force3D: true });
+      gsap.set(catRef.current, { x: geom.deltaCat, y: 0, force3D: true });
+      gsap.set(visRef.current, { x: geom.deltaVis, y: 0, force3D: true });
+      gsap.set(searchTriggerRef.current, { x: geom.deltaSearch, y: 0, force3D: true });
       gsap.set(shellRef.current, {
         opacity: 0,
         scaleX: geom.initialScaleX,
         x: geom.initialTranslateX,
         transformOrigin: "center center",
+        force3D: true,
       });
-      gsap.set(sweepRef.current, { xPercent: -100, opacity: 0 });
-      gsap.set(brandLinkRef.current, { autoAlpha: 0, y: 34 });
+      gsap.set(sweepRef.current, { xPercent: -100, opacity: 0, force3D: true });
+      gsap.set(brandLinkRef.current, { autoAlpha: 0, y: 34, force3D: true });
       if (brandWrapRef.current) {
         brandWrapRef.current.style.pointerEvents = "none";
       }
       if (brandLinkRef.current) brandLinkRef.current.tabIndex = -1;
       gsap.set(contentRef.current, { color: "#ffffff" });
 
+      let lastSettled = false;
+
       // Create unified scrubbed timeline: 0px -> 190px transformation distance
+      // scrub: 0.12 eliminates discrete mouse-wheel stepping while feeling instantaneous
       timeline = gsap.timeline({
-        defaults: { ease: "none" },
+        defaults: { ease: "none", force3D: true },
         scrollTrigger: {
           id: "site-nav-transformation",
           start: 0,
           end: 190,
-          scrub: true,
+          scrub: 0.12,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             const isSettled = self.progress >= 0.70;
-            if (brandWrapRef.current) {
-              brandWrapRef.current.style.pointerEvents = isSettled ? "auto" : "none";
-            }
-            if (brandLinkRef.current) {
-              brandLinkRef.current.tabIndex = isSettled ? 0 : -1;
+            if (isSettled !== lastSettled) {
+              lastSettled = isSettled;
+              if (brandWrapRef.current) {
+                brandWrapRef.current.style.pointerEvents = isSettled ? "auto" : "none";
+              }
+              if (brandLinkRef.current) {
+                brandLinkRef.current.tabIndex = isSettled ? 0 : -1;
+              }
             }
           },
         },

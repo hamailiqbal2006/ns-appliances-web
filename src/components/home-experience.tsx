@@ -74,11 +74,11 @@ export function HomeExperience() {
   const categoryTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
   const visitCover = useRef<HTMLElement>(null);
-  const visitEyebrow = useRef<HTMLParagraphElement>(null);
   const visitHeading = useRef<HTMLHeadingElement>(null);
   const visitTagline = useRef<HTMLParagraphElement>(null);
   const visitSettleLine = useRef<HTMLDivElement>(null);
   const visitActions = useRef<HTMLDivElement>(null);
+  const storefrontSection = useRef<HTMLElement>(null);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
   const currentYear = useSyncExternalStore(
@@ -309,21 +309,12 @@ export function HomeExperience() {
           },
         });
 
-        if (visitEyebrow.current) {
-          visitTimeline.fromTo(
-            visitEyebrow.current,
-            { autoAlpha: 0.1, y: 16 },
-            { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
-            0.08
-          );
-        }
-
         if (visitHeading.current) {
           visitTimeline.fromTo(
             visitHeading.current,
             { autoAlpha: 0.2, y: 30 },
             { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" },
-            0.15
+            0.12
           );
         }
 
@@ -332,7 +323,7 @@ export function HomeExperience() {
             visitTagline.current,
             { autoAlpha: 0, y: 18 },
             { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
-            0.28
+            0.26
           );
         }
 
@@ -341,7 +332,7 @@ export function HomeExperience() {
             visitSettleLine.current,
             { autoAlpha: 0, scaleX: 0.2 },
             { autoAlpha: 1, scaleX: 1, duration: 0.4, ease: "power2.out" },
-            0.42
+            0.40
           );
         }
 
@@ -350,9 +341,27 @@ export function HomeExperience() {
             visitActions.current,
             { autoAlpha: 0, y: 14 },
             { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out" },
-            0.50
+            0.48
           );
         }
+      }
+
+      if (storefrontSection.current) {
+        gsap.fromTo(
+          storefrontSection.current,
+          { autoAlpha: 0.88, y: 22 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.7,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: storefrontSection.current,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
       }
     }, root);
 
@@ -504,7 +513,6 @@ export function HomeExperience() {
         >
           <div className="visit-sticky">
             <div className="visit-editorial-body">
-              <p className="visit-eyebrow" ref={visitEyebrow}>02 / In Person</p>
               <h2
                 id="visit-cover-title"
                 className="visit-cover-title"
@@ -530,61 +538,53 @@ export function HomeExperience() {
         <section
           id="storefront"
           className="storefront-section cover-panel"
+          ref={storefrontSection}
           aria-labelledby="storefront-heading"
         >
           <div className="storefront-container">
-            <header className="storefront-editorial">
-              <p className="eyebrow">Our Showroom</p>
-              <h2 id="storefront-heading" className="storefront-heading">See Us in Person.</h2>
-              <p className="storefront-note">
-                Explore our appliance collection and find the right options for your home.
+            <header className="storefront-header">
+              <h2 id="storefront-heading" className="storefront-title">Our Store</h2>
+              <p className="storefront-desc">
+                Explore NS Home Appliances in person.
               </p>
             </header>
 
             <div className="storefront-frame">
               {/* Architecture ready for future exterior photograph at /images/storefront.jpg */}
-              <div className="storefront-canvas" role="img" aria-label="NS Home Appliances Showroom Exterior">
+              <div className="storefront-canvas" role="img" aria-label="NS Home Appliances Storefront">
                 {HAS_STOREFRONT_IMAGE ? (
                   <Image
                     src={STOREFRONT_IMAGE_PATH}
-                    alt="NS Home Appliances Showroom Exterior"
+                    alt="NS Home Appliances Storefront Exterior"
                     fill
                     sizes="(max-width: 1024px) 100vw, 1360px"
                     style={{ objectFit: "cover" }}
                     priority={false}
                   />
                 ) : (
-                  <>
-                    <div className="storefront-ambient-base" />
-                    <div className="storefront-ambient-light" />
-                    <div className="storefront-grain" aria-hidden="true" />
-                    <div className="storefront-focal" aria-hidden="true">
-                      <span className="storefront-mark">NS</span>
-                      <span className="storefront-caption">Showroom Exterior · Coming Soon</span>
-                    </div>
-                  </>
+                  <div className="storefront-atmospheric-viewport">
+                    <div className="storefront-ambient-deep" />
+                    <div className="storefront-ambient-glow" />
+                    <div className="storefront-ambient-horizon" />
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </section>
 
-        {/* LAYER 6: FINAL PREMIUM FOOTER */}
+        {/* LAYER 6: FINAL REFINED FOOTER */}
         <footer className="site-footer cover-panel" role="contentinfo">
           <div className="footer-container">
-            <div className="footer-grid">
-              {/* Brand Column */}
-              <div className="footer-col footer-col-brand">
+            <div className="footer-main">
+              {/* Confident Brand Presentation */}
+              <div className="footer-brand">
                 <span className="footer-brand-title">NS Home Appliances</span>
                 <p className="footer-brand-tagline">Comfort made better.</p>
-                <p className="footer-brand-desc">
-                  A digital showroom and physical destination for curated premium home appliances.
-                </p>
               </div>
 
-              {/* Navigation Column */}
-              <div className="footer-col footer-col-nav">
-                <p className="footer-heading">Navigation</p>
+              {/* Clean Working Navigation */}
+              <nav className="footer-nav" aria-label="Footer navigation">
                 <ul className="footer-links">
                   <li>
                     <Link href="/" className="footer-link">
@@ -597,26 +597,17 @@ export function HomeExperience() {
                     </a>
                   </li>
                   <li>
-                    <a href="#visit" className="footer-link">
-                      Visit Our Store
-                    </a>
-                  </li>
-                  <li>
                     <a href="#categories" className="footer-link">
                       Products
                     </a>
                   </li>
+                  <li>
+                    <a href="#visit" className="footer-link">
+                      Visit Our Store
+                    </a>
+                  </li>
                 </ul>
-              </div>
-
-              {/* Showroom Information Column */}
-              <div className="footer-col footer-col-showroom">
-                <p className="footer-heading">Showroom</p>
-                <p className="footer-detail-title">In-Person Demonstration &amp; Selection</p>
-                <p className="footer-detail-text">
-                  Inspect cooling, laundry, cooking, and home systems live. Model consultations and inventory guidance provided in store.
-                </p>
-              </div>
+              </nav>
             </div>
 
             <div className="footer-bottom">

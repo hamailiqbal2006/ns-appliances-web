@@ -3,16 +3,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { categories, products } from "@/data/catalog";
+import { categories } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { HeroDistortion } from "@/components/hero-distortion";
+
+const emptySubscribe = () => () => {};
 
 gsap.registerPlugin(ScrollTrigger);
 
 const css = (values: Record<string, string | number>) => values as React.CSSProperties;
+
+// Exterior showroom photography configuration
+// Set to true when the physical storefront photograph is placed at /public/images/storefront.jpg
+const HAS_STOREFRONT_IMAGE = false;
+const STOREFRONT_IMAGE_PATH = "/images/storefront.jpg";
 
 export interface HeroBannerSlide {
   id: string;
@@ -65,11 +72,20 @@ export function HomeExperience() {
   const coverTagline = useRef<HTMLParagraphElement>(null);
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
-  const productTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
-  const [activeProduct, setActiveProduct] = useState(0);
+  const visitCover = useRef<HTMLElement>(null);
+  const visitEyebrow = useRef<HTMLParagraphElement>(null);
+  const visitHeading = useRef<HTMLHeadingElement>(null);
+  const visitTagline = useRef<HTMLParagraphElement>(null);
+  const visitSettleLine = useRef<HTMLDivElement>(null);
+  const visitActions = useRef<HTMLDivElement>(null);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
+  const currentYear = useSyncExternalStore(
+    emptySubscribe,
+    () => new Date().getFullYear(),
+    () => 2026
+  );
 
   // Exactly 3 automatic rotating banners
   const [activeBanner, setActiveBanner] = useState(0);
@@ -91,7 +107,7 @@ export function HomeExperience() {
   useEffect(() => {
     const scrollToHashTarget = () => {
       const id = decodeURIComponent(window.location.hash.slice(1));
-      if (id !== "products" && id !== "categories") return;
+      if (id !== "categories" && id !== "visit" && id !== "storefront") return;
 
       document.getElementById(id)?.scrollIntoView();
     };
@@ -282,17 +298,61 @@ export function HomeExperience() {
         });
       }
 
-      if (productTrack.current) {
-        ScrollTrigger.create({
-          trigger: productTrack.current,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: ({ progress: p }) => {
-            const next = indexFrom(p, products.length);
-            setActiveProduct((prev) => (prev !== next ? next : prev));
+      if (visitCover.current) {
+        const visitTimeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: visitCover.current,
+            start: "top bottom",
+            end: "top top",
+            scrub: true,
+            invalidateOnRefresh: true,
           },
         });
+
+        if (visitEyebrow.current) {
+          visitTimeline.fromTo(
+            visitEyebrow.current,
+            { autoAlpha: 0.1, y: 16 },
+            { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
+            0.08
+          );
+        }
+
+        if (visitHeading.current) {
+          visitTimeline.fromTo(
+            visitHeading.current,
+            { autoAlpha: 0.2, y: 30 },
+            { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" },
+            0.15
+          );
+        }
+
+        if (visitTagline.current) {
+          visitTimeline.fromTo(
+            visitTagline.current,
+            { autoAlpha: 0, y: 18 },
+            { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
+            0.28
+          );
+        }
+
+        if (visitSettleLine.current) {
+          visitTimeline.fromTo(
+            visitSettleLine.current,
+            { autoAlpha: 0, scaleX: 0.2 },
+            { autoAlpha: 1, scaleX: 1, duration: 0.4, ease: "power2.out" },
+            0.42
+          );
+        }
+
+        if (visitActions.current) {
+          visitTimeline.fromTo(
+            visitActions.current,
+            { autoAlpha: 0, y: 14 },
+            { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out" },
+            0.50
+          );
+        }
       }
     }, root);
 
@@ -300,7 +360,6 @@ export function HomeExperience() {
   }, []);
 
   const category = categories[activeCategory];
-  const product = products[activeProduct];
   const currentBanner = heroBanners[activeBanner];
 
   return (
@@ -436,77 +495,140 @@ export function HomeExperience() {
           </div>
         </section>
 
-        {/* LAYER 7: PRODUCT SHOWCASE TRACK */}
+        {/* LAYER 4: VISIT OUR STORE EDITORIAL COVER */}
         <section
-          id="products"
-          className="products-track cover-panel"
-          ref={productTrack}
-          aria-labelledby="products-heading"
-          style={{ height: `${products.length * 110}svh` }}
+          id="visit"
+          className="visit-cover cover-panel"
+          ref={visitCover}
+          aria-labelledby="visit-cover-title"
         >
-          <div
-            className="product-scene"
-            style={css({
-              "--product-base": product.palette.base,
-              "--product-panel": product.palette.panel,
-              "--product-ink": product.palette.ink,
-              "--product-accent": product.palette.accent,
-            })}
-          >
-            <div key={`visual-${product.slug}`} className="product-visual product-state-enter">
-              <Link href={`/products/${product.slug}`} aria-label={`View ${product.name}`}>
-                <Image
-                  key={product.slug}
-                  src={product.image}
-                  alt={`Temporary ${product.name} cutout`}
-                  fill
-                  sizes="(max-width: 760px) 85vw, 52vw"
-                  style={{
-                    objectFit: "contain",
-                    transform: `translate(${product.art.x}%, ${product.art.y}%) scale(${product.art.scale}) rotate(${product.art.rotation ?? 0}deg)`,
-                  }}
-                />
-              </Link>
+          <div className="visit-sticky">
+            <div className="visit-editorial-body">
+              <p className="visit-eyebrow" ref={visitEyebrow}>02 / In Person</p>
+              <h2
+                id="visit-cover-title"
+                className="visit-cover-title"
+                ref={visitHeading}
+              >
+                <span className="visit-title-line">Visit our store</span>
+              </h2>
+              <p className="visit-supporting-note" ref={visitTagline}>
+                Experience the appliances in person. Find what fits your home.
+              </p>
+              <div className="visit-settle-line" ref={visitSettleLine} aria-hidden="true" />
+              <div className="visit-actions" ref={visitActions}>
+                <a href="#storefront" className="visit-primary-btn">
+                  Explore Our Store <span>↗</span>
+                </a>
+              </div>
             </div>
-            <div key={`info-${product.slug}`} className="product-info product-state-enter">
-              <p className="eyebrow">02 / product {String(activeProduct + 1).padStart(2, "0")}</p>
-              <p className="product-kind">{product.kind}</p>
-              <h2 id="products-heading">{product.name}</h2>
-              <p>{product.note}</p>
-              <Link className="view-product" href={`/products/${product.slug}`}>
-                View product <span>↗</span>
-              </Link>
-            </div>
-            <div className="product-pagination" aria-label="Product sequence">
-              {products.map((item, index) => (
-                <button
-                  onClick={() =>
-                    document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })
-                  }
-                  key={item.slug}
-                  className={index === activeProduct ? "active" : ""}
-                  aria-label={`Product ${index + 1}`}
-                />
-              ))}
+          </div>
+        </section>
+        <div className="layer-spacer" aria-hidden="true" />
+
+        {/* LAYER 5: STOREFRONT VISUAL SECTION */}
+        <section
+          id="storefront"
+          className="storefront-section cover-panel"
+          aria-labelledby="storefront-heading"
+        >
+          <div className="storefront-container">
+            <header className="storefront-editorial">
+              <p className="eyebrow">Our Showroom</p>
+              <h2 id="storefront-heading" className="storefront-heading">See Us in Person.</h2>
+              <p className="storefront-note">
+                Explore our appliance collection and find the right options for your home.
+              </p>
+            </header>
+
+            <div className="storefront-frame">
+              {/* Architecture ready for future exterior photograph at /images/storefront.jpg */}
+              <div className="storefront-canvas" role="img" aria-label="NS Home Appliances Showroom Exterior">
+                {HAS_STOREFRONT_IMAGE ? (
+                  <Image
+                    src={STOREFRONT_IMAGE_PATH}
+                    alt="NS Home Appliances Showroom Exterior"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 1360px"
+                    style={{ objectFit: "cover" }}
+                    priority={false}
+                  />
+                ) : (
+                  <>
+                    <div className="storefront-ambient-base" />
+                    <div className="storefront-ambient-light" />
+                    <div className="storefront-grain" aria-hidden="true" />
+                    <div className="storefront-focal" aria-hidden="true">
+                      <span className="storefront-mark">NS</span>
+                      <span className="storefront-caption">Showroom Exterior · Coming Soon</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* LAYER 8: VISIT PANEL */}
-        <section id="visit" className="visit-panel cover-panel">
-          <p className="eyebrow">03 / next step</p>
-          <h2>
-            See it<br />
-            <em>in person.</em>
-          </h2>
-          <p>
-            This digital showroom is ready for real inventory, model information, booking contact
-            details and the final NS Appliances photography.
-          </p>
-          <a href="#hero-title">
-            Back to top <span>↑</span>
-          </a>
-        </section>
+        {/* LAYER 6: FINAL PREMIUM FOOTER */}
+        <footer className="site-footer cover-panel" role="contentinfo">
+          <div className="footer-container">
+            <div className="footer-grid">
+              {/* Brand Column */}
+              <div className="footer-col footer-col-brand">
+                <span className="footer-brand-title">NS Home Appliances</span>
+                <p className="footer-brand-tagline">Comfort made better.</p>
+                <p className="footer-brand-desc">
+                  A digital showroom and physical destination for curated premium home appliances.
+                </p>
+              </div>
+
+              {/* Navigation Column */}
+              <div className="footer-col footer-col-nav">
+                <p className="footer-heading">Navigation</p>
+                <ul className="footer-links">
+                  <li>
+                    <Link href="/" className="footer-link">
+                      Home
+                    </Link>
+                  </li>
+                  <li>
+                    <a href="#categories" className="footer-link">
+                      Categories
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#visit" className="footer-link">
+                      Visit Our Store
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#categories" className="footer-link">
+                      Products
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Showroom Information Column */}
+              <div className="footer-col footer-col-showroom">
+                <p className="footer-heading">Showroom</p>
+                <p className="footer-detail-title">In-Person Demonstration &amp; Selection</p>
+                <p className="footer-detail-text">
+                  Inspect cooling, laundry, cooking, and home systems live. Model consultations and inventory guidance provided in store.
+                </p>
+              </div>
+            </div>
+
+            <div className="footer-bottom">
+              <p className="footer-copyright">
+                &copy; {currentYear} NS Home Appliances. All rights reserved.
+              </p>
+              <a href="#hero-title" className="footer-back-top">
+                Back to top <span>↑</span>
+              </a>
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   );

@@ -332,7 +332,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             <nav className="site-nav-links" aria-label="Section links">
               <a
                 ref={prodRef}
-                href={`${root}#products`}
+                href={`${root}#categories`}
                 className="nav-text-link"
               >
                 Products
@@ -467,7 +467,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               transition={{ duration: 0.2 }}
             >
               <a
-                href={`${root}#products`}
+                href={`${root}#categories`}
                 className="nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
               >

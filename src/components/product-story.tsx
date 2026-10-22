@@ -40,7 +40,7 @@ export function ProductStory({ product }: { product: Product }) {
         <div className="feature-row"><span>01</span><h2>Built for the<br /><em>real product.</em></h2><p>This visual story is deliberately data-led. Replace the temporary cutout and add confirmed NS model data without reworking the composition.</p></div>
         <div className="feature-row inverse"><span>02</span><h2>Feature<br /><em>callouts.</em></h2><p>Confirmed close-ups and product benefits will live here as editorial panels rather than a conventional gallery and sidebar.</p></div>
         <div className="feature-row"><span>03</span><h2>Specifications,<br /><em>when verified.</em></h2><p>No made-up capacity, efficiency, warranty or price is shown. These slots are ready for the official product sheet.</p></div>
-        <Link className="story-return" href="/#products">Return to showroom <span>↑</span></Link>
+        <Link className="story-return" href="/#categories">Return to showroom <span>↑</span></Link>
       </section>
     </main>
   </div>;

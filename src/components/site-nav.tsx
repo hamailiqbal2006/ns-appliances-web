@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  motion,
-  AnimatePresence,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-  useMotionValue,
-  useMotionValueEvent,
-} from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { searchCatalog } from "@/data/catalog-search";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface SiteNavProps {
   detail?: boolean;
@@ -24,124 +25,103 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeResultIndex, setActiveResultIndex] = useState(0);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const headerRef = useRef<HTMLElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const sweepRef = useRef<HTMLSpanElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const prodRef = useRef<HTMLAnchorElement>(null);
   const catRef = useRef<HTMLAnchorElement>(null);
   const visRef = useRef<HTMLAnchorElement>(null);
-  const shouldReduceMotion = useReducedMotion();
+  const brandWrapRef = useRef<HTMLDivElement>(null);
+  const brandLinkRef = useRef<HTMLAnchorElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const { scrollY } = useScroll();
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    window.setTimeout(() => searchTriggerRef.current?.focus(), 0);
+  };
 
-  // Dynamic floating-to-formed deltas (measured on mount and resize, cached in MotionValues)
-  const deltaProd = useMotionValue(0);
-  const deltaCat = useMotionValue(0);
-  const deltaVis = useMotionValue(0);
-  const deltaSearch = useMotionValue(0);
+  const openSearch = () => {
+    setSearchOpen(true);
+    setMobileMenuOpen(false);
+  };
 
-  // One direct scroll signal controls the entire morph. It intentionally has no
-  // spring: the old spring added visual latency on slow/reversed wheel input.
-  // Everything below is a cached transform of this single 12px -> 215px range.
-  const morphProgress = useTransform(
-    scrollY,
-    [12, 215],
-    [0, 1],
-    { clamp: true }
-  );
-
-  // The controls arrive in a restrained cascade rather than all travelling at
-  // the same rate. The values are still strictly scroll-linked (not delayed).
-  const productProgress = useTransform(morphProgress, [0, 0.72], [0, 1], { clamp: true });
-  const categoryProgress = useTransform(morphProgress, [0.025, 0.78], [0, 1], { clamp: true });
-  const visitProgress = useTransform(morphProgress, [0.055, 0.84], [0, 1], { clamp: true });
-  const searchProgress = useTransform(morphProgress, [0, 0.76], [0, 1], { clamp: true });
-
-  const xProd = useTransform(
-    [productProgress, deltaProd],
-    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
-  );
-  const xCat = useTransform(
-    [categoryProgress, deltaCat],
-    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
-  );
-  const xVis = useTransform(
-    [visitProgress, deltaVis],
-    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
-  );
-  const xSearch = useTransform(
-    [searchProgress, deltaSearch],
-    ([p, d]: number[]) => (detail || shouldReduceMotion ? 0 : d * (1 - p))
-  );
-
-  // A 1-2px vertical settle keeps the glide intentional without ever scaling text.
-  const yProd = useTransform(morphProgress, [0, 0.38, 0.76], [0, 1.4, 0], { clamp: true });
-  const yCat = useTransform(morphProgress, [0.025, 0.42, 0.8], [0, 1.1, 0], { clamp: true });
-  const yVis = useTransform(morphProgress, [0.055, 0.47, 0.84], [0, 0.8, 0], { clamp: true });
-  const ySearch = useTransform(morphProgress, [0, 0.4, 0.78], [0, 1.2, 0], { clamp: true });
-
-  // The ribbon appears only while the controls have already cleared the shell
-  // inset. The real shell always retains its final full geometry, so an opaque
-  // glass boundary can never cut through an outlying control.
-  const ribbonOpacity = useTransform(morphProgress, [0.38, 0.54, 0.74], [0, 0.72, 0], { clamp: true });
-  const ribbonScaleX = useTransform(morphProgress, [0.38, 0.74], [0.22, 1], { clamp: true });
-  const navShellOpacity = useTransform(
-    morphProgress,
-    [0.6, 0.9],
-    detail || shouldReduceMotion ? [1, 1] : [0, 1],
-    { clamp: true }
-  );
-  const navShellScale = useTransform(
-    morphProgress,
-    [0.6, 0.9],
-    detail || shouldReduceMotion ? [1, 1] : [0.992, 1],
-    { clamp: true }
-  );
-  const shellSweepX = useTransform(morphProgress, [0.66, 0.96], ["-62%", "142%"], { clamp: true });
-  const shellSweepOpacity = useTransform(morphProgress, [0.62, 0.72, 0.96, 1], [0, 0.52, 0.16, 0], { clamp: true });
-
-  // The brand rises through a real overflow mask once the glass is established.
-  const brandOpacity = useTransform(
-    morphProgress,
-    [0.68, 0.82, 1],
-    detail || shouldReduceMotion ? [1, 1, 1] : [0, 0.9, 1],
-    { clamp: true }
-  );
-  const brandY = useTransform(
-    morphProgress,
-    [0.68, 0.82, 1],
-    detail || shouldReduceMotion ? [0, 0, 0] : [13, 2, 0],
-    { clamp: true }
-  );
-
-  // Ink changes only while the full-width glass is visibly forming.
-  const navTextColor = useTransform(
-    morphProgress,
-    [0.62, 0.9],
-    detail ? ["#ffffff", "#ffffff"] : ["#ffffff", "#0e1618"],
-    { clamp: true }
-  );
-
-  // Enable brand link interactivity only when visible (does not re-render during intermediate scrolling)
-  const [brandInteractive, setBrandInteractive] = useState(detail);
-  useMotionValueEvent(brandOpacity, "change", (latest) => {
-    if (detail) return;
-    const isInteractive = latest > 0.5;
-    setBrandInteractive((prev) => (prev !== isInteractive ? isInteractive : prev));
-  });
-
-  // Calculate target floating offsets relative to the formed navbar layout
+  // Close mobile menu when user scrolls
   useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleScroll = () => setMobileMenuOpen(false);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [mobileMenuOpen]);
+
+  // Handle ESC key to close search or mobile menu
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeSearch();
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (searchOpen) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [searchOpen]);
+
+  const searchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
+  const cleanQuery = searchQuery.trim();
+
+  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!searchResults.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index + 1) % searchResults.length);
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index - 1 + searchResults.length) % searchResults.length);
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const result = searchResults[activeResultIndex];
+      if (result) window.location.assign(result.href);
+    }
+  };
+
+  // Coordinated GSAP scroll transformation
+  useIsomorphicLayoutEffect(() => {
     if (detail || typeof window === "undefined") return;
 
-    const updateDeltas = () => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      if (shellRef.current) gsap.set(shellRef.current, { opacity: 1, scaleX: 1, x: 0 });
+      if (brandWrapRef.current) gsap.set(brandWrapRef.current, { autoAlpha: 1, y: 0, pointerEvents: "auto" });
+      if (contentRef.current) gsap.set(contentRef.current, { color: "#0e1618" });
+      return;
+    }
+
+    const calculateDeltas = () => {
       const vw = window.innerWidth;
-      // On mobile screens (<= 760px), mobile menu and search stay compact within the pill
       if (vw <= 760) {
-        deltaProd.set(0);
-        deltaCat.set(0);
-        deltaVis.set(0);
-        deltaSearch.set(0);
-        return;
+        return {
+          deltaProd: 0,
+          deltaCat: 0,
+          deltaVis: 0,
+          deltaSearch: 0,
+          initialScaleX: 1,
+          initialTranslateX: 0,
+        };
       }
 
       const isTablet = vw <= 1024;
@@ -169,166 +149,201 @@ export function SiteNav({ detail = false }: SiteNavProps) {
       const floatVisLeft = floatCatLeft + catW + floatingGap;
       const floatSearchRight = targetRightEdge;
 
-      deltaProd.set(floatProdLeft - formedProdLeft);
-      deltaCat.set(floatCatLeft - formedCatLeft);
-      deltaVis.set(floatVisLeft - formedVisLeft);
-      deltaSearch.set(floatSearchRight - formedSearchRight);
+      const deltaProd = floatProdLeft - formedProdLeft;
+      const deltaCat = floatCatLeft - formedCatLeft;
+      const deltaVis = floatVisLeft - formedVisLeft;
+      const deltaSearch = floatSearchRight - formedSearchRight;
+
+      // Sizing the glass shell so controls are ALWAYS strictly inside by 'padding'
+      const initialLeft = floatProdLeft - padding;
+      const initialRight = floatSearchRight + padding;
+      const initialWidth = Math.max(formedNavWidth, initialRight - initialLeft);
+      const initialCenter = (initialLeft + initialRight) / 2;
+      const formedCenter = formedNavLeft + formedNavWidth / 2;
+
+      const initialScaleX = initialWidth / formedNavWidth;
+      const initialTranslateX = initialCenter - formedCenter;
+
+      return {
+        deltaProd,
+        deltaCat,
+        deltaVis,
+        deltaSearch,
+        initialScaleX,
+        initialTranslateX,
+      };
     };
 
-    updateDeltas();
+    let timeline: gsap.core.Timeline | null = null;
+    let st: ScrollTrigger | null = null;
 
-    let rAF = 0;
-    const onResize = () => {
-      cancelAnimationFrame(rAF);
-      rAF = requestAnimationFrame(updateDeltas);
+    const buildTimeline = () => {
+      if (timeline) {
+        timeline.kill();
+        timeline = null;
+      }
+      if (st) {
+        st.kill();
+        st = null;
+      }
+
+      const geom = calculateDeltas();
+
+      // State A baseline initialization
+      gsap.set(prodRef.current, { x: geom.deltaProd, y: 0 });
+      gsap.set(catRef.current, { x: geom.deltaCat, y: 0 });
+      gsap.set(visRef.current, { x: geom.deltaVis, y: 0 });
+      gsap.set(searchTriggerRef.current, { x: geom.deltaSearch, y: 0 });
+      gsap.set(shellRef.current, {
+        opacity: 0,
+        scaleX: geom.initialScaleX,
+        x: geom.initialTranslateX,
+        transformOrigin: "center center",
+      });
+      gsap.set(sweepRef.current, { xPercent: -100, opacity: 0 });
+      gsap.set(brandLinkRef.current, { autoAlpha: 0, y: 34 });
+      if (brandWrapRef.current) {
+        brandWrapRef.current.style.pointerEvents = "none";
+      }
+      if (brandLinkRef.current) brandLinkRef.current.tabIndex = -1;
+      gsap.set(contentRef.current, { color: "#ffffff" });
+
+      // Create unified scrubbed timeline: 0px -> 190px transformation distance
+      timeline = gsap.timeline({
+        defaults: { ease: "none" },
+        scrollTrigger: {
+          id: "site-nav-transformation",
+          start: 0,
+          end: 190,
+          scrub: true,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            const isSettled = self.progress >= 0.70;
+            if (brandWrapRef.current) {
+              brandWrapRef.current.style.pointerEvents = isSettled ? "auto" : "none";
+            }
+            if (brandLinkRef.current) {
+              brandLinkRef.current.tabIndex = isSettled ? 0 : -1;
+            }
+          },
+        },
+      });
+
+      // PHASE 2 & 3: Coordinated Glide & Glass Capsule Contraction
+      // Left controls glide inward with subtle natural stagger
+      timeline.to(prodRef.current, { x: 0, duration: 0.85, ease: "power2.out" }, 0);
+      timeline.to(catRef.current, { x: 0, duration: 0.88, ease: "power2.out" }, 0.02);
+      timeline.to(visRef.current, { x: 0, duration: 0.90, ease: "power2.out" }, 0.04);
+      timeline.to(searchTriggerRef.current, { x: 0, duration: 0.86, ease: "power2.out" }, 0.01);
+
+      // Subtle vertical settling (1.2px) to enhance tactile glide without text blur
+      timeline.to([prodRef.current, catRef.current, visRef.current, searchTriggerRef.current], {
+        y: 1.2,
+        duration: 0.40,
+        ease: "sine.inOut",
+      }, 0);
+      timeline.to([prodRef.current, catRef.current, visRef.current, searchTriggerRef.current], {
+        y: 0,
+        duration: 0.45,
+        ease: "sine.inOut",
+      }, 0.40);
+
+      // Glass capsule reveals around the moving controls (starts wide, contracts to formed navbar)
+      timeline.to(shellRef.current, { opacity: 1, duration: 0.45, ease: "power1.inOut" }, 0.04);
+      timeline.to(shellRef.current, { scaleX: 1, x: 0, duration: 0.88, ease: "power2.out" }, 0.02);
+
+      // Specular highlight sweep across the glass surface
+      timeline.fromTo(sweepRef.current,
+        { xPercent: -100, opacity: 0 },
+        { xPercent: 180, opacity: 0.48, duration: 0.52, ease: "power1.inOut" },
+        0.44
+      );
+      timeline.to(sweepRef.current, { opacity: 0, duration: 0.16, ease: "power1.out" }, 0.82);
+
+      // PHASE 3/4: Ink color transition as the light glass forms behind controls
+      timeline.to(contentRef.current, { color: "#0e1618", duration: 0.38, ease: "power1.inOut" }, 0.14);
+
+      // PHASE 4: Brand reveal (masked upward rise through overflow mask)
+      timeline.fromTo(brandLinkRef.current,
+        { autoAlpha: 0, y: 34 },
+        { autoAlpha: 1, y: 0, duration: 0.46, ease: "power2.out" },
+        0.44
+      );
+
+      st = timeline.scrollTrigger || null;
     };
-    window.addEventListener("resize", onResize, { passive: true });
 
+    buildTimeline();
+
+    // Rebuild on resize or font load
+    let resizeTimer: number;
+    const handleResize = () => {
+      cancelAnimationFrame(resizeTimer);
+      resizeTimer = requestAnimationFrame(buildTimeline);
+    };
+
+    window.addEventListener("resize", handleResize, { passive: true });
     if (document.fonts?.ready) {
-      document.fonts.ready.then(updateDeltas).catch(() => {});
+      document.fonts.ready.then(buildTimeline).catch(() => {});
     }
 
     return () => {
-      cancelAnimationFrame(rAF);
-      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+      if (timeline) timeline.kill();
+      if (st) st.kill();
     };
-  }, [detail, deltaProd, deltaCat, deltaVis, deltaSearch]);
-
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setSearchQuery("");
-    window.setTimeout(() => searchTriggerRef.current?.focus(), 0);
-  };
-
-  const openSearch = () => {
-    setSearchOpen(true);
-    setMobileMenuOpen(false);
-  };
-
-  // Close mobile menu when user scrolls
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const handleScroll = () => setMobileMenuOpen(false);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [mobileMenuOpen]);
-
-  // Handle ESC key to close search or mobile menu.
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeSearch();
-        setMobileMenuOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Focus input when search opens
-  useEffect(() => {
-    if (searchOpen) {
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [searchOpen]);
-
-  const searchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
-
-  const cleanQuery = searchQuery.trim();
-
-  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!searchResults.length) return;
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveResultIndex((index) => (index + 1) % searchResults.length);
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveResultIndex((index) => (index - 1 + searchResults.length) % searchResults.length);
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const result = searchResults[activeResultIndex];
-      if (result) window.location.assign(result.href);
-    }
-  };
+  }, [detail]);
 
   return (
     <>
       <header
+        ref={headerRef}
         className={`site-nav ${detail ? "site-nav-detail" : "site-nav-home"}`}
         aria-label="Primary navigation"
       >
-        {/* The seam is a lightweight bridge between floating controls and glass. */}
-        <motion.div
-          className="site-nav-ribbon"
-          style={
-            detail || shouldReduceMotion
-              ? { opacity: 0 }
-              : { opacity: ribbonOpacity, scaleX: ribbonScaleX }
-          }
-          aria-hidden
-        />
-
-        {/* Constant-geometry glass shell: only opacity/transform are animated. */}
-        <motion.div
+        {/* Constant-geometry glass shell with geometry-synchronized scale and translate */}
+        <div
+          ref={shellRef}
           className="site-nav-shell"
-          style={
-            detail || shouldReduceMotion
-              ? undefined
-              : { opacity: navShellOpacity, scale: navShellScale }
-          }
-          aria-hidden
+          aria-hidden="true"
         >
-          <motion.span
+          <span
+            ref={sweepRef}
             className="site-nav-shell-sweep"
-            style={
-              detail || shouldReduceMotion
-                ? undefined
-                : { x: shellSweepX, opacity: shellSweepOpacity }
-            }
+            aria-hidden="true"
           />
-        </motion.div>
+        </div>
 
-        {/* 2. CRISP CONTENT LAYER (Vector text, zero blur, subpixel sharp, borderless) */}
-        <motion.div
+        {/* Crisp vector content layer */}
+        <div
+          ref={contentRef}
           className="site-nav-content"
-          style={
-            detail || shouldReduceMotion
-              ? undefined
-              : { color: navTextColor }
-          }
         >
           {/* ZONE 1: LEFT GROUP */}
           <div className="site-nav-left">
             <nav className="site-nav-links" aria-label="Section links">
-              <motion.a
+              <a
                 ref={prodRef}
                 href={`${root}#products`}
                 className="nav-text-link"
-                style={{ x: xProd, y: yProd }}
               >
                 Products
-              </motion.a>
-              <motion.a
+              </a>
+              <a
                 ref={catRef}
                 href={`${root}#categories`}
                 className="nav-text-link"
-                style={{ x: xCat, y: yCat }}
               >
                 Categories
-              </motion.a>
-              <motion.a
+              </a>
+              <a
                 ref={visRef}
                 href={`${root}#visit`}
                 className="nav-text-link"
-                style={{ x: xVis, y: yVis }}
               >
                 Visit
-              </motion.a>
+              </a>
             </nav>
 
             {/* Mobile menu toggle */}
@@ -380,20 +395,16 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
           {/* ZONE 2: CENTER TITLE */}
           <div className="site-nav-center">
-            <motion.div
+            <div
+              ref={brandWrapRef}
               className="site-nav-brand-wrap"
-              style={{
-                opacity: detail || shouldReduceMotion ? 1 : brandOpacity,
-                y: detail || shouldReduceMotion ? 0 : brandY,
-                pointerEvents: brandInteractive ? "auto" : "none",
-              }}
             >
               <span className="site-nav-brand-mask">
                 <Link
+                  ref={brandLinkRef}
                   href={detail ? "/" : "#hero-title"}
                   className="site-nav-brand"
                   aria-label="NS Home Appliances home"
-                  tabIndex={brandInteractive ? 0 : -1}
                   onClick={(e) => {
                     if (!detail) {
                       e.preventDefault();
@@ -404,18 +415,17 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   NS Home Appliances
                 </Link>
               </span>
-            </motion.div>
+            </div>
           </div>
 
           {/* ZONE 3: RIGHT GROUP */}
           <div className="site-nav-right">
-            <motion.button
+            <button
               type="button"
               className="nav-text-link nav-search-btn"
               ref={searchTriggerRef}
               aria-label="Search showroom collection"
               onClick={openSearch}
-              style={{ x: xSearch, y: ySearch }}
             >
               <svg
                 className="nav-search-svg"
@@ -433,9 +443,9 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <span className="nav-search-text">Search</span>
-            </motion.button>
+            </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* MOBILE DROPDOWN PANEL */}
         <AnimatePresence>
@@ -447,7 +457,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               initial={{ opacity: 0, y: -6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
-              transition={{ duration: shouldReduceMotion ? 0.001 : 0.2 }}
+              transition={{ duration: 0.2 }}
             >
               <a
                 href={`${root}#products`}
@@ -489,7 +499,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: shouldReduceMotion ? 0.001 : 0.2 }}
+            transition={{ duration: 0.2 }}
             onClick={closeSearch}
           >
             <motion.div
@@ -501,7 +511,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -16, scale: 0.96 }}
               transition={{
-                duration: shouldReduceMotion ? 0.001 : 0.24,
+                duration: 0.24,
                 ease: [0.22, 1, 0.36, 1],
               }}
               onClick={(e) => e.stopPropagation()}
@@ -559,7 +569,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 </button>
               </div>
 
-              {/* SEARCH RESULTS (Displayed directly below input when user types) */}
+              {/* SEARCH RESULTS */}
               {cleanQuery && (
                 <div className="nav-search-results">
                   {searchResults.length > 0 ? (
@@ -597,3 +607,4 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     </>
   );
 }
+

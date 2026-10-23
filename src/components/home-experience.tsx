@@ -230,17 +230,23 @@ export function HomeExperience() {
           setIsHeroInteractive(!covered);
         };
 
+        let lastCoverVisible: boolean | null = null;
+
         const coverTimeline = gsap.timeline({
           scrollTrigger: {
             trigger: categoryCover.current,
             start: "top bottom",
             end: "top top",
-            scrub: true,
+            scrub: 0.12,
             invalidateOnRefresh: true,
             onUpdate: ({ progress }) => {
               setHeroCovered(progress > 0.85);
-              if (categoryCover.current) {
-                categoryCover.current.style.visibility = progress <= 0 ? "hidden" : "visible";
+              const isVisible = progress > 0;
+              if (lastCoverVisible !== isVisible) {
+                lastCoverVisible = isVisible;
+                if (categoryCover.current) {
+                  categoryCover.current.style.visibility = isVisible ? "visible" : "hidden";
+                }
               }
             },
           },
@@ -285,7 +291,7 @@ export function HomeExperience() {
           trigger: categoryTrack.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: true,
+          scrub: 0.12,
           onUpdate: ({ progress: p }) => {
             const next = indexFrom(p, categories.length);
             setActiveCategory((prev) => (prev !== next ? next : prev));
@@ -298,6 +304,8 @@ export function HomeExperience() {
       }
 
       if (visitTrack.current && visitHeading.current && visitTagline.current && visitSettleLine.current) {
+        let lastFooterPointerEvents: boolean | null = null;
+
         const visitTimeline = gsap.timeline({
           scrollTrigger: {
             trigger: visitTrack.current,
@@ -306,8 +314,12 @@ export function HomeExperience() {
             scrub: 0.12,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
-              if (siteFooterRef.current) {
-                siteFooterRef.current.style.pointerEvents = self.progress >= 0.88 ? "auto" : "none";
+              const allowEvents = self.progress >= 0.88;
+              if (lastFooterPointerEvents !== allowEvents) {
+                lastFooterPointerEvents = allowEvents;
+                if (siteFooterRef.current) {
+                  siteFooterRef.current.style.pointerEvents = allowEvents ? "auto" : "none";
+                }
               }
             },
           },
@@ -340,7 +352,6 @@ export function HomeExperience() {
     return () => context.revert();
   }, []);
 
-  const category = categories[activeCategory];
   const currentBanner = heroBanners[activeBanner];
 
   return (
@@ -422,52 +433,71 @@ export function HomeExperience() {
           aria-label="Shop by category"
           style={{ height: `${categories.length * 105}svh` }}
         >
-          <div
-            className="category-scene"
-            style={css({
-              "--scene-base": category.palette.base,
-              "--scene-panel": category.palette.panel,
-              "--scene-ink": category.palette.ink,
+          <div className="category-scene">
+            {/* Split Background Layers per Category (GPU-accelerated opacity crossfade, zero gradient repaint) */}
+            {categories.map((cat, idx) => (
+              <div
+                key={`bg-${cat.slug}`}
+                className={`category-scene-bg ${idx === activeCategory ? "is-active" : ""}`}
+                style={css({
+                  "--cat-base": cat.palette.base,
+                  "--cat-panel": cat.palette.panel,
+                })}
+              />
+            ))}
+
+            {/* Pre-rendered Category Content Layers (Pre-decoded images, zero DOM unmounting, 60fps GPU transform/opacity) */}
+            {categories.map((cat, idx) => {
+              const isActive = idx === activeCategory;
+              return (
+                <div
+                  key={`content-${cat.slug}`}
+                  className={`category-content-layer ${isActive ? "is-active" : ""}`}
+                  style={css({
+                    "--scene-ink": cat.palette.ink,
+                  })}
+                  aria-hidden={!isActive}
+                >
+                  <div className="category-left">
+                    <p className="scene-number">0{idx + 1} / 04</p>
+                    <h2>{cat.name}</h2>
+                    <p className="category-signal">Scroll-led selection</p>
+                  </div>
+                  <div className="category-cutout">
+                    <div className="category-cutout-stage">
+                      <Image
+                        src={cat.image}
+                        alt={`Temporary ${cat.name} appliance cutout`}
+                        fill
+                        sizes="(max-width: 760px) 85vw, 46vw"
+                        priority
+                        style={{
+                          objectFit: "contain",
+                          transform: `translate(${cat.art.x}%, ${cat.art.y}%) scale(${cat.art.scale}) rotate(${cat.art.rotation ?? 0}deg)`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="category-right">
+                    <p className="eyebrow">Explore</p>
+                    <ul>
+                      {cat.subcategories.map((sub, sIdx) => (
+                        <li key={sub.slug}>
+                          <Link href={`/category/${cat.slug}/${sub.slug}`} tabIndex={isActive ? 0 : -1}>
+                            <span>0{sIdx + 1}</span>
+                            {sub.name}
+                            <b>↗</b>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
+                  </div>
+                </div>
+              );
             })}
-          >
-            <div className="category-left">
-              <div key={`cat-left-${category.slug}`} className="category-state-enter">
-                <p className="scene-number">0{activeCategory + 1} / 04</p>
-                <h2>{category.name}</h2>
-                <p className="category-signal">Scroll-led selection</p>
-              </div>
-            </div>
-            <div className="category-cutout">
-              <div key={`cat-cutout-${category.slug}`} className="category-cutout-stage category-state-enter">
-                <Image
-                  src={category.image}
-                  alt={`Temporary ${category.name} appliance cutout`}
-                  fill
-                  sizes="(max-width: 760px) 85vw, 46vw"
-                  style={{
-                    objectFit: "contain",
-                    transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="category-right">
-              <div key={`cat-right-${category.slug}`} className="category-state-enter">
-                <p className="eyebrow">Explore</p>
-                <ul>
-                  {category.subcategories.map((sub, sIdx) => (
-                    <li key={sub.slug}>
-                      <Link href={`/category/${category.slug}/${sub.slug}`}>
-                        <span>0{sIdx + 1}</span>
-                        {sub.name}
-                        <b>↗</b>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
-              </div>
-            </div>
+
+            {/* Pagination dots */}
             <div className="scene-dots" aria-hidden>
               {categories.map((_, dotIdx) => (
                 <i key={dotIdx} className={dotIdx === activeCategory ? "active" : ""} />

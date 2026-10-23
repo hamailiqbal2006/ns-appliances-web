@@ -106,9 +106,33 @@ export function HeroDistortion({
     };
 
     const heroParent = canvas.parentElement;
+    let isLoopRunning = false;
+
+    const startLoop = () => {
+      if (isLoopRunning || !isVisible) return;
+      isLoopRunning = true;
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    const stopLoop = () => {
+      if (!isLoopRunning) return;
+      isLoopRunning = false;
+      cancelAnimationFrame(animationFrameId);
+    };
+
+    const onMouseEnter = () => {
+      handleMouseEnter();
+      startLoop();
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      handleMouseMove(e);
+      startLoop();
+    };
+
     if (heroParent) {
-      heroParent.addEventListener("mousemove", handleMouseMove, { passive: true });
-      heroParent.addEventListener("mouseenter", handleMouseEnter, { passive: true });
+      heroParent.addEventListener("mousemove", onMouseMove, { passive: true });
+      heroParent.addEventListener("mouseenter", onMouseEnter, { passive: true });
       heroParent.addEventListener("mouseleave", handleMouseLeave, { passive: true });
     }
 
@@ -117,6 +141,11 @@ export function HeroDistortion({
       (entries) => {
         entries.forEach((entry) => {
           isVisible = entry.isIntersecting;
+          if (isVisible) {
+            startLoop();
+          } else {
+            stopLoop();
+          }
         });
       },
       { threshold: 0.05 }
@@ -127,7 +156,7 @@ export function HeroDistortion({
 
     const render = () => {
       if (!isVisible) {
-        animationFrameId = requestAnimationFrame(render);
+        stopLoop();
         return;
       }
 
@@ -230,18 +259,24 @@ export function HeroDistortion({
         ctx.restore();
       }
 
+      if (!isHovered && mouse.intensity < 0.005 && ripples.length === 0) {
+        ctx.clearRect(0, 0, width, height);
+        stopLoop();
+        return;
+      }
+
       animationFrameId = requestAnimationFrame(render);
     };
 
-    animationFrameId = requestAnimationFrame(render);
+    startLoop();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      stopLoop();
       window.removeEventListener("resize", resize);
       observer.disconnect();
       if (heroParent) {
-        heroParent.removeEventListener("mousemove", handleMouseMove);
-        heroParent.removeEventListener("mouseenter", handleMouseEnter);
+        heroParent.removeEventListener("mousemove", onMouseMove);
+        heroParent.removeEventListener("mouseenter", onMouseEnter);
         heroParent.removeEventListener("mouseleave", handleMouseLeave);
       }
     };

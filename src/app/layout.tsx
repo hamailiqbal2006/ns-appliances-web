@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Anton, Bodoni_Moda, Geist, Instrument_Serif, Fraunces, Manrope, Newsreader, Sora } from "next/font/google";
+import "lenis/dist/lenis.css";
 import "./globals.css";
+import { SmoothScroll } from "@/components/smooth-scroll";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const sora = Sora({
@@ -63,7 +65,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${geist.variable} ${sora.variable} ${manrope.variable} ${anton.variable} ${bodoniModa.variable} ${newsreader.variable} ${instrumentSerif.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <SmoothScroll />
+        {children}
+      </body>
     </html>
   );
 }

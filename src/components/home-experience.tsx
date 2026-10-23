@@ -62,6 +62,41 @@ export const heroBanners: HeroBannerSlide[] = [
 
 const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
+// Robust hysteresis-buffered category calculation to prevent flickering at transition thresholds
+function computeCategoryIndex(
+  progress: number,
+  currentIndex: number,
+  count: number
+): number {
+  if (progress <= 0.01) return 0;
+  if (progress >= 0.99) return count - 1;
+
+  const bandSize = 1 / count;
+  const hysteresis = bandSize * 0.10; // 10% deadband margin
+
+  // Forward transition with hysteresis threshold
+  for (let i = currentIndex; i < count - 1; i++) {
+    const forwardThreshold = (i + 1) * bandSize + hysteresis;
+    if (progress >= forwardThreshold) {
+      currentIndex = i + 1;
+    } else {
+      break;
+    }
+  }
+
+  // Backward transition with hysteresis threshold
+  for (let i = currentIndex; i > 0; i--) {
+    const backwardThreshold = i * bandSize - hysteresis;
+    if (progress <= backwardThreshold) {
+      currentIndex = i - 1;
+    } else {
+      break;
+    }
+  }
+
+  return Math.min(count - 1, Math.max(0, currentIndex));
+}
+
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
@@ -237,7 +272,7 @@ export function HomeExperience() {
             trigger: categoryCover.current,
             start: "top bottom",
             end: "top top",
-            scrub: 0.12,
+            scrub: true,
             invalidateOnRefresh: true,
             onUpdate: ({ progress }) => {
               setHeroCovered(progress > 0.85);
@@ -283,18 +318,20 @@ export function HomeExperience() {
         }
       }
 
-      const indexFrom = (p: number, size: number) =>
-        Math.min(size - 1, Math.floor(p * size + 0.0001));
+      let currentCategoryIdx = 0;
 
       if (categoryTrack.current) {
         ScrollTrigger.create({
           trigger: categoryTrack.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: 0.12,
+          scrub: true,
           onUpdate: ({ progress: p }) => {
-            const next = indexFrom(p, categories.length);
-            setActiveCategory((prev) => (prev !== next ? next : prev));
+            const next = computeCategoryIndex(p, currentCategoryIdx, categories.length);
+            if (next !== currentCategoryIdx) {
+              currentCategoryIdx = next;
+              setActiveCategory(next);
+            }
           },
         });
       }
@@ -311,7 +348,7 @@ export function HomeExperience() {
             trigger: visitTrack.current,
             start: "top top",
             end: "bottom bottom",
-            scrub: 0.12,
+            scrub: true,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
               const allowEvents = self.progress >= 0.88;
@@ -326,24 +363,24 @@ export function HomeExperience() {
         });
 
         // STATE B: Only foreground text disappears smoothly, moving up slightly (~24px) and fading out
-        // Foreground text exits in the first portion (0.04 - 0.26), followed by an intentional background hold
+        // Foreground text exits in the first portion (0.04 - 0.28), followed by an intentional background hold
         visitTimeline
-          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.22, ease: "power2.inOut" }, 0.04)
-          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.20, ease: "power2.inOut" }, 0.06)
-          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.16, ease: "power2.inOut" }, 0.08);
+          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.24, ease: "power2.inOut" }, 0.04)
+          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.22, ease: "power2.inOut" }, 0.06)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.18, ease: "power2.inOut" }, 0.08);
 
         if (visitForeground.current) {
-          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.26);
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.28);
         }
 
-        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background (0.52 - 1.00)
-        // Between 0.26 and 0.52, the background alone is held stationary for clear visual appreciation
+        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background (0.50 - 1.00)
+        // Between 0.28 and 0.50, the background alone is held stationary for clear visual appreciation
         if (siteFooterRef.current) {
           visitTimeline.fromTo(
             siteFooterRef.current,
             { yPercent: 100 },
-            { yPercent: 0, duration: 0.48, ease: "power1.out" },
-            0.52
+            { yPercent: 0, duration: 0.50, ease: "power1.out" },
+            0.50
           );
         }
       }
@@ -431,7 +468,7 @@ export function HomeExperience() {
           className="category-track cover-panel"
           ref={categoryTrack}
           aria-label="Shop by category"
-          style={{ height: `${categories.length * 105}svh` }}
+          style={{ height: `${categories.length * 80}svh` }}
         >
           <div className="category-scene">
             {/* Split Background Layers per Category (GPU-accelerated opacity crossfade, zero gradient repaint) */}
@@ -512,7 +549,7 @@ export function HomeExperience() {
           className="visit-track cover-panel"
           ref={visitTrack}
           aria-labelledby="visit-cover-title"
-          style={{ height: "360svh" }}
+          style={{ height: "260svh" }}
         >
           <div className="visit-stage">
             {/* Atmospheric Background Layer — Stationary throughout entire track */}
@@ -562,16 +599,27 @@ export function HomeExperience() {
                 if (categoryTrack.current) {
                   const trackTop = categoryTrack.current.offsetTop;
                   const trackHeight = categoryTrack.current.offsetHeight;
-                  window.scrollTo({
-                    top: trackTop + (index / categories.length) * trackHeight + 10,
-                    behavior: "smooth",
-                  });
+                  const targetY = trackTop + (index / categories.length) * trackHeight + 10;
+                  const lenis = (window as unknown as { __lenis?: { scrollTo: (target: number, opts?: unknown) => void } }).__lenis;
+                  if (lenis) {
+                    lenis.scrollTo(targetY, { duration: 0.9 });
+                  } else {
+                    window.scrollTo({
+                      top: targetY,
+                      behavior: "smooth",
+                    });
+                  }
                 }
               }}
               onSectionClick={(id) => {
                 const target = document.getElementById(id);
                 if (target) {
-                  target.scrollIntoView({ behavior: "smooth" });
+                  const lenis = (window as unknown as { __lenis?: { scrollTo: (target: HTMLElement, opts?: unknown) => void } }).__lenis;
+                  if (lenis) {
+                    lenis.scrollTo(target, { duration: 0.9 });
+                  } else {
+                    target.scrollIntoView({ behavior: "smooth" });
+                  }
                 }
               }}
             />

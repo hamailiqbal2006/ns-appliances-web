@@ -41,12 +41,14 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchQuery("");
+    (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
     window.setTimeout(() => searchTriggerRef.current?.focus(), 0);
   };
 
   const openSearch = () => {
     setSearchOpen(true);
     setMobileMenuOpen(false);
+    (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
   };
 
   // Close mobile menu when user scrolls
@@ -211,15 +213,15 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
       let lastSettled = false;
 
-      // Create unified scrubbed timeline: 0px -> 190px transformation distance
-      // scrub: 0.12 eliminates discrete mouse-wheel stepping while feeling instantaneous
+      // Coordinated timeline synchronized with smooth-scrolling position
+      // scrub: true provides immediate 1:1 synchronization with Lenis smooth scrolling
       timeline = gsap.timeline({
         defaults: { ease: "none", force3D: true },
         scrollTrigger: {
           id: "site-nav-transformation",
           start: 0,
           end: 190,
-          scrub: 0.12,
+          scrub: true,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             const isSettled = self.progress >= 0.70;
@@ -415,7 +417,12 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                   onClick={(e) => {
                     if (!detail) {
                       e.preventDefault();
-                      window.scrollTo({ top: 0, behavior: "smooth" });
+                      const lenis = (window as unknown as { __lenis?: { scrollTo: (target: number, opts?: unknown) => void } }).__lenis;
+                      if (lenis) {
+                        lenis.scrollTo(0, { duration: 0.9 });
+                      } else {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
                     }
                   }}
                 >
@@ -578,7 +585,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
 
               {/* SEARCH RESULTS */}
               {cleanQuery && (
-                <div className="nav-search-results">
+                <div className="nav-search-results" data-lenis-prevent>
                   {searchResults.length > 0 ? (
                     <div className="nav-search-list" role="listbox" aria-label="Search results">
                       {searchResults.map((result, index) => (

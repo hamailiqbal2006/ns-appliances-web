@@ -3,14 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
 import { HeroDistortion } from "@/components/hero-distortion";
-
-const emptySubscribe = () => () => {};
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -78,13 +77,10 @@ export function HomeExperience() {
   const visitHeading = useRef<HTMLHeadingElement>(null);
   const visitTagline = useRef<HTMLParagraphElement>(null);
   const visitSettleLine = useRef<HTMLDivElement>(null);
+  const siteFooterRef = useRef<HTMLElement>(null);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
-  const currentYear = useSyncExternalStore(
-    emptySubscribe,
-    () => new Date().getFullYear(),
-    () => 2026
-  );
+
 
   // Exactly 3 automatic rotating banners
   const [activeBanner, setActiveBanner] = useState(0);
@@ -297,6 +293,10 @@ export function HomeExperience() {
         });
       }
 
+      if (siteFooterRef.current) {
+        gsap.set(siteFooterRef.current, { yPercent: 100 });
+      }
+
       if (visitTrack.current && visitHeading.current && visitTagline.current && visitSettleLine.current) {
         const visitTimeline = gsap.timeline({
           scrollTrigger: {
@@ -305,18 +305,33 @@ export function HomeExperience() {
             end: "bottom bottom",
             scrub: 0.12,
             invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              if (siteFooterRef.current) {
+                siteFooterRef.current.style.pointerEvents = self.progress >= 0.65 ? "auto" : "none";
+              }
+            },
           },
         });
 
-        // STATE B: Only foreground text disappears smoothly, moving up slightly (~20px) and fading out
+        // STATE B: Only foreground text disappears smoothly, moving up slightly (~24px) and fading out
         // Foreground text exits in the first portion of scroll, then holds empty background
         visitTimeline
-          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.38, ease: "power2.inOut" }, 0.04)
-          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.36, ease: "power2.inOut" }, 0.08)
-          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.30, ease: "power2.inOut" }, 0.11);
+          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.36, ease: "power2.inOut" }, 0.04)
+          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.34, ease: "power2.inOut" }, 0.08)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.28, ease: "power2.inOut" }, 0.11);
 
         if (visitForeground.current) {
-          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.42);
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.38);
+        }
+
+        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background
+        if (siteFooterRef.current) {
+          visitTimeline.fromTo(
+            siteFooterRef.current,
+            { yPercent: 100 },
+            { yPercent: 0, duration: 0.60, ease: "power1.out" },
+            0.40
+          );
         }
       }
     }, root);
@@ -466,7 +481,7 @@ export function HomeExperience() {
           className="visit-track cover-panel"
           ref={visitTrack}
           aria-labelledby="visit-cover-title"
-          style={{ height: "230svh" }}
+          style={{ height: "320svh" }}
         >
           <div className="visit-stage">
             {/* Atmospheric Background Layer — Stationary throughout entire track */}
@@ -507,192 +522,30 @@ export function HomeExperience() {
                 <div className="visit-settle-line" ref={visitSettleLine} aria-hidden="true" />
               </div>
             </div>
+
+            {/* LAYER 5: FULL-SCREEN TRANSLUCENT FROSTED-GLASS FOOTER */}
+            <SiteFooter
+              ref={siteFooterRef}
+              variant="glass-overlay"
+              onCategoryClick={(index) => {
+                if (categoryTrack.current) {
+                  const trackTop = categoryTrack.current.offsetTop;
+                  const trackHeight = categoryTrack.current.offsetHeight;
+                  window.scrollTo({
+                    top: trackTop + (index / categories.length) * trackHeight + 10,
+                    behavior: "smooth",
+                  });
+                }
+              }}
+              onSectionClick={(id) => {
+                const target = document.getElementById(id);
+                if (target) {
+                  target.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            />
           </div>
         </section>
-
-        {/* LAYER 5: FULL-SCREEN RETAIL FOOTER */}
-        <footer className="site-footer cover-panel" role="contentinfo">
-          <div className="footer-full-container">
-            {/* Upper Region: Standard Retail Columns */}
-            <div className="footer-main-grid">
-              {/* Column 1 — Brand */}
-              <div className="footer-col footer-col-brand">
-                <h2 className="footer-brand-title">
-                  <Link
-                    href="/"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                  >
-                    NS Home Appliances
-                  </Link>
-                </h2>
-                <p className="footer-brand-tagline">Comfort made better.</p>
-              </div>
-
-              {/* Column 2 — Quick Links */}
-              <div className="footer-col">
-                <h3 className="footer-col-heading">Quick Links</h3>
-                <ul className="footer-link-list">
-                  <li>
-                    <Link
-                      href="/"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        const target = document.getElementById("categories");
-                        if (target) {
-                          e.preventDefault();
-                          target.scrollIntoView({ behavior: "smooth" });
-                        }
-                      }}
-                    >
-                      Products
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        const target = document.getElementById("categories");
-                        if (target) {
-                          e.preventDefault();
-                          target.scrollIntoView({ behavior: "smooth" });
-                        }
-                      }}
-                    >
-                      Categories
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#visit"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        const target = document.getElementById("visit");
-                        if (target) {
-                          e.preventDefault();
-                          target.scrollIntoView({ behavior: "smooth" });
-                        }
-                      }}
-                    >
-                      Visit Our Store
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Column 3 — Shop Categories */}
-              <div className="footer-col">
-                <h3 className="footer-col-heading">Shop Categories</h3>
-                <ul className="footer-link-list">
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        if (categoryTrack.current) {
-                          e.preventDefault();
-                          const trackTop = categoryTrack.current.offsetTop;
-                          window.scrollTo({ top: trackTop + 10, behavior: "smooth" });
-                        }
-                      }}
-                    >
-                      Cooling
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        if (categoryTrack.current) {
-                          e.preventDefault();
-                          const trackTop = categoryTrack.current.offsetTop;
-                          const trackHeight = categoryTrack.current.offsetHeight;
-                          window.scrollTo({
-                            top: trackTop + (1 / categories.length) * trackHeight + 10,
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                    >
-                      Laundry
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        if (categoryTrack.current) {
-                          e.preventDefault();
-                          const trackTop = categoryTrack.current.offsetTop;
-                          const trackHeight = categoryTrack.current.offsetHeight;
-                          window.scrollTo({
-                            top: trackTop + (2 / categories.length) * trackHeight + 10,
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                    >
-                      Kitchen & Everyday
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#categories"
-                      className="footer-nav-link"
-                      onClick={(e) => {
-                        if (categoryTrack.current) {
-                          e.preventDefault();
-                          const trackTop = categoryTrack.current.offsetTop;
-                          const trackHeight = categoryTrack.current.offsetHeight;
-                          window.scrollTo({
-                            top: trackTop + (3 / categories.length) * trackHeight + 10,
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                    >
-                      Home Appliances
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Bottom Region: Standard Footer Bar */}
-            <div className="footer-full-bottom">
-              <p className="footer-full-copyright">
-                &copy; {currentYear} NS Home Appliances. All rights reserved.
-              </p>
-              <a
-                href="#hero-title"
-                className="footer-full-back-top"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Back to top <span aria-hidden="true">↑</span>
-              </a>
-            </div>
-          </div>
-        </footer>
       </main>
     </div>
   );

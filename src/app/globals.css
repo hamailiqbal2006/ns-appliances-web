@@ -120,15 +120,19 @@
 .visit-supporting-note{max-width:520px;margin-top:clamp(26px,3.4vh,36px);margin-bottom:0;padding:0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(15px,1.25vw,18px);font-weight:400;line-height:1.5;letter-spacing:-.012em;color:rgba(245,244,239,.72);text-align:center;will-change:transform,opacity}
 .visit-settle-line{width:min(168px,28vw);height:1px;margin:clamp(20px,2.8vh,28px) auto 0;background:rgba(245,244,239,.32);transform-origin:center;will-change:transform,opacity}
 
-.site-footer{position:relative;z-index:7;width:100%;height:100svh;min-height:100svh;background:#06090b;color:#f5f4ef;display:flex;align-items:stretch;box-shadow:0 -28px 70px rgba(0,0,0,.55);box-sizing:border-box}
+.site-footer{position:relative;width:100%;color:#f5f4ef;display:flex;align-items:stretch;box-sizing:border-box}
+.site-footer-glass{position:absolute;inset:0;z-index:5;height:100svh;min-height:100svh;background:rgba(8,13,16,.76);backdrop-filter:blur(12px) saturate(130%);-webkit-backdrop-filter:blur(12px) saturate(130%);border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -24px 60px rgba(0,0,0,.45);pointer-events:none;will-change:transform}
+.site-footer-static{position:relative;z-index:5;width:100%;min-height:auto;height:auto;background:#080d10;border-top:1px solid rgba(255,255,255,.08)}
+.site-footer-static .footer-full-container{padding-top:clamp(64px,8vh,96px);padding-bottom:clamp(36px,5vh,48px);gap:clamp(36px,5vh,64px)}
 .footer-full-container{max-width:1280px;width:100%;margin:0 auto;padding:clamp(144px,17vh,176px) clamp(24px,5vw,72px) clamp(36px,5vh,52px);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box}
-.footer-main-grid{display:grid;grid-template-columns:2fr 1.15fr 1.15fr;gap:clamp(36px,5vw,80px);align-items:start}
+.footer-main-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1.15fr;gap:clamp(32px,4vw,64px);align-items:start}
 .footer-col{display:flex;flex-direction:column}
-.footer-col-brand{max-width:440px}
+.footer-col-brand{max-width:380px}
 .footer-brand-title{margin:0 0 10px 0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(24px,2.2vw,30px);font-weight:600;letter-spacing:-.025em;line-height:1.2;color:#ffffff}
 .footer-brand-title a{color:inherit;text-decoration:none;transition:opacity 160ms ease}
 .footer-brand-title a:hover{opacity:.9}
-.footer-brand-tagline{margin:0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(14px,1.05vw,15px);font-weight:400;line-height:1.5;letter-spacing:-.01em;color:rgba(245,244,239,.55)}
+.footer-brand-tagline{margin:0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(14px,1.05vw,15px);font-weight:500;line-height:1.5;letter-spacing:-.01em;color:rgba(245,244,239,.72)}
+.footer-brand-sub{margin:10px 0 0 0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;font-weight:400;line-height:1.5;color:rgba(245,244,239,.45)}
 .footer-col-heading{margin:0 0 clamp(16px,2.2vh,22px) 0;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,244,239,.42);line-height:1}
 .footer-link-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:clamp(10px,1.4vh,14px)}
 .footer-nav-link{display:inline-block;padding:3px 0;font-family:var(--font-geist),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(14px,1.05vw,15px);font-weight:400;letter-spacing:-.01em;line-height:1.4;color:rgba(245,244,239,.72);text-decoration:none;transition:color 180ms ease}
@@ -140,6 +144,50 @@
 .footer-full-back-top span{font-size:13px;transition:transform 160ms ease}
 .footer-full-back-top:hover span{transform:translateY(-2px)}
 .footer-nav-link:focus-visible,.footer-full-back-top:focus-visible,.footer-brand-title a:focus-visible{outline:2px solid #ffffff;outline-offset:3px;border-radius:2px}
+
+/* Informational & Editorial Pages */
+.info-page{background:#080d10;color:#f5f4ef;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box}
+.info-main{max-width:1120px;width:100%;margin:0 auto;padding:clamp(140px,17vh,180px) clamp(24px,5vw,64px) clamp(64px,8vh,100px);flex:1;box-sizing:border-box}
+.info-eyebrow{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,244,239,.45);margin:0 0 16px 0}
+.info-title{font-family:var(--font-cover),Impact,"Arial Narrow",sans-serif;font-size:clamp(44px,6vw,84px);font-weight:400;letter-spacing:-.03em;line-height:.95;text-transform:uppercase;color:#ffffff;margin:0 0 clamp(20px,2.8vh,32px) 0}
+.info-lead{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(16px,1.35vw,19px);font-weight:400;line-height:1.65;color:rgba(245,244,239,.82);max-width:760px;margin:0 0 clamp(40px,5vh,56px) 0}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(20px,2.5vw,32px);margin:clamp(32px,4vh,48px) 0}
+.info-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:clamp(24px,3vw,36px);backdrop-filter:blur(8px);transition:border-color 200ms ease,transform 200ms ease;display:flex;flex-direction:column}
+.info-card:hover{border-color:rgba(255,255,255,.18);transform:translateY(-2px)}
+.info-card-num{font-family:var(--font-geist),monospace;font-size:11.5px;color:rgba(245,244,239,.4);margin-bottom:12px;letter-spacing:.08em}
+.info-card-title{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:18px;font-weight:600;color:#ffffff;margin:0 0 10px 0}
+.info-card-body{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.6;color:rgba(245,244,239,.65);margin:0}
+.info-cta-bar{display:flex;align-items:center;gap:14px;margin-top:clamp(40px,5vh,60px);flex-wrap:wrap}
+.info-btn-primary{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:#ffffff;color:#080d10;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13.5px;font-weight:600;border-radius:4px;text-decoration:none;transition:background 180ms ease,transform 180ms ease}
+.info-btn-primary:hover{background:#e8e7e2;transform:translateY(-1px)}
+.info-btn-secondary{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:rgba(255,255,255,.05);color:#f5f4ef;border:1px solid rgba(255,255,255,.12);font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13.5px;font-weight:500;border-radius:4px;text-decoration:none;transition:border-color 180ms ease,background 180ms ease}
+.info-btn-secondary:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.08)}
+
+/* Accordion FAQ */
+.faq-list{display:flex;flex-direction:column;gap:12px;max-width:860px;width:100%}
+.faq-item{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.02);overflow:hidden;transition:border-color 200ms ease}
+.faq-item.is-open{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04)}
+.faq-trigger{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:clamp(18px,2.4vh,24px) clamp(20px,3vw,28px);background:transparent;border:none;cursor:pointer;color:#ffffff;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:clamp(15px,1.2vw,17px);font-weight:500;line-height:1.4}
+.faq-trigger:focus-visible{outline:2px solid #ffffff;outline-offset:-2px}
+.faq-icon{font-size:20px;line-height:1;color:rgba(245,244,239,.5);transition:transform 240ms cubic-bezier(.16,1,.3,1);flex-shrink:0}
+.faq-item.is-open .faq-icon{transform:rotate(45deg);color:#ffffff}
+.faq-answer{padding:0 clamp(20px,3vw,28px) clamp(20px,2.5vh,26px);font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14.5px;line-height:1.65;color:rgba(245,244,239,.72)}
+
+/* Catalog All Products */
+.catalog-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:clamp(28px,3.5vh,40px)}
+.catalog-tab{padding:8px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:rgba(245,244,239,.7);font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 180ms ease}
+.catalog-tab:hover{border-color:rgba(255,255,255,.25);color:#ffffff}
+.catalog-tab.is-active{background:#ffffff;color:#080d10;border-color:#ffffff;font-weight:600}
+.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:clamp(20px,2.5vw,32px)}
+.catalog-card{position:relative;display:flex;flex-direction:column;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;transition:border-color 200ms ease,transform 200ms ease,box-shadow 200ms ease}
+.catalog-card:hover{border-color:rgba(255,255,255,.22);transform:translateY(-3px);box-shadow:0 16px 36px rgba(0,0,0,.4)}
+.catalog-card-image{position:relative;width:100%;height:260px;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.06) 0%,transparent 70%);display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden}
+.catalog-card-body{padding:20px 24px 24px;display:flex;flex-direction:column;gap:6px}
+.catalog-card-cat{font-family:var(--font-geist),monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:rgba(245,244,239,.45)}
+.catalog-card-name{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:18px;font-weight:600;color:#ffffff;margin:0}
+.catalog-card-kind{font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13.5px;color:rgba(245,244,239,.65);margin:0}
+.catalog-card-action{margin-top:12px;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12.5px;font-weight:500;color:#ffffff;display:flex;align-items:center;gap:4px}
+.catalog-notice{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:14px 20px;font-family:var(--font-sora),-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;line-height:1.5;color:rgba(245,244,239,.6);margin-bottom:clamp(28px,3.5vh,40px);max-width:760px}
 
 @media(max-width:900px){
   .site-nav-links{display:none}
@@ -167,17 +215,22 @@
 
 @media(max-width:640px){
   .site-footer{height:auto;min-height:100svh}
-  .footer-full-container{padding:clamp(120px,14vh,136px) 24px clamp(28px,4vh,36px);gap:24px;min-height:100svh}
-  .footer-main-grid{grid-template-columns:1fr;gap:20px}
-  .footer-col-brand{margin-bottom:0}
-  .footer-brand-title{font-size:24px;margin-bottom:6px}
-  .footer-brand-tagline{font-size:13.5px}
-  .footer-col-heading{margin-bottom:10px;font-size:11.5px}
-  .footer-link-list{gap:4px}
-  .footer-nav-link{padding:2px 0;min-height:32px;display:flex;align-items:center;font-size:14px}
-  .footer-full-bottom{flex-direction:column-reverse;align-items:flex-start;gap:12px;padding-top:16px}
-  .footer-full-copyright{font-size:12px}
+  .site-footer-glass{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .footer-full-container{padding:clamp(116px,13vh,132px) 20px clamp(24px,3.5vh,32px);gap:20px;min-height:100svh}
+  .footer-main-grid{grid-template-columns:1fr 1fr;gap:22px 16px}
+  .footer-col-brand{grid-column:1 / -1;margin-bottom:2px}
+  .footer-brand-title{font-size:22px;margin-bottom:4px}
+  .footer-brand-tagline{font-size:13px}
+  .footer-brand-sub{font-size:12px;margin-top:4px}
+  .footer-col-heading{margin-bottom:8px;font-size:11px}
+  .footer-link-list{gap:2px}
+  .footer-nav-link{padding:4px 0;min-height:36px;display:flex;align-items:center;font-size:13px}
+  .footer-full-bottom{flex-direction:column-reverse;align-items:flex-start;gap:10px;padding-top:14px}
+  .footer-full-copyright{font-size:11.5px}
   .footer-full-back-top{font-size:11px}
+  .info-main{padding:120px 20px 60px}
+  .info-title{font-size:clamp(34px,9vw,52px)}
+  .catalog-grid{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){
   .showroom-stack{height:auto}

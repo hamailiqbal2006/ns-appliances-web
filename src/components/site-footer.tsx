@@ -69,9 +69,6 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
                 </Link>
               </h2>
               <p className="footer-brand-tagline">Comfort made better.</p>
-              <p className="footer-brand-sub">
-                Physical showroom and digital appliance exploration catalog.
-              </p>
             </div>
 
             {/* COLUMN 2 — EXPLORE */}

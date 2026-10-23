@@ -307,30 +307,31 @@ export function HomeExperience() {
             invalidateOnRefresh: true,
             onUpdate: (self) => {
               if (siteFooterRef.current) {
-                siteFooterRef.current.style.pointerEvents = self.progress >= 0.65 ? "auto" : "none";
+                siteFooterRef.current.style.pointerEvents = self.progress >= 0.88 ? "auto" : "none";
               }
             },
           },
         });
 
         // STATE B: Only foreground text disappears smoothly, moving up slightly (~24px) and fading out
-        // Foreground text exits in the first portion of scroll, then holds empty background
+        // Foreground text exits in the first portion (0.04 - 0.26), followed by an intentional background hold
         visitTimeline
-          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.36, ease: "power2.inOut" }, 0.04)
-          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.34, ease: "power2.inOut" }, 0.08)
-          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.28, ease: "power2.inOut" }, 0.11);
+          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.22, ease: "power2.inOut" }, 0.04)
+          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.20, ease: "power2.inOut" }, 0.06)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.16, ease: "power2.inOut" }, 0.08);
 
         if (visitForeground.current) {
-          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.38);
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.26);
         }
 
-        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background
+        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background (0.52 - 1.00)
+        // Between 0.26 and 0.52, the background alone is held stationary for clear visual appreciation
         if (siteFooterRef.current) {
           visitTimeline.fromTo(
             siteFooterRef.current,
             { yPercent: 100 },
-            { yPercent: 0, duration: 0.60, ease: "power1.out" },
-            0.40
+            { yPercent: 0, duration: 0.48, ease: "power1.out" },
+            0.52
           );
         }
       }
@@ -481,7 +482,7 @@ export function HomeExperience() {
           className="visit-track cover-panel"
           ref={visitTrack}
           aria-labelledby="visit-cover-title"
-          style={{ height: "320svh" }}
+          style={{ height: "360svh" }}
         >
           <div className="visit-stage">
             {/* Atmospheric Background Layer — Stationary throughout entire track */}

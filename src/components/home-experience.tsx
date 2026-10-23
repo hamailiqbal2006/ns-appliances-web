@@ -510,56 +510,185 @@ export function HomeExperience() {
           </div>
         </section>
 
-        {/* LAYER 5: FULL-SCREEN CINEMATIC FOOTER */}
+        {/* LAYER 5: FULL-SCREEN RETAIL FOOTER */}
         <footer className="site-footer cover-panel" role="contentinfo">
           <div className="footer-full-container">
-            {/* Upper Region: Final Brand Statement */}
-            <div className="footer-hero-brand-wrap">
-              <span className="footer-hero-label">Comfort made better.</span>
-              <h2 className="footer-hero-title">NS Home Appliances</h2>
+            {/* Upper Region: Standard Retail Columns */}
+            <div className="footer-main-grid">
+              {/* Column 1 — Brand */}
+              <div className="footer-col footer-col-brand">
+                <h2 className="footer-brand-title">
+                  <Link
+                    href="/"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    NS Home Appliances
+                  </Link>
+                </h2>
+                <p className="footer-brand-tagline">Comfort made better.</p>
+              </div>
+
+              {/* Column 2 — Quick Links */}
+              <div className="footer-col">
+                <h3 className="footer-col-heading">Quick Links</h3>
+                <ul className="footer-link-list">
+                  <li>
+                    <Link
+                      href="/"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      Home
+                    </Link>
+                  </li>
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        const target = document.getElementById("categories");
+                        if (target) {
+                          e.preventDefault();
+                          target.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                    >
+                      Products
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        const target = document.getElementById("categories");
+                        if (target) {
+                          e.preventDefault();
+                          target.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                    >
+                      Categories
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#visit"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        const target = document.getElementById("visit");
+                        if (target) {
+                          e.preventDefault();
+                          target.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                    >
+                      Visit Our Store
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 3 — Shop Categories */}
+              <div className="footer-col">
+                <h3 className="footer-col-heading">Shop Categories</h3>
+                <ul className="footer-link-list">
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        if (categoryTrack.current) {
+                          e.preventDefault();
+                          const trackTop = categoryTrack.current.offsetTop;
+                          window.scrollTo({ top: trackTop + 10, behavior: "smooth" });
+                        }
+                      }}
+                    >
+                      Cooling
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        if (categoryTrack.current) {
+                          e.preventDefault();
+                          const trackTop = categoryTrack.current.offsetTop;
+                          const trackHeight = categoryTrack.current.offsetHeight;
+                          window.scrollTo({
+                            top: trackTop + (1 / categories.length) * trackHeight + 10,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                    >
+                      Laundry
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        if (categoryTrack.current) {
+                          e.preventDefault();
+                          const trackTop = categoryTrack.current.offsetTop;
+                          const trackHeight = categoryTrack.current.offsetHeight;
+                          window.scrollTo({
+                            top: trackTop + (2 / categories.length) * trackHeight + 10,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                    >
+                      Kitchen & Everyday
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#categories"
+                      className="footer-nav-link"
+                      onClick={(e) => {
+                        if (categoryTrack.current) {
+                          e.preventDefault();
+                          const trackTop = categoryTrack.current.offsetTop;
+                          const trackHeight = categoryTrack.current.offsetHeight;
+                          window.scrollTo({
+                            top: trackTop + (3 / categories.length) * trackHeight + 10,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                    >
+                      Home Appliances
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            {/* Middle Region: Editorial Navigation */}
-            <nav className="footer-full-nav" aria-label="Footer navigation">
-              <ul className="footer-full-links">
-                <li>
-                  <Link href="/" className="footer-full-link">
-                    <span>01</span>
-                    <b>Home</b>
-                    <i>↗</i>
-                  </Link>
-                </li>
-                <li>
-                  <a href="#categories" className="footer-full-link">
-                    <span>02</span>
-                    <b>Categories</b>
-                    <i>↗</i>
-                  </a>
-                </li>
-                <li>
-                  <a href="#categories" className="footer-full-link">
-                    <span>03</span>
-                    <b>Products</b>
-                    <i>↗</i>
-                  </a>
-                </li>
-                <li>
-                  <a href="#visit" className="footer-full-link">
-                    <span>04</span>
-                    <b>Visit Our Store</b>
-                    <i>↗</i>
-                  </a>
-                </li>
-              </ul>
-            </nav>
-
-            {/* Bottom Region: Dynamic Copyright & Back to Top */}
+            {/* Bottom Region: Standard Footer Bar */}
             <div className="footer-full-bottom">
               <p className="footer-full-copyright">
                 &copy; {currentYear} NS Home Appliances. All rights reserved.
               </p>
-              <a href="#hero-title" className="footer-full-back-top">
-                Back to top <span>↑</span>
+              <a
+                href="#hero-title"
+                className="footer-full-back-top"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                Back to top <span aria-hidden="true">↑</span>
               </a>
             </div>
           </div>

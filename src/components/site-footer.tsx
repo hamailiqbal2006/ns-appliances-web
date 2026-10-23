@@ -52,26 +52,36 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
         aria-label="Site footer"
       >
         <div className="footer-full-container">
-          {/* Upper Region: 4-Column Retail Layout */}
-          <div className="footer-main-grid">
-            {/* COLUMN 1 — BRAND */}
-            <div className="footer-col footer-col-brand">
-              <h2 className="footer-brand-title">
-                <Link
-                  href="/"
-                  onClick={(e) => {
-                    if (isGlass) {
-                      handleBackToTop(e);
-                    }
-                  }}
-                >
-                  NS Home Appliances
+          {/* TIER 1 — BRAND HEADER */}
+          <div className="footer-tier-brand-wrap">
+            <div className="footer-tier-brand">
+              <div className="footer-brand-block">
+                <h2 className="footer-brand-title">
+                  <Link
+                    href="/"
+                    onClick={(e) => {
+                      if (isGlass) {
+                        handleBackToTop(e);
+                      }
+                    }}
+                  >
+                    NS Home Appliances
+                  </Link>
+                </h2>
+                <p className="footer-brand-tagline">Comfort made better.</p>
+              </div>
+              <div className="footer-brand-action">
+                <Link href="/products" className="footer-explore-pill">
+                  Explore Products <span aria-hidden="true">&rarr;</span>
                 </Link>
-              </h2>
-              <p className="footer-brand-tagline">Comfort made better.</p>
+              </div>
             </div>
+            <div className="footer-tier-divider" aria-hidden="true" />
+          </div>
 
-            {/* COLUMN 2 — EXPLORE */}
+          {/* TIER 2 — PROFESSIONAL 4-COLUMN FOOTER NAVIGATION */}
+          <div className="footer-main-grid">
+            {/* COLUMN 1 — EXPLORE */}
             <div className="footer-col">
               <h3 className="footer-col-heading">Explore</h3>
               <ul className="footer-link-list">
@@ -114,36 +124,9 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
               </ul>
             </div>
 
-            {/* COLUMN 3 — INFORMATION */}
+            {/* COLUMN 2 — CATEGORIES */}
             <div className="footer-col">
-              <h3 className="footer-col-heading">Information</h3>
-              <ul className="footer-link-list">
-                <li>
-                  <Link href="/about" className="footer-nav-link">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/faq" className="footer-nav-link">
-                    FAQs
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="footer-nav-link">
-                    Contact Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="footer-nav-link">
-                    Privacy Policy
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* COLUMN 4 — SHOP CATEGORIES */}
-            <div className="footer-col">
-              <h3 className="footer-col-heading">Shop Categories</h3>
+              <h3 className="footer-col-heading">Categories</h3>
               <ul className="footer-link-list">
                 {categories.map((cat, idx) => (
                   <li key={cat.slug}>
@@ -158,20 +141,57 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
                 ))}
               </ul>
             </div>
+
+            {/* COLUMN 3 — SUPPORT */}
+            <div className="footer-col">
+              <h3 className="footer-col-heading">Support</h3>
+              <ul className="footer-link-list">
+                <li>
+                  <Link href="/faq" className="footer-nav-link">
+                    FAQs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="footer-nav-link">
+                    Contact Us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* COLUMN 4 — COMPANY */}
+            <div className="footer-col">
+              <h3 className="footer-col-heading">Company</h3>
+              <ul className="footer-link-list">
+                <li>
+                  <Link href="/about" className="footer-nav-link">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="footer-nav-link">
+                    Privacy Policy
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          {/* Lower Region: Divider, Copyright & Back to Top */}
-          <div className="footer-full-bottom">
-            <p className="footer-full-copyright">
-              &copy; {currentYear} NS Home Appliances. All rights reserved.
-            </p>
-            <a
-              href="#top"
-              className="footer-full-back-top"
-              onClick={handleBackToTop}
-            >
-              Back to top <span aria-hidden="true">&uarr;</span>
-            </a>
+          {/* TIER 3 — FOOTER BOTTOM BAR */}
+          <div className="footer-tier-bottom-wrap">
+            <div className="footer-tier-divider" aria-hidden="true" />
+            <div className="footer-full-bottom">
+              <p className="footer-full-copyright">
+                &copy; {currentYear} NS Home Appliances. All rights reserved.
+              </p>
+              <a
+                href="#top"
+                className="footer-full-back-top"
+                onClick={handleBackToTop}
+              >
+                Back to top <span aria-hidden="true">&uarr;</span>
+              </a>
+            </div>
           </div>
         </div>
       </footer>

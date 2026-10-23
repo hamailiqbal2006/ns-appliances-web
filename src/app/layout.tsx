@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Anton, Bodoni_Moda, Geist, Instrument_Serif, Fraunces, Newsreader, Sora } from "next/font/google";
+import { Anton, Bodoni_Moda, Geist, Instrument_Serif, Fraunces, Manrope, Newsreader, Sora } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -7,6 +7,12 @@ const sora = Sora({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sora",
+  display: "swap",
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
   display: "swap",
 });
 const anton = Anton({
@@ -54,7 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geist.variable} ${sora.variable} ${anton.variable} ${bodoniModa.variable} ${newsreader.variable} ${instrumentSerif.variable} ${fraunces.variable}`}
+      className={`${geist.variable} ${sora.variable} ${manrope.variable} ${anton.variable} ${bodoniModa.variable} ${newsreader.variable} ${instrumentSerif.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>{children}</body>

@@ -27,12 +27,7 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
 
     const handleBackToTop = (e: React.MouseEvent) => {
       e.preventDefault();
-      const lenis = (window as unknown as { __lenis?: { scrollTo: (target: number, opts?: unknown) => void } }).__lenis;
-      if (lenis) {
-        lenis.scrollTo(0, { duration: 0.9 });
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const handleCategoryClick = (e: React.MouseEvent, index: number) => {

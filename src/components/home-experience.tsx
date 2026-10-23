@@ -62,41 +62,6 @@ export const heroBanners: HeroBannerSlide[] = [
 
 const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
-// Robust hysteresis-buffered category calculation to prevent flickering at transition thresholds
-function computeCategoryIndex(
-  progress: number,
-  currentIndex: number,
-  count: number
-): number {
-  if (progress <= 0.01) return 0;
-  if (progress >= 0.99) return count - 1;
-
-  const bandSize = 1 / count;
-  const hysteresis = bandSize * 0.10; // 10% deadband margin
-
-  // Forward transition with hysteresis threshold
-  for (let i = currentIndex; i < count - 1; i++) {
-    const forwardThreshold = (i + 1) * bandSize + hysteresis;
-    if (progress >= forwardThreshold) {
-      currentIndex = i + 1;
-    } else {
-      break;
-    }
-  }
-
-  // Backward transition with hysteresis threshold
-  for (let i = currentIndex; i > 0; i--) {
-    const backwardThreshold = i * bandSize - hysteresis;
-    if (progress <= backwardThreshold) {
-      currentIndex = i - 1;
-    } else {
-      break;
-    }
-  }
-
-  return Math.min(count - 1, Math.max(0, currentIndex));
-}
-
 export function HomeExperience() {
   const root = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
@@ -107,6 +72,7 @@ export function HomeExperience() {
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
+  const category = categories[activeCategory];
   const visitTrack = useRef<HTMLElement>(null);
   const visitForeground = useRef<HTMLDivElement>(null);
   const visitHeading = useRef<HTMLHeadingElement>(null);
@@ -272,7 +238,7 @@ export function HomeExperience() {
             trigger: categoryCover.current,
             start: "top bottom",
             end: "top top",
-            scrub: true,
+            scrub: 0.12,
             invalidateOnRefresh: true,
             onUpdate: ({ progress }) => {
               setHeroCovered(progress > 0.85);
@@ -318,20 +284,18 @@ export function HomeExperience() {
         }
       }
 
-      let currentCategoryIdx = 0;
+      const indexFrom = (p: number, size: number) =>
+        Math.min(size - 1, Math.floor(p * size + 0.0001));
 
       if (categoryTrack.current) {
         ScrollTrigger.create({
           trigger: categoryTrack.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: true,
+          scrub: 0.12,
           onUpdate: ({ progress: p }) => {
-            const next = computeCategoryIndex(p, currentCategoryIdx, categories.length);
-            if (next !== currentCategoryIdx) {
-              currentCategoryIdx = next;
-              setActiveCategory(next);
-            }
+            const next = indexFrom(p, categories.length);
+            setActiveCategory((prev) => (prev !== next ? next : prev));
           },
         });
       }
@@ -348,7 +312,7 @@ export function HomeExperience() {
             trigger: visitTrack.current,
             start: "top top",
             end: "bottom bottom",
-            scrub: true,
+            scrub: 0.12,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
               const allowEvents = self.progress >= 0.88;
@@ -468,71 +432,69 @@ export function HomeExperience() {
           className="category-track cover-panel"
           ref={categoryTrack}
           aria-label="Shop by category"
-          style={{ height: `${categories.length * 80}svh` }}
+          style={{ height: `${categories.length * 105}svh` }}
         >
-          <div className="category-scene">
-            {/* Split Background Layers per Category (GPU-accelerated opacity crossfade, zero gradient repaint) */}
-            {categories.map((cat, idx) => (
-              <div
-                key={`bg-${cat.slug}`}
-                className={`category-scene-bg ${idx === activeCategory ? "is-active" : ""}`}
-                style={css({
-                  "--cat-base": cat.palette.base,
-                  "--cat-panel": cat.palette.panel,
-                })}
+          {/* Preload all category images to ensure instantaneous decoding and zero layout flash */}
+          <div className="sr-only" aria-hidden="true">
+            {categories.map((cat) => (
+              <Image
+                key={`preload-${cat.slug}`}
+                src={cat.image}
+                alt=""
+                width={600}
+                height={600}
+                priority
               />
             ))}
+          </div>
 
-            {/* Pre-rendered Category Content Layers (Pre-decoded images, zero DOM unmounting, 60fps GPU transform/opacity) */}
-            {categories.map((cat, idx) => {
-              const isActive = idx === activeCategory;
-              return (
-                <div
-                  key={`content-${cat.slug}`}
-                  className={`category-content-layer ${isActive ? "is-active" : ""}`}
-                  style={css({
-                    "--scene-ink": cat.palette.ink,
-                  })}
-                  aria-hidden={!isActive}
-                >
-                  <div className="category-left">
-                    <p className="scene-number">0{idx + 1} / 04</p>
-                    <h2>{cat.name}</h2>
-                    <p className="category-signal">Scroll-led selection</p>
-                  </div>
-                  <div className="category-cutout">
-                    <div className="category-cutout-stage">
-                      <Image
-                        src={cat.image}
-                        alt={`Temporary ${cat.name} appliance cutout`}
-                        fill
-                        sizes="(max-width: 760px) 85vw, 46vw"
-                        priority
-                        style={{
-                          objectFit: "contain",
-                          transform: `translate(${cat.art.x}%, ${cat.art.y}%) scale(${cat.art.scale}) rotate(${cat.art.rotation ?? 0}deg)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="category-right">
-                    <p className="eyebrow">Explore</p>
-                    <ul>
-                      {cat.subcategories.map((sub, sIdx) => (
-                        <li key={sub.slug}>
-                          <Link href={`/category/${cat.slug}/${sub.slug}`} tabIndex={isActive ? 0 : -1}>
-                            <span>0{sIdx + 1}</span>
-                            {sub.name}
-                            <b>↗</b>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
-                  </div>
-                </div>
-              );
+          <div
+            className="category-scene"
+            style={css({
+              "--scene-base": category.palette.base,
+              "--scene-panel": category.palette.panel,
+              "--scene-ink": category.palette.ink,
             })}
+          >
+            <div className="category-left">
+              <div key={`cat-left-${category.slug}`} className="category-state-enter">
+                <p className="scene-number">0{activeCategory + 1} / 04</p>
+                <h2>{category.name}</h2>
+                <p className="category-signal">Scroll-led selection</p>
+              </div>
+            </div>
+            <div className="category-cutout">
+              <div key={`cat-cutout-${category.slug}`} className="category-cutout-stage category-state-enter">
+                <Image
+                  src={category.image}
+                  alt={`Temporary ${category.name} appliance cutout`}
+                  fill
+                  sizes="(max-width: 760px) 85vw, 46vw"
+                  priority
+                  style={{
+                    objectFit: "contain",
+                    transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="category-right">
+              <div key={`cat-right-${category.slug}`} className="category-state-enter">
+                <p className="eyebrow">Explore</p>
+                <ul>
+                  {category.subcategories.map((sub, sIdx) => (
+                    <li key={sub.slug}>
+                      <Link href={`/category/${category.slug}/${sub.slug}`}>
+                        <span>0{sIdx + 1}</span>
+                        {sub.name}
+                        <b>↗</b>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
+              </div>
+            </div>
 
             {/* Pagination dots */}
             <div className="scene-dots" aria-hidden>
@@ -549,7 +511,7 @@ export function HomeExperience() {
           className="visit-track cover-panel"
           ref={visitTrack}
           aria-labelledby="visit-cover-title"
-          style={{ height: "260svh" }}
+          style={{ height: "360svh" }}
         >
           <div className="visit-stage">
             {/* Atmospheric Background Layer — Stationary throughout entire track */}
@@ -600,26 +562,16 @@ export function HomeExperience() {
                   const trackTop = categoryTrack.current.offsetTop;
                   const trackHeight = categoryTrack.current.offsetHeight;
                   const targetY = trackTop + (index / categories.length) * trackHeight + 10;
-                  const lenis = (window as unknown as { __lenis?: { scrollTo: (target: number, opts?: unknown) => void } }).__lenis;
-                  if (lenis) {
-                    lenis.scrollTo(targetY, { duration: 0.9 });
-                  } else {
-                    window.scrollTo({
-                      top: targetY,
-                      behavior: "smooth",
-                    });
-                  }
+                  window.scrollTo({
+                    top: targetY,
+                    behavior: "smooth",
+                  });
                 }
               }}
               onSectionClick={(id) => {
                 const target = document.getElementById(id);
                 if (target) {
-                  const lenis = (window as unknown as { __lenis?: { scrollTo: (target: HTMLElement, opts?: unknown) => void } }).__lenis;
-                  if (lenis) {
-                    lenis.scrollTo(target, { duration: 0.9 });
-                  } else {
-                    target.scrollIntoView({ behavior: "smooth" });
-                  }
+                  target.scrollIntoView({ behavior: "smooth" });
                 }
               }}
             />

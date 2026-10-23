@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories } from "@/data/catalog";
@@ -72,6 +72,28 @@ export function HomeExperience() {
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
+  const activeCategoryRef = useRef(0);
+  const isTransitioningRef = useRef(false);
+  const isCategoryActiveRef = useRef(false);
+  const accumulatedDeltaRef = useRef(0);
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    activeCategoryRef.current = activeCategory;
+  }, [activeCategory]);
+
+  const goToCategory = useCallback((nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= categories.length || nextIndex === activeCategoryRef.current || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    activeCategoryRef.current = nextIndex;
+    setActiveCategory(nextIndex);
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    transitionTimerRef.current = setTimeout(() => {
+      isTransitioningRef.current = false;
+      accumulatedDeltaRef.current = 0;
+    }, 440);
+  }, []);
+
   const category = categories[activeCategory];
   const visitTrack = useRef<HTMLElement>(null);
   const visitForeground = useRef<HTMLDivElement>(null);
@@ -121,6 +143,105 @@ export function HomeExperience() {
       window.removeEventListener("hashchange", scrollToHashTarget);
     };
   }, []);
+
+  // Desktop wheel, mobile touch, and keyboard interaction controller for stationary categories
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const INTENT_THRESHOLD = 18; // Responsive threshold for wheel notch / trackpad gesture
+
+    const onWheel = (e: WheelEvent) => {
+      if (!isCategoryActiveRef.current) return;
+
+      const delta = e.deltaY;
+      if (Math.abs(delta) < 2) return;
+
+      if (delta > 0) {
+        // Scrolling DOWN
+        if (activeCategoryRef.current < categories.length - 1) {
+          e.preventDefault();
+          accumulatedDeltaRef.current += delta;
+          if (!isTransitioningRef.current && accumulatedDeltaRef.current >= INTENT_THRESHOLD) {
+            accumulatedDeltaRef.current = 0;
+            goToCategory(activeCategoryRef.current + 1);
+          }
+        } else {
+          // At Category 3 (Home): allow native scroll to proceed down to Visit!
+        }
+      } else if (delta < 0) {
+        // Scrolling UP
+        if (activeCategoryRef.current > 0) {
+          e.preventDefault();
+          accumulatedDeltaRef.current += delta;
+          if (!isTransitioningRef.current && Math.abs(accumulatedDeltaRef.current) >= INTENT_THRESHOLD) {
+            accumulatedDeltaRef.current = 0;
+            goToCategory(activeCategoryRef.current - 1);
+          }
+        } else {
+          // At Category 0 (Cooling): allow native scroll to proceed up to Category Intro / Hero!
+        }
+      }
+    };
+
+    let touchStartY = 0;
+    const TOUCH_THRESHOLD = 28;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isCategoryActiveRef.current) return;
+      const currentY = e.touches[0].clientY;
+      const deltaY = touchStartY - currentY; // positive = swipe up = scroll down
+
+      if (deltaY > TOUCH_THRESHOLD) {
+        if (activeCategoryRef.current < categories.length - 1) {
+          if (e.cancelable) e.preventDefault();
+          if (!isTransitioningRef.current) {
+            touchStartY = currentY;
+            goToCategory(activeCategoryRef.current + 1);
+          }
+        }
+      } else if (deltaY < -TOUCH_THRESHOLD) {
+        if (activeCategoryRef.current > 0) {
+          if (e.cancelable) e.preventDefault();
+          if (!isTransitioningRef.current) {
+            touchStartY = currentY;
+            goToCategory(activeCategoryRef.current - 1);
+          }
+        }
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isCategoryActiveRef.current) return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        if (activeCategoryRef.current < categories.length - 1) {
+          e.preventDefault();
+          goToCategory(activeCategoryRef.current + 1);
+        }
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        if (activeCategoryRef.current > 0) {
+          e.preventDefault();
+          goToCategory(activeCategoryRef.current - 1);
+        }
+      }
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKeyDown);
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, [goToCategory]);
 
   // Subtle cursor-responsive movement for the Shop by Category heading
   useEffect(() => {
@@ -284,18 +405,28 @@ export function HomeExperience() {
         }
       }
 
-      const indexFrom = (p: number, size: number) =>
-        Math.min(size - 1, Math.floor(p * size + 0.0001));
-
       if (categoryTrack.current) {
         ScrollTrigger.create({
           trigger: categoryTrack.current,
           start: "top top",
-          end: "bottom bottom",
-          scrub: 0.12,
-          onUpdate: ({ progress: p }) => {
-            const next = indexFrom(p, categories.length);
-            setActiveCategory((prev) => (prev !== next ? next : prev));
+          end: "bottom top",
+          onEnter: () => {
+            isCategoryActiveRef.current = true;
+            if (activeCategoryRef.current !== 0) {
+              goToCategory(0);
+            }
+          },
+          onEnterBack: () => {
+            isCategoryActiveRef.current = true;
+            if (activeCategoryRef.current !== categories.length - 1) {
+              goToCategory(categories.length - 1);
+            }
+          },
+          onLeave: () => {
+            isCategoryActiveRef.current = false;
+          },
+          onLeaveBack: () => {
+            isCategoryActiveRef.current = false;
           },
         });
       }
@@ -351,7 +482,7 @@ export function HomeExperience() {
     }, root);
 
     return () => context.revert();
-  }, []);
+  }, [goToCategory]);
 
   const currentBanner = heroBanners[activeBanner];
 
@@ -432,7 +563,7 @@ export function HomeExperience() {
           className="category-track cover-panel"
           ref={categoryTrack}
           aria-label="Shop by category"
-          style={{ height: `${categories.length * 105}svh` }}
+          style={{ height: "120svh" }}
         >
           {/* Preload all category images to ensure instantaneous decoding and zero layout flash */}
           <div className="sr-only" aria-hidden="true">
@@ -499,7 +630,15 @@ export function HomeExperience() {
             {/* Pagination dots */}
             <div className="scene-dots" aria-hidden>
               {categories.map((_, dotIdx) => (
-                <i key={dotIdx} className={dotIdx === activeCategory ? "active" : ""} />
+                <i
+                  key={dotIdx}
+                  className={dotIdx === activeCategory ? "active" : ""}
+                  onClick={() => goToCategory(dotIdx)}
+                  style={{ cursor: "pointer" }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Category ${dotIdx + 1}`}
+                />
               ))}
             </div>
           </div>
@@ -558,14 +697,9 @@ export function HomeExperience() {
               ref={siteFooterRef}
               variant="glass-overlay"
               onCategoryClick={(index) => {
+                goToCategory(index);
                 if (categoryTrack.current) {
-                  const trackTop = categoryTrack.current.offsetTop;
-                  const trackHeight = categoryTrack.current.offsetHeight;
-                  const targetY = trackTop + (index / categories.length) * trackHeight + 10;
-                  window.scrollTo({
-                    top: targetY,
-                    behavior: "smooth",
-                  });
+                  categoryTrack.current.scrollIntoView({ behavior: "smooth" });
                 }
               }}
               onSectionClick={(id) => {

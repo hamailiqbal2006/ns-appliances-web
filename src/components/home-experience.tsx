@@ -13,6 +13,11 @@ import { HeroDistortion } from "@/components/hero-distortion";
 
 gsap.registerPlugin(ScrollTrigger);
 
+if (typeof window !== "undefined") {
+  // The browser's address-bar transitions should not trigger a full scroll-layout refresh.
+  ScrollTrigger.config({ ignoreMobileResize: true });
+}
+
 const css = (values: Record<string, string | number>) => values as React.CSSProperties;
 
 // Exterior showroom photography configuration
@@ -147,6 +152,7 @@ export function HomeExperience() {
   // Desktop wheel, mobile touch, and keyboard interaction controller for stationary categories
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
 
     const INTENT_THRESHOLD = 18; // Responsive threshold for wheel notch / trackpad gesture
 
@@ -242,6 +248,26 @@ export function HomeExperience() {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
     };
   }, [goToCategory]);
+
+  // Let touch devices use their native scroll path while categories advance with page progress.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia("(max-width: 1024px)").matches) return;
+    const track = categoryTrack.current;
+    if (!track) return;
+
+    const trigger = ScrollTrigger.create({
+      trigger: track,
+      start: "top top",
+      end: "bottom bottom",
+      invalidateOnRefresh: true,
+      onUpdate: ({ progress }) => {
+        const next = Math.min(categories.length - 1, Math.floor(progress * categories.length + 0.0001));
+        setActiveCategory((previous) => (previous === next ? previous : next));
+      },
+    });
+
+    return () => trigger.kill();
+  }, []);
 
   // Subtle cursor-responsive movement for the Shop by Category heading
   useEffect(() => {
@@ -563,7 +589,7 @@ export function HomeExperience() {
           className="category-track cover-panel"
           ref={categoryTrack}
           aria-label="Shop by category"
-          style={{ height: "120svh" }}
+          style={{ height: `${categories.length * 105}svh` }}
         >
           {/* Preload all category images to ensure instantaneous decoding and zero layout flash */}
           <div className="sr-only" aria-hidden="true">
@@ -602,10 +628,15 @@ export function HomeExperience() {
                   fill
                   sizes="(max-width: 760px) 85vw, 46vw"
                   priority
-                  style={{
+                  style={css({
                     objectFit: "contain",
-                    transform: `translate(${category.art.x}%, ${category.art.y}%) scale(${category.art.scale}) rotate(${category.art.rotation ?? 0}deg)`,
-                  }}
+                    "--cat-scale": category.art.scale,
+                    "--cat-x": `${category.art.x}%`,
+                    "--cat-y": `${category.art.y}%`,
+                    "--cat-rot": `${category.art.rotation ?? 0}deg`,
+                    "--cat-mobile-scale": category.art.scale,
+                    "--cat-mobile-y": `${category.art.y}%`,
+                  })}
                 />
               </div>
             </div>

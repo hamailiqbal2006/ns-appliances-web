@@ -105,6 +105,20 @@ export function WelcomePopup({
     };
   }, []);
 
+  // Preload and decode appliance image during the display delay period so the
+  // modal and its visual asset appear as one unified component without pop-in.
+  useEffect(() => {
+    if (!config.imageSrc || !isStorefrontRoute) {
+      return;
+    }
+
+    const img = new window.Image();
+    img.src = config.imageSrc;
+    if (typeof img.decode === "function") {
+      img.decode().catch(() => {});
+    }
+  }, [config.imageSrc, isStorefrontRoute]);
+
   // Timer and session trigger logic
   useEffect(() => {
     // Never display on protected admin routes, including while navigating
@@ -310,6 +324,35 @@ export function WelcomePopup({
 
   return (
     <>
+      {/* Background Next.js image cache priming during initial display delay */}
+      {config.imageSrc && !isOpen && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+            pointerEvents: "none",
+            opacity: 0,
+          }}
+        >
+          <Image
+            src={config.imageSrc}
+            alt=""
+            priority
+            sizes="(max-width: 640px) 250px, 360px"
+            width={250}
+            height={250}
+          />
+        </div>
+      )}
+
       {/* Development Preview Pill Launcher (Visible in dev mode for quick inspection) */}
       {isPreviewUrl && !isOpen && (
         <button
@@ -382,6 +425,7 @@ export function WelcomePopup({
                       src={config.imageSrc}
                       alt={config.imageAlt}
                       fill
+                      priority
                       sizes="(max-width: 640px) 250px, 360px"
                     />
                   ) : (

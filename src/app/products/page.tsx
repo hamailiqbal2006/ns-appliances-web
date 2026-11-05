@@ -3,46 +3,60 @@ import Link from "next/link";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductsCatalog } from "@/components/products-catalog";
+import { getStorefrontProducts } from "@/lib/public-catalog";
+import { getStorefrontCategories } from "@/lib/categories";
+import styles from "@/components/category-catalog.module.css";
 
 export const metadata: Metadata = {
-  title: "All Products Catalog | NS Home Appliances",
+  title: "All Appliances | NS Home Appliances",
   description:
-    "Explore the complete NS Home Appliances catalog — cooling fans, room coolers, washing machines, kitchen appliances, and water heating geysers.",
+    "Explore appliances available from NS Home Appliances — room coolers, washing machines, dryers, fans, kitchen appliances, and water heaters.",
 };
 
-export default function ProductsPage() {
+export const instant = false;
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; subcategory?: string }>;
+}) {
+  const { category } = await searchParams;
+  const [products, categories] = await Promise.all([
+    getStorefrontProducts(),
+    getStorefrontCategories(),
+  ]);
+
   return (
-    <div className="info-page">
-      <SiteNav detail />
-      <main className="info-main" id="main-content">
-        <p className="info-eyebrow">NS Home Appliances · Complete Collection</p>
-        <h1 className="info-title">All Products</h1>
-        <p className="info-lead">
-          Explore our range of dependable home appliances designed for comfort,
-          efficiency, and durability. Filter by category or select an item to inspect
-          its visual story.
-        </p>
+    <div className={styles.categoryPage}>
+      <SiteNav alwaysFormed />
+      <main className={`${styles.catalogMain} ${styles.allProductsMain}`} id="main-content">
+        <header className={styles.allProductsHeader}>
+          <div className={styles.allProductsHeaderContent}>
+            <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+              <Link href="/" className={styles.breadcrumbLink}>
+                Home
+              </Link>
+              <span className={styles.breadcrumbSeparator} aria-hidden="true">
+                /
+              </span>
+              <span className={styles.breadcrumbCurrent}>All Appliances</span>
+            </nav>
+
+            <h1 className={styles.allProductsTitle}>
+              All Appliances
+            </h1>
+          </div>
+        </header>
 
         <section aria-labelledby="catalog-heading">
           <h2 id="catalog-heading" className="sr-only">
             Products Catalog
           </h2>
-          <ProductsCatalog />
-        </section>
-
-        <section aria-labelledby="products-cta-title" className="info-cta-bar">
-          <h2 id="products-cta-title" className="sr-only">
-            More Options
-          </h2>
-          <Link href="/#visit" className="info-btn-primary">
-            Visit Our Store &rarr;
-          </Link>
-          <Link href="/faq" className="info-btn-secondary">
-            Read FAQs
-          </Link>
-          <Link href="/contact" className="info-btn-secondary">
-            Contact Showroom
-          </Link>
+          <ProductsCatalog
+            products={products}
+            categories={categories}
+            initialCategory={category}
+          />
         </section>
       </main>
       <SiteFooter variant="static" />

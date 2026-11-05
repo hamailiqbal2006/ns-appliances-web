@@ -1,4 +1,11 @@
-export type ArtDirection = { scale: number; x: number; y: number; rotation?: number };
+export type ArtDirection = {
+  scale: number;
+  x: number;
+  y: number;
+  rotation?: number;
+  mobileScale?: number;
+  mobileY?: number;
+};
 export type Product = { slug: string; name: string; category: string; kind: string; image: string; art: ArtDirection; palette: { base: string; panel: string; ink: string; accent: string }; note: string };
 export type Category = { slug: string; name: string; image: string; art: ArtDirection; palette: { base: string; panel: string; ink: string }; subcategories: { name: string; slug: string }[] };
 
@@ -10,10 +17,51 @@ export const products: Product[] = [
 ];
 
 export const categories: Category[] = [
-  { slug: "cooling", name: "Cooling", image: "/products/temp/fan-temp.png", art: { scale: 1.2, x: 6, y: 0 }, palette: { base: "#e8ece9", panel: "#163f45", ink: "#f8faf7" }, subcategories: [{ name: "Room Coolers", slug: "room-coolers" }, { name: "Pedestal Fans", slug: "pedestal-fans" }, { name: "Ceiling Fans", slug: "ceiling-fans" }] },
-  { slug: "laundry", name: "Laundry", image: "/products/temp/washer-temp.png", art: { scale: 1.12, x: 4, y: 3, rotation: -2 }, palette: { base: "#ede8df", panel: "#7e2e39", ink: "#fff9f4" }, subcategories: [{ name: "Washing Machines", slug: "washing-machines" }, { name: "Dryers", slug: "dryers" }] },
-  { slug: "kitchen-everyday", name: "Kitchen & Everyday", image: "/products/temp/blender-temp.png", art: { scale: 1.06, x: 0, y: 2 }, palette: { base: "#f1eddf", panel: "#596044", ink: "#fbfbf4" }, subcategories: [{ name: "Juicers & Blenders", slug: "juicers-blenders" }, { name: "Irons", slug: "irons" }] },
-  { slug: "home", name: "Home", image: "/products/temp/geyser-temp.png", art: { scale: 1.1, x: 0, y: 0 }, palette: { base: "#e7e4df", panel: "#25282a", ink: "#fbfbf6" }, subcategories: [{ name: "Geysers", slug: "geysers" }, { name: "Metal Safe Almirahs", slug: "metal-safe-almirahs" }] },
+  {
+    slug: "cooling",
+    name: "Cooling",
+    image: "/products/temp/fan-temp.png",
+    art: { scale: 0.98, x: 0, y: 1, mobileScale: 0.90, mobileY: 0 },
+    palette: { base: "#e8ece9", panel: "#163f45", ink: "#f8faf7" },
+    subcategories: [
+      { name: "Room Coolers", slug: "room-coolers" },
+      { name: "Pedestal Fans", slug: "pedestal-fans" },
+      { name: "Ceiling Fans", slug: "ceiling-fans" },
+    ],
+  },
+  {
+    slug: "laundry",
+    name: "Laundry",
+    image: "/products/temp/washer-temp.png",
+    art: { scale: 0.76, x: 0, y: 2, rotation: 0, mobileScale: 0.70, mobileY: 2 },
+    palette: { base: "#ede8df", panel: "#7e2e39", ink: "#fff9f4" },
+    subcategories: [
+      { name: "Washing Machines", slug: "washing-machines" },
+      { name: "Dryers", slug: "dryers" },
+    ],
+  },
+  {
+    slug: "kitchen-everyday",
+    name: "Kitchen & Everyday",
+    image: "/products/temp/blender-temp.png",
+    art: { scale: 0.98, x: 0, y: 1, mobileScale: 0.84, mobileY: 7 },
+    palette: { base: "#f1eddf", panel: "#596044", ink: "#fbfbf4" },
+    subcategories: [
+      { name: "Juicers & Blenders", slug: "juicers-blenders" },
+      { name: "Irons", slug: "irons" },
+    ],
+  },
+  {
+    slug: "home",
+    name: "Home",
+    image: "/products/temp/geyser-temp.png",
+    art: { scale: 0.90, x: 0, y: 4, mobileScale: 0.84, mobileY: 2 },
+    palette: { base: "#e7e4df", panel: "#25282a", ink: "#fbfbf6" },
+    subcategories: [
+      { name: "Geysers", slug: "geysers" },
+      { name: "Metal Safe Almirahs", slug: "metal-safe-almirahs" },
+    ],
+  },
 ];
 
 export const productBySlug = (slug: string) => products.find((product) => product.slug === slug);

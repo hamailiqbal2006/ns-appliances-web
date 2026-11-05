@@ -1,0 +1,566 @@
+/* SELF-HOSTED URDU FONTS (Noto Naskh Arabic & Noto Nastaliq Urdu) */
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src:
+    local("Noto Naskh Arabic"),
+    url("/fonts/NotoNaskhArabic-Variable.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+FB50-FDFF, U+FE70-FEFC;
+}
+
+@font-face {
+  font-family: "Noto Nastaliq Urdu";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src:
+    local("Noto Nastaliq Urdu"),
+    url("/fonts/NotoNastaliqUrdu-Variable.woff2") format("woff2"),
+    url("/fonts/NotoNastaliqUrdu-Regular.ttf") format("truetype");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+FB50-FDFF, U+FE70-FEFC;
+}
+
+/* TRUE FULL-SCREEN LIGHT-SURFACE PAGE (NO BLACK CANVAS, NO FLOATING CARD) */
+.faqPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f7f8f9;
+  background-image:
+    radial-gradient(ellipse 1400px 700px at 50% 0px, #ffffff 0%, rgba(255, 255, 255, 0) 75%),
+    linear-gradient(180deg, #fcfdfe 0%, #f7f8f9 35%, #edf0f3 100%);
+  color: #111827;
+  position: relative;
+  overflow-x: clip;
+}
+
+.faqMain {
+  flex: 1;
+  width: 100%;
+  padding: clamp(130px, 15vh, 160px) 24px clamp(50px, 7vh, 80px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* CENTERED FAQ CONTENT CONTAINER (Bounded for optimal line-length and reading balance) */
+.faqContent {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* HEADER SECTION */
+.panelHeader {
+  position: relative;
+  margin-bottom: 34px;
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* TRANSLATE BUTTON (Upper Pill Button) */
+.translateBtn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+  padding: 7px 16px;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 550;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 160ms ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  z-index: 2;
+}
+
+.translateBtn:hover {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.28);
+  color: #000000;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.translateBtn:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+
+.translateIcon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* RTL translation button alignment */
+[dir="rtl"] .translateBtn {
+  left: auto;
+  right: 0;
+  font-family: var(--font-sora), -apple-system, sans-serif;
+  font-size: 13px;
+  padding: 7px 16px;
+}
+
+/* HEADER CENTER */
+.headerCenter {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* 010 / FAQS LABEL BADGE */
+.faqBadge {
+  display: inline-block;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  margin-bottom: 12px;
+}
+
+/* URDU BADGE */
+[dir="rtl"] .faqBadge {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #475569;
+  padding: 4px 16px;
+  margin-bottom: 10px;
+}
+
+/* MAIN HEADING (Common Questions / عام سوالات) */
+.mainTitle {
+  margin: 0;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(34px, 3vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: #111827;
+  line-height: 1.15;
+  text-align: center;
+}
+
+[dir="rtl"] .mainTitle {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", sans-serif;
+  font-size: clamp(34px, 3.2vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+/* ACCORDION LIST CONTAINER */
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* INDIVIDUAL ACCORDION ROW */
+.faqRow {
+  background: #eaedf0;
+  border-radius: 16px;
+  border: 1.5px solid transparent;
+  transition: background-color 150ms ease, border-color 150ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.faqRow:hover:not(.faqRowOpen) {
+  background: #e1e5e8;
+}
+
+/* EXPANDED ROW (White surface + thin muted lavender outline) */
+.faqRowOpen {
+  background: #ffffff;
+  border-color: rgba(175, 155, 225, 0.8);
+  box-shadow: 0 4px 18px rgba(160, 140, 210, 0.12);
+}
+
+.questionHeading {
+  margin: 0;
+  padding: 0;
+}
+
+/* TRIGGER BUTTON */
+.faqTrigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 15px 18px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  gap: 16px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.faqTrigger:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: -3px;
+  border-radius: 14px;
+}
+
+/* NUMBER BADGE */
+.numBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  color: #4b5563;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 150ms ease, color 150ms ease;
+  line-height: 1;
+}
+
+.faqRowOpen .numBadge {
+  background: rgba(180, 160, 220, 0.2);
+  color: #5b21b6;
+}
+
+/* RTL Number Badge */
+[dir="rtl"] .numBadge {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", var(--font-sora), sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* QUESTION TEXT */
+.questionText {
+  flex: 1;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16.5px;
+  font-weight: 550;
+  color: #111827;
+  letter-spacing: -0.015em;
+  line-height: 1.4;
+  margin: 0;
+  transition: color 150ms ease;
+}
+
+.faqRow:hover .questionText {
+  color: #000000;
+}
+
+[dir="rtl"] .faqTrigger {
+  text-align: right;
+  padding: 15px 20px;
+  gap: 16px;
+}
+
+/* URDU QUESTION TYPOGRAPHY: Clean, crisp, modern Naskh/Nastaliq hybrid */
+[dir="rtl"] .questionText {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", Arial, sans-serif;
+  font-size: 19.5px;
+  font-weight: 600;
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: #111827;
+  text-align: right;
+}
+
+/* ACTION BUTTON (Plus in closed, Outlined X in open) */
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #111417;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+  transition: all 160ms ease;
+  box-sizing: border-box;
+}
+
+.faqRow:hover:not(.faqRowOpen) .actionBtn {
+  background: #000000;
+  transform: scale(1.05);
+}
+
+/* EXPANDED OUTLINED CLOSE ICON */
+.actionBtnOpen {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+.faqRowOpen:hover .actionBtnOpen {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+/* ANSWER WRAP: ZERO-JANK INSTANT GPU COMPOSITED REVEAL */
+.answerWrap {
+  display: none;
+}
+
+.answerWrapOpen {
+  display: block;
+  animation: answerFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes answerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.answerText {
+  margin: 0;
+  padding: 2px 20px 20px calc(18px + 32px + 16px); /* Indented past the number circle */
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: #4b5563;
+  box-sizing: border-box;
+  max-width: 950px;
+}
+
+/* URDU ANSWER TYPOGRAPHY: Highly readable, generous vertical spacing, crisp baseline */
+[dir="rtl"] .answerText {
+  padding: 4px calc(20px + 32px + 16px) 22px 20px;
+  text-align: right;
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", Arial, sans-serif;
+  font-size: 17.5px;
+  line-height: 1.95;
+  color: #374151;
+  max-width: 980px;
+}
+
+/* CONTACT US ENDING (Bottom of list) */
+.contactSection {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.contactQuestion {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 6px 0;
+}
+
+[dir="rtl"] .contactQuestion {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", sans-serif;
+  font-size: 15px;
+  color: #64748b;
+}
+
+.contactLink {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #111827;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.contactLink:hover {
+  color: #000000;
+  transform: translateX(3px);
+}
+
+[dir="rtl"] .contactLink {
+  font-family: "Noto Naskh Arabic", "Noto Nastaliq Urdu", sans-serif;
+  font-size: 15.5px;
+}
+
+[dir="rtl"] .contactLink:hover {
+  transform: translateX(-3px);
+}
+
+.contactLink:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* TABLET RESPONSIVENESS (1024px to 769px) */
+@media (max-width: 1024px) {
+  .faqMain {
+    padding: 100px 20px 60px;
+  }
+
+  [dir="rtl"] .questionText {
+    font-size: 18.5px;
+    line-height: 1.65;
+  }
+
+  [dir="rtl"] .answerText {
+    font-size: 16.5px;
+    line-height: 1.9;
+  }
+}
+
+/* MOBILE AND NARROW TABLET RESPONSIVENESS (<= 768px) */
+@media (max-width: 768px) {
+  .faqMain {
+    padding: 96px 14px 60px;
+  }
+
+  .panelHeader {
+    margin-bottom: 24px;
+  }
+
+  .translateBtn {
+    position: static;
+    margin-bottom: 14px;
+    align-self: center;
+  }
+
+  [dir="rtl"] .translateBtn {
+    position: static;
+    margin-bottom: 14px;
+    align-self: center;
+  }
+
+  .mainTitle {
+    font-size: 28px;
+  }
+
+  [dir="rtl"] .mainTitle {
+    font-size: 28px;
+    line-height: 1.5;
+  }
+
+  .faqTrigger {
+    padding: 13px 14px;
+    gap: 12px;
+  }
+
+  [dir="rtl"] .faqTrigger {
+    padding: 13px 15px;
+    gap: 12px;
+  }
+
+  .questionText {
+    font-size: 15.5px;
+  }
+
+  [dir="rtl"] .questionText {
+    font-size: 17.5px;
+    line-height: 1.65;
+  }
+
+  .answerText {
+    padding: 2px 14px 16px calc(14px + 32px + 12px);
+    font-size: 14.5px;
+  }
+
+  [dir="rtl"] .answerText {
+    padding: 2px calc(15px + 32px + 12px) 18px 15px;
+    font-size: 16px;
+    line-height: 1.85;
+  }
+}
+
+/* SMALL MOBILE (<= 440px) */
+@media (max-width: 440px) {
+  .faqMain {
+    padding: 90px 10px 50px;
+  }
+
+  .faqTrigger {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+
+  [dir="rtl"] .faqTrigger {
+    padding: 12px 12px;
+    gap: 10px;
+  }
+
+  .numBadge {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  [dir="rtl"] .numBadge {
+    font-size: 13px;
+  }
+
+  .actionBtn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .questionText {
+    font-size: 14.5px;
+  }
+
+  [dir="rtl"] .questionText {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .answerText {
+    padding: 2px 10px 14px 10px; /* Full width beneath trigger */
+    font-size: 14px;
+  }
+
+  [dir="rtl"] .answerText {
+    padding: 2px 10px 16px 10px;
+    font-size: 15px;
+    line-height: 1.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faqRow,
+  .actionBtn,
+  .answerWrapOpen,
+  .translateBtn,
+  .contactLink {
+    animation: none !important;
+    transition: none !important;
+  }
+}

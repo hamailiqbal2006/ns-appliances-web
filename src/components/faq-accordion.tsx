@@ -1,94 +1,208 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useId, useState } from "react";
+import Link from "next/link";
+import { FAQ_DATA, type BilingualFaqItem } from "@/data/faq-data";
+import styles from "@/app/faq/faq.module.css";
 
-interface FaqItem {
-  question: string;
-  answer: string;
-}
-
-const FAQS: FaqItem[] = [
-  {
-    question: "How can I browse appliances on this website?",
-    answer:
-      "You can browse by category directly on our homepage showroom, review our All Products catalog, or use the instant search bar (press '/' or click Search in the navigation). The search bar supports both English and Roman Urdu keywords like 'dhulai', 'pankha', or 'cooler' to help you find items naturally.",
-  },
-  {
-    question: "Can I purchase directly through the website?",
-    answer:
-      "No. This website is designed as a digital exploration catalog and showroom guide. Direct online checkout and payment processing are not active. All purchases are completed in person at our physical showroom so you can inspect the appliance, verify specifications, and receive official documentation.",
-  },
-  {
-    question: "Can I reserve a product through the website?",
-    answer:
-      "Product pages feature an inquiry framework to assist you in preparing requests. However, because store floor inventory changes continuously, final unit reservations and holds must be confirmed directly with our showroom team.",
-  },
-  {
-    question: "Where can I see and test products in person?",
-    answer:
-      "All featured appliance categories are available for hands-on inspection at our physical NS Home Appliances showroom. You can see physical dimensions, verify cabinet finishes, and assess operating volume before deciding.",
-  },
-  {
-    question: "How does the search bar handle Roman Urdu?",
-    answer:
-      "Our search engine has built-in colloquial terminology mapping. Searching for common everyday words such as 'dhulai machine', 'hawa', 'istri', 'pankha', or 'cooler' automatically routes you to the matching products and categories.",
-  },
-  {
-    question: "Are product availability and prices confirmed online?",
-    answer:
-      "Digital listings show representative models and temporary demonstration cutouts while inventory systems are finalized. Official retail pricing, manufacturer warranty terms, and active stock levels are confirmed on-site at the store.",
-  },
-  {
-    question: "How can I contact the store?",
-    answer:
-      "You can visit our showroom in person during retail business hours. Please refer to our Contact Us page for guidance on store consultations and visiting our physical location.",
-  },
+const URDU_NUMERALS = [
+  "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹", "۱۰",
+  "۱۱", "۱۲", "۱۳", "۱۴", "۱۵", "۱۶"
 ];
 
-export function FaqAccordion() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+interface FaqRowItemProps {
+  item: BilingualFaqItem;
+  index: number;
+  isOpen: boolean;
+  isUrdu: boolean;
+  baseId: string;
+  onToggle: (id: string) => void;
+}
 
-  const toggle = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
+const FaqRowItem = memo(function FaqRowItem({
+  item,
+  index,
+  isOpen,
+  isUrdu,
+  baseId,
+  onToggle,
+}: FaqRowItemProps) {
+  const buttonId = `${baseId}-trigger-${item.id}`;
+  const panelId = `${baseId}-panel-${item.id}`;
+  const itemNum = isUrdu
+    ? URDU_NUMERALS[index] || String(index + 1)
+    : String(index + 1);
+
+  const content = isUrdu ? item.ur : item.en;
 
   return (
-    <div className="faq-list" role="region" aria-label="Frequently Asked Questions">
-      {FAQS.map((faq, idx) => {
-        const isOpen = openIndex === idx;
-        const panelId = `faq-panel-${idx}`;
-        const buttonId = `faq-btn-${idx}`;
+    <article
+      className={`${styles.faqRow} ${isOpen ? styles.faqRowOpen : ""}`}
+    >
+      <h2 className={styles.questionHeading}>
+        <button
+          type="button"
+          id={buttonId}
+          className={styles.faqTrigger}
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => onToggle(item.id)}
+        >
+          <span className={styles.numBadge} aria-hidden="true">
+            {itemNum}
+          </span>
 
-        return (
-          <div key={idx} className={`faq-item ${isOpen ? "is-open" : ""}`}>
-            <h3>
-              <button
-                type="button"
-                id={buttonId}
-                className="faq-trigger"
-                aria-expanded={isOpen}
-                aria-controls={panelId}
-                onClick={() => toggle(idx)}
+          <span className={styles.questionText}>
+            {content.question}
+          </span>
+
+          <span
+            className={`${styles.actionBtn} ${isOpen ? styles.actionBtnOpen : ""}`}
+            aria-hidden="true"
+          >
+            {isOpen ? (
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <span>{faq.question}</span>
-                <span className="faq-icon" aria-hidden="true">
-                  +
-                </span>
-              </button>
-            </h3>
-            {isOpen && (
-              <div
-                id={panelId}
-                role="region"
-                aria-labelledby={buttonId}
-                className="faq-answer"
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <p style={{ margin: 0 }}>{faq.answer}</p>
-              </div>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
             )}
-          </div>
-        );
-      })}
+          </span>
+        </button>
+      </h2>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={buttonId}
+        hidden={!isOpen}
+        className={`${styles.answerWrap} ${isOpen ? styles.answerWrapOpen : ""}`}
+      >
+        <p className={styles.answerText}>{content.answer}</p>
+      </div>
+    </article>
+  );
+});
+
+export function FaqAccordion() {
+  const [lang, setLang] = useState<"en" | "ur">("en");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const baseId = useId();
+
+  const isUrdu = lang === "ur";
+
+  const toggleLanguage = useCallback(() => {
+    setLang((current) => (current === "en" ? "ur" : "en"));
+  }, []);
+
+  const toggleAccordion = useCallback((id: string) => {
+    setOpenId((current) => (current === id ? null : id));
+  }, []);
+
+  return (
+    <div
+      className={styles.faqContent}
+      dir={isUrdu ? "rtl" : "ltr"}
+      lang={isUrdu ? "ur" : "en"}
+      aria-labelledby="faq-page-title"
+    >
+      {/* HEADER WITH TRANSLATE BUTTON AND CENTER HEADING */}
+      <div className={styles.panelHeader}>
+        <button
+          type="button"
+          className={styles.translateBtn}
+          onClick={toggleLanguage}
+          aria-label={
+            isUrdu
+              ? "Switch language to English"
+              : "Translate to Urdu (اردو میں ترجمہ کریں)"
+          }
+        >
+          <svg
+            className={styles.translateIcon}
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          <span>{isUrdu ? "English" : "Translate to Urdu"}</span>
+        </button>
+
+        <div className={styles.headerCenter}>
+          <span className={styles.faqBadge}>
+            {isUrdu ? "عمومی سوالات" : "FAQS"}
+          </span>
+          <h1 id="faq-page-title" className={styles.mainTitle}>
+            {isUrdu ? "عام سوالات" : "Common Questions"}
+          </h1>
+        </div>
+      </div>
+
+      {/* QUESTION ROWS */}
+      <div className={styles.faqList}>
+        {FAQ_DATA.map((item, index) => (
+          <FaqRowItem
+            key={item.id}
+            item={item}
+            index={index}
+            isOpen={openId === item.id}
+            isUrdu={isUrdu}
+            baseId={baseId}
+            onToggle={toggleAccordion}
+          />
+        ))}
+      </div>
+
+      {/* CONTACT US ENDING */}
+      <footer className={styles.contactSection}>
+        <p className={styles.contactQuestion}>
+          {isUrdu ? "کیا آپ کا کوئی اور سوال ہے؟" : "Have any other questions?"}
+        </p>
+        <Link href="/contact" className={styles.contactLink}>
+          {isUrdu ? (
+            <>
+              <span>ہم سے رابطہ کریں</span>
+              <span aria-hidden="true">&larr;</span>
+            </>
+          ) : (
+            <>
+              <span>Contact Us</span>
+              <span aria-hidden="true">&rarr;</span>
+            </>
+          )}
+        </Link>
+      </footer>
     </div>
   );
 }

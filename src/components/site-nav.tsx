@@ -2,10 +2,11 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { searchCatalog } from "@/data/catalog-search";
+import { searchCatalog, type CatalogSearchResult } from "@/data/catalog-search";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -16,15 +17,23 @@ const useIsomorphicLayoutEffect =
 
 interface SiteNavProps {
   detail?: boolean;
+  homeLinks?: boolean;
+  alwaysFormed?: boolean;
 }
 
-export function SiteNav({ detail = false }: SiteNavProps) {
-  const root = detail ? "/" : "";
+export function SiteNav({
+  detail = false,
+  alwaysFormed = false,
+}: SiteNavProps) {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const root = isHome ? "" : "/";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeResultIndex, setActiveResultIndex] = useState(0);
+  const [remoteSearchResults, setRemoteSearchResults] = useState<{ query: string; results: CatalogSearchResult[] } | null>(null);
 
   const headerRef = useRef<HTMLElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -79,8 +88,21 @@ export function SiteNav({ detail = false }: SiteNavProps) {
     }
   }, [searchOpen]);
 
-  const searchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
+  const fallbackSearchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
   const cleanQuery = searchQuery.trim();
+  const searchResults = remoteSearchResults?.query === cleanQuery ? remoteSearchResults.results : fallbackSearchResults;
+
+  useEffect(() => {
+    if (cleanQuery.length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch(`/api/catalog-search?q=${encodeURIComponent(cleanQuery)}`, { signal: controller.signal })
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((results: CatalogSearchResult[]) => setRemoteSearchResults({ query: cleanQuery, results }))
+        .catch(() => {});
+    }, 180);
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [cleanQuery]);
 
   const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (!searchResults.length) return;
@@ -103,9 +125,24 @@ export function SiteNav({ detail = false }: SiteNavProps) {
   useIsomorphicLayoutEffect(() => {
     if (detail || typeof window === "undefined") return;
 
+    if (alwaysFormed) {
+      gsap.set([prodRef.current, catRef.current, visRef.current, searchTriggerRef.current], {
+        x: 0,
+        y: 0,
+        clearProps: "transform",
+      });
+      gsap.set(shellRef.current, { opacity: 1, clearProps: "transform" });
+      gsap.set(sweepRef.current, { opacity: 0 });
+      gsap.set(brandLinkRef.current, { autoAlpha: 1, clearProps: "transform" });
+      gsap.set(contentRef.current, { color: "#0e1618" });
+      if (brandWrapRef.current) brandWrapRef.current.style.pointerEvents = "auto";
+      if (brandLinkRef.current) brandLinkRef.current.tabIndex = 0;
+      return;
+    }
+
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
-      if (shellRef.current) gsap.set(shellRef.current, { opacity: 1, scaleX: 1, x: 0 });
+      if (shellRef.current) gsap.set(shellRef.current, { opacity: 1, clearProps: "transform" });
       if (brandWrapRef.current) gsap.set(brandWrapRef.current, { autoAlpha: 1, y: 0, pointerEvents: "auto" });
       if (contentRef.current) gsap.set(contentRef.current, { color: "#0e1618" });
       return;
@@ -300,7 +337,7 @@ export function SiteNav({ detail = false }: SiteNavProps) {
       if (timeline) timeline.kill();
       if (st) st.kill();
     };
-  }, [detail]);
+  }, [alwaysFormed, detail]);
 
   return (
     <>
@@ -409,12 +446,18 @@ export function SiteNav({ detail = false }: SiteNavProps) {
               <span className="site-nav-brand-mask">
                 <Link
                   ref={brandLinkRef}
-                  href={detail ? "/" : "#hero-title"}
+                  href="/"
                   className="site-nav-brand"
                   aria-label="NS Home Appliances home"
                   onClick={(e) => {
-                    if (!detail) {
+                    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+                      window.history.scrollRestoration = "manual";
+                    }
+                    if (isHome) {
                       e.preventDefault();
+                      if (typeof window !== "undefined" && window.location.hash) {
+                        window.history.replaceState(null, "", "/");
+                      }
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }
                   }}
@@ -471,7 +514,6 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 className="nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="mobile-link-num">01</span>
                 <span className="mobile-link-text">Products</span>
                 <span className="mobile-link-arrow">↓</span>
               </a>
@@ -480,7 +522,6 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 className="nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="mobile-link-num">02</span>
                 <span className="mobile-link-text">Categories</span>
                 <span className="mobile-link-arrow">↓</span>
               </a>
@@ -489,7 +530,6 @@ export function SiteNav({ detail = false }: SiteNavProps) {
                 className="nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="mobile-link-num">03</span>
                 <span className="mobile-link-text">Visit</span>
                 <span className="mobile-link-arrow">↓</span>
               </a>

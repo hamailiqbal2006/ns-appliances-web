@@ -1,17 +1,70 @@
-import Link from "next/link";
-import { categories } from "@/data/catalog";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
+import { CategoryCatalog } from "@/components/category-catalog";
+import { getStorefrontProducts } from "@/lib/public-catalog";
+import { getStorefrontCategories, resolveCategoryForProduct } from "@/lib/categories";
+import { categories as editorialCategories } from "@/data/catalog";
+import styles from "@/components/category-catalog.module.css";
 
 export const instant = false;
 
 export function generateStaticParams() {
-  return categories.flatMap((category) =>
-    category.subcategories.map((subcategory) => ({ category: category.slug, subcategory: subcategory.slug })),
+  return editorialCategories.flatMap((category) =>
+    category.subcategories.map((subcategory) => ({
+      category: category.slug,
+      subcategory: subcategory.slug,
+    })),
   );
 }
 
-export default async function SubcategoryPage({ params }: { params: Promise<{ category: string; subcategory: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string; subcategory: string }>;
+}): Promise<Metadata> {
   const { category: categorySlug, subcategory: subcategorySlug } = await params;
-  const category = categories.find((item) => item.slug === categorySlug);
-  const subcategory = category?.subcategories.find((item) => item.slug === subcategorySlug);
-  return <main className="placeholder-route"><p className="eyebrow">NS Home Appliances / future category route</p><h1>{subcategory?.name ?? "Category"}</h1><p>This route is prepared for confirmed products, product photography and store information.</p><Link href="/#categories">Back to categories <span>←</span></Link></main>;
+  const allCategories = await getStorefrontCategories();
+  const cat = resolveCategoryForProduct(categorySlug, subcategorySlug, allCategories);
+
+  return {
+    title: `${cat.name} | NS Home Appliances`,
+    description:
+      cat.description ||
+      `Browse verified ${cat.name} appliances in our showroom collection. Inspect technical specifications and contact our showroom.`,
+  };
+}
+
+export default async function SubcategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ category: string; subcategory: string }>;
+  searchParams: Promise<{ sub?: string }>;
+}) {
+  const { category: categorySlug, subcategory: subcategorySlug } = await params;
+  const { sub: querySub } = await searchParams;
+
+  const [products, allCategories] = await Promise.all([
+    getStorefrontProducts(),
+    getStorefrontCategories(),
+  ]);
+
+  const cat = resolveCategoryForProduct(categorySlug, subcategorySlug, allCategories);
+  if (!cat) notFound();
+
+  return (
+    <div className={styles.categoryPage}>
+      <SiteNav alwaysFormed />
+      <main id="main-content">
+        <CategoryCatalog
+          category={cat}
+          products={products}
+          initialSubcategory={querySub}
+        />
+      </main>
+      <SiteFooter variant="static" />
+    </div>
+  );
 }

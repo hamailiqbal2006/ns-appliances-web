@@ -1,20 +1,25 @@
+/* eslint-disable @next/next/no-img-element -- banner artwork is a private Storage stream with an owner-configured host. */
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { HeroDistortion } from "@/components/hero-distortion";
+import type { AnnouncementBar } from "@/lib/announcement-bar";
+import { AnnouncementBarView } from "@/components/announcement-bar";
+import type { HomepageBanner } from "@/lib/homepage-banners";
+import { SHOWROOM_LOCATION } from "@/lib/showroom-location";
 
 gsap.registerPlugin(ScrollTrigger);
 
 if (typeof window !== "undefined") {
-  // The browser's address-bar transitions should not trigger a full scroll-layout refresh.
+  // Prevent mobile address bar show/hide from triggering expensive recalculations during touch scroll
   ScrollTrigger.config({ ignoreMobileResize: true });
 }
 
@@ -25,49 +30,9 @@ const css = (values: Record<string, string | number>) => values as React.CSSProp
 const HAS_STOREFRONT_IMAGE = false;
 const STOREFRONT_IMAGE_PATH = "/images/storefront.jpg";
 
-export interface HeroBannerSlide {
-  id: string;
-  className: string;
-  palette: {
-    primary: string;
-    secondary: string;
-    accent: string;
-  };
-}
-
-export const heroBanners: HeroBannerSlide[] = [
-  {
-    id: "brand",
-    className: "hero-ambient-slide-1",
-    palette: {
-      primary: "rgba(142, 178, 126, 0.32)",
-      secondary: "rgba(68, 138, 125, 0.22)",
-      accent: "rgba(225, 238, 200, 0.28)",
-    },
-  },
-  {
-    id: "climate",
-    className: "hero-ambient-slide-2",
-    palette: {
-      primary: "rgba(110, 185, 205, 0.30)",
-      secondary: "rgba(42, 115, 130, 0.22)",
-      accent: "rgba(195, 235, 245, 0.26)",
-    },
-  },
-  {
-    id: "utility",
-    className: "hero-ambient-slide-3",
-    palette: {
-      primary: "rgba(205, 165, 110, 0.28)",
-      secondary: "rgba(125, 95, 60, 0.20)",
-      accent: "rgba(245, 225, 185, 0.24)",
-    },
-  },
-];
-
 const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
 
-export function HomeExperience() {
+export function HomeExperience({ banners, announcement }: { banners: HomepageBanner[]; announcement: AnnouncementBar }) {
   const root = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
   const coverEditorialBody = useRef<HTMLDivElement>(null);
@@ -77,34 +42,13 @@ export function HomeExperience() {
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState(0);
-  const activeCategoryRef = useRef(0);
-  const isTransitioningRef = useRef(false);
-  const isCategoryActiveRef = useRef(false);
-  const accumulatedDeltaRef = useRef(0);
-  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    activeCategoryRef.current = activeCategory;
-  }, [activeCategory]);
-
-  const goToCategory = useCallback((nextIndex: number) => {
-    if (nextIndex < 0 || nextIndex >= categories.length || nextIndex === activeCategoryRef.current || isTransitioningRef.current) return;
-    isTransitioningRef.current = true;
-    activeCategoryRef.current = nextIndex;
-    setActiveCategory(nextIndex);
-    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-    transitionTimerRef.current = setTimeout(() => {
-      isTransitioningRef.current = false;
-      accumulatedDeltaRef.current = 0;
-    }, 440);
-  }, []);
-
   const category = categories[activeCategory];
   const visitTrack = useRef<HTMLElement>(null);
   const visitForeground = useRef<HTMLDivElement>(null);
   const visitHeading = useRef<HTMLHeadingElement>(null);
   const visitTagline = useRef<HTMLParagraphElement>(null);
   const visitSettleLine = useRef<HTMLDivElement>(null);
+  const visitCta = useRef<HTMLAnchorElement>(null);
   const siteFooterRef = useRef<HTMLElement>(null);
   const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -118,11 +62,57 @@ export function HomeExperience() {
     if (shouldReduceMotion) return;
 
     const timer = setInterval(() => {
-      setActiveBanner((curr) => (curr + 1) % heroBanners.length);
+      setActiveBanner((curr) => (curr + 1) % banners.length);
     }, BANNER_DURATION);
 
     return () => clearInterval(timer);
-  }, [shouldReduceMotion]);
+  }, [banners.length, shouldReduceMotion]);
+
+  // Ensure homepage begins at the top (Hero) on initial mount, refresh, and back/forward unless an explicit section hash is requested
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    ScrollTrigger.clearScrollMemory();
+
+    const hash = window.location.hash;
+    const hasSectionHash = hash === "#categories" || hash === "#visit";
+
+    if (!hasSectionHash) {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
+  // Handle browser Back/Forward (popstate) and back-forward cache restoration (pageshow)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      const hasSectionHash = hash === "#categories" || hash === "#visit";
+      if (!hasSectionHash) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    const handlePageShow = () => {
+      const hash = window.location.hash;
+      const hasSectionHash = hash === "#categories" || hash === "#visit";
+      if (!hasSectionHash) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   // App Router hydration can occur after the browser's initial hash lookup.
   // Re-apply only the Product anchor once the complete layered stack exists;
@@ -147,126 +137,6 @@ export function HomeExperience() {
       window.cancelAnimationFrame(frameId);
       window.removeEventListener("hashchange", scrollToHashTarget);
     };
-  }, []);
-
-  // Desktop wheel, mobile touch, and keyboard interaction controller for stationary categories
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-
-    const INTENT_THRESHOLD = 18; // Responsive threshold for wheel notch / trackpad gesture
-
-    const onWheel = (e: WheelEvent) => {
-      if (!isCategoryActiveRef.current) return;
-
-      const delta = e.deltaY;
-      if (Math.abs(delta) < 2) return;
-
-      if (delta > 0) {
-        // Scrolling DOWN
-        if (activeCategoryRef.current < categories.length - 1) {
-          e.preventDefault();
-          accumulatedDeltaRef.current += delta;
-          if (!isTransitioningRef.current && accumulatedDeltaRef.current >= INTENT_THRESHOLD) {
-            accumulatedDeltaRef.current = 0;
-            goToCategory(activeCategoryRef.current + 1);
-          }
-        } else {
-          // At Category 3 (Home): allow native scroll to proceed down to Visit!
-        }
-      } else if (delta < 0) {
-        // Scrolling UP
-        if (activeCategoryRef.current > 0) {
-          e.preventDefault();
-          accumulatedDeltaRef.current += delta;
-          if (!isTransitioningRef.current && Math.abs(accumulatedDeltaRef.current) >= INTENT_THRESHOLD) {
-            accumulatedDeltaRef.current = 0;
-            goToCategory(activeCategoryRef.current - 1);
-          }
-        } else {
-          // At Category 0 (Cooling): allow native scroll to proceed up to Category Intro / Hero!
-        }
-      }
-    };
-
-    let touchStartY = 0;
-    const TOUCH_THRESHOLD = 28;
-
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isCategoryActiveRef.current) return;
-      const currentY = e.touches[0].clientY;
-      const deltaY = touchStartY - currentY; // positive = swipe up = scroll down
-
-      if (deltaY > TOUCH_THRESHOLD) {
-        if (activeCategoryRef.current < categories.length - 1) {
-          if (e.cancelable) e.preventDefault();
-          if (!isTransitioningRef.current) {
-            touchStartY = currentY;
-            goToCategory(activeCategoryRef.current + 1);
-          }
-        }
-      } else if (deltaY < -TOUCH_THRESHOLD) {
-        if (activeCategoryRef.current > 0) {
-          if (e.cancelable) e.preventDefault();
-          if (!isTransitioningRef.current) {
-            touchStartY = currentY;
-            goToCategory(activeCategoryRef.current - 1);
-          }
-        }
-      }
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!isCategoryActiveRef.current) return;
-      if (e.key === "ArrowDown" || e.key === "PageDown") {
-        if (activeCategoryRef.current < categories.length - 1) {
-          e.preventDefault();
-          goToCategory(activeCategoryRef.current + 1);
-        }
-      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
-        if (activeCategoryRef.current > 0) {
-          e.preventDefault();
-          goToCategory(activeCategoryRef.current - 1);
-        }
-      }
-    };
-
-    window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("keydown", onKeyDown);
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-    };
-  }, [goToCategory]);
-
-  // Let touch devices use their native scroll path while categories advance with page progress.
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia("(max-width: 1024px)").matches) return;
-    const track = categoryTrack.current;
-    if (!track) return;
-
-    const trigger = ScrollTrigger.create({
-      trigger: track,
-      start: "top top",
-      end: "bottom bottom",
-      invalidateOnRefresh: true,
-      onUpdate: ({ progress }) => {
-        const next = Math.min(categories.length - 1, Math.floor(progress * categories.length + 0.0001));
-        setActiveCategory((previous) => (previous === next ? previous : next));
-      },
-    });
-
-    return () => trigger.kill();
   }, []);
 
   // Subtle cursor-responsive movement for the Shop by Category heading
@@ -364,13 +234,32 @@ export function HomeExperience() {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const context = gsap.context(() => {
-      if (categoryCover.current) {
-        // Initial seam prevention at scroll position 0
-        if (window.scrollY <= 5) {
-          categoryCover.current.style.visibility = "hidden";
-        }
+    const mm = gsap.matchMedia(root);
 
+    // Initial seam prevention at scroll position 0
+    if (categoryCover.current && window.scrollY <= 5) {
+      categoryCover.current.style.visibility = "hidden";
+    }
+
+    const indexFrom = (progress: number, size: number) =>
+      Math.min(size - 1, Math.floor(progress * size + 0.0001));
+
+    // Shared category switch trigger across all screen sizes
+    if (categoryTrack.current) {
+      ScrollTrigger.create({
+        trigger: categoryTrack.current,
+        start: "top top",
+        end: "bottom bottom",
+        onUpdate: ({ progress }) => {
+          const next = indexFrom(progress, categories.length);
+          setActiveCategory((previous) => (previous === next ? previous : next));
+        },
+      });
+    }
+
+    // DESKTOP: (min-width: 1025px) -> EXACT APPROVED DESKTOP TIMELINE & INTERACTION (100% UNCHANGED)
+    mm.add("(min-width: 1025px)", () => {
+      if (categoryCover.current) {
         let heroIsCovered = false;
         const setHeroCovered = (covered: boolean) => {
           if (heroIsCovered === covered) return;
@@ -431,86 +320,117 @@ export function HomeExperience() {
         }
       }
 
-      if (categoryTrack.current) {
-        ScrollTrigger.create({
-          trigger: categoryTrack.current,
-          start: "top top",
-          end: "bottom top",
-          onEnter: () => {
-            isCategoryActiveRef.current = true;
-            if (activeCategoryRef.current !== 0) {
-              goToCategory(0);
-            }
-          },
-          onEnterBack: () => {
-            isCategoryActiveRef.current = true;
-            if (activeCategoryRef.current !== categories.length - 1) {
-              goToCategory(categories.length - 1);
-            }
-          },
-          onLeave: () => {
-            isCategoryActiveRef.current = false;
-          },
-          onLeaveBack: () => {
-            isCategoryActiveRef.current = false;
-          },
-        });
-      }
-
-      if (siteFooterRef.current) {
-        gsap.set(siteFooterRef.current, { yPercent: 100 });
-      }
-
       if (visitTrack.current && visitHeading.current && visitTagline.current && visitSettleLine.current) {
-        let lastFooterPointerEvents: boolean | null = null;
-
         const visitTimeline = gsap.timeline({
           scrollTrigger: {
             trigger: visitTrack.current,
             start: "top top",
             end: "bottom bottom",
-            scrub: 0.12,
+            scrub: true,
             invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              const allowEvents = self.progress >= 0.88;
-              if (lastFooterPointerEvents !== allowEvents) {
-                lastFooterPointerEvents = allowEvents;
-                if (siteFooterRef.current) {
-                  siteFooterRef.current.style.pointerEvents = allowEvents ? "auto" : "none";
+          },
+        });
+
+        // Foreground text exits on scroll, moving up slightly (~24px) and fading out
+        visitTimeline
+          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.5, ease: "power2.inOut" }, 0.04)
+          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.45, ease: "power2.inOut" }, 0.06)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.35, ease: "power2.inOut" }, 0.08);
+
+        if (visitCta.current) {
+          visitTimeline.to(visitCta.current, { autoAlpha: 0, y: -16, duration: 0.4, ease: "power2.inOut" }, 0.08);
+        }
+
+        if (visitForeground.current) {
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.45);
+        }
+      }
+    });
+
+    // MOBILE & TABLET: (max-width: 1024px) -> FLUID TOUCH SCROLL, ZERO RE-RENDER CHURN
+    mm.add("(max-width: 1024px)", () => {
+      if (categoryCover.current) {
+        let lastCoverVisible: boolean | null = null;
+
+        const coverTimeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: categoryCover.current,
+            start: "top bottom",
+            end: "top top",
+            scrub: 0.08,
+            invalidateOnRefresh: true,
+            onUpdate: ({ progress }) => {
+              const isVisible = progress > 0;
+              if (lastCoverVisible !== isVisible) {
+                lastCoverVisible = isVisible;
+                if (categoryCover.current) {
+                  categoryCover.current.style.visibility = isVisible ? "visible" : "hidden";
                 }
               }
             },
           },
         });
 
-        // STATE B: Only foreground text disappears smoothly, moving up slightly (~24px) and fading out
-        // Foreground text exits in the first portion (0.04 - 0.28), followed by an intentional background hold
-        visitTimeline
-          .to(visitHeading.current, { autoAlpha: 0, y: -24, duration: 0.24, ease: "power2.inOut" }, 0.04)
-          .to(visitTagline.current, { autoAlpha: 0, y: -18, duration: 0.22, ease: "power2.inOut" }, 0.06)
-          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.18, ease: "power2.inOut" }, 0.08);
-
-        if (visitForeground.current) {
-          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.28);
+        if (coverHeading.current) {
+          coverTimeline.fromTo(
+            coverHeading.current,
+            { autoAlpha: 0.3, y: 18 },
+            { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
+            0.10
+          );
         }
 
-        // STATE C: Frosted glass footer smoothly rises from bottom OVER the stationary background (0.50 - 1.00)
-        // Between 0.28 and 0.50, the background alone is held stationary for clear visual appreciation
-        if (siteFooterRef.current) {
-          visitTimeline.fromTo(
-            siteFooterRef.current,
-            { yPercent: 100 },
-            { yPercent: 0, duration: 0.50, ease: "power1.out" },
-            0.50
+        if (coverTagline.current) {
+          coverTimeline.fromTo(
+            coverTagline.current,
+            { autoAlpha: 0.2, y: 12 },
+            { autoAlpha: 1, y: 0, duration: 0.45, ease: "power2.out" },
+            0.18
+          );
+        }
+
+        if (coverSettleLine.current) {
+          coverTimeline.fromTo(
+            coverSettleLine.current,
+            { autoAlpha: 0, scaleX: 0.25 },
+            { autoAlpha: 1, scaleX: 1, duration: 0.35, ease: "power2.out" },
+            0.28
           );
         }
       }
-    }, root);
 
-    return () => context.revert();
-  }, [goToCategory]);
+      if (visitTrack.current && visitHeading.current && visitTagline.current && visitSettleLine.current) {
+        const visitTimeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: visitTrack.current,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: true,
+            invalidateOnRefresh: true,
+          },
+        });
 
-  const currentBanner = heroBanners[activeBanner];
+        // On mobile, text remains legible and exits smoothly as the footer arrives (~0.35-0.70 progress)
+        // instead of vanishing abruptly on the first touch gesture (0.04 progress)
+        visitTimeline
+          .to(visitHeading.current, { autoAlpha: 0, y: -20, duration: 0.4, ease: "power2.inOut" }, 0.38)
+          .to(visitTagline.current, { autoAlpha: 0, y: -14, duration: 0.35, ease: "power2.inOut" }, 0.42)
+          .to(visitSettleLine.current, { autoAlpha: 0, scaleX: 0.2, duration: 0.3, ease: "power2.inOut" }, 0.46);
+
+        if (visitCta.current) {
+          visitTimeline.to(visitCta.current, { autoAlpha: 0, y: -12, duration: 0.35, ease: "power2.inOut" }, 0.46);
+        }
+
+        if (visitForeground.current) {
+          visitTimeline.to(visitForeground.current, { pointerEvents: "none" }, 0.70);
+        }
+      }
+    });
+
+    return () => mm.revert();
+  }, []);
+
+  const currentBanner = banners[activeBanner] ?? banners[0]!;
 
   return (
     <div className="showroom" ref={root}>
@@ -523,7 +443,7 @@ export function HomeExperience() {
         >
           <div className="hero-stage">
             <div className="hero-banners" aria-hidden="true">
-              {heroBanners.map((banner, index) => {
+              {banners.map((banner, index) => {
                 const isActive = activeBanner === index;
                 return (
                   <div
@@ -536,7 +456,9 @@ export function HomeExperience() {
                         ? "none"
                         : "opacity 1600ms cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
-                  />
+                  >
+                    {banner.imageUrl ? <img className="hero-banner-artwork" src={banner.imageUrl} alt="" /> : null}
+                  </div>
                 );
               })}
             </div>
@@ -553,6 +475,14 @@ export function HomeExperience() {
             </h1>
           </div>
         </section>
+
+        <AnnouncementBarView
+          enabled={announcement.enabled}
+          messages={announcement.messages}
+          theme={announcement.theme}
+          separator={announcement.separator}
+          speed={announcement.speed}
+        />
 
         {/* LAYER 2: SHOP BY CATEGORY INTRODUCTION COVER */}
         <section
@@ -615,18 +545,16 @@ export function HomeExperience() {
           >
             <div className="category-left">
               <div key={`cat-left-${category.slug}`} className="category-state-enter">
-                <p className="scene-number">0{activeCategory + 1} / 04</p>
                 <h2>{category.name}</h2>
-                <p className="category-signal">Scroll-led selection</p>
               </div>
             </div>
             <div className="category-cutout">
               <div key={`cat-cutout-${category.slug}`} className="category-cutout-stage category-state-enter">
                 <Image
                   src={category.image}
-                  alt={`Temporary ${category.name} appliance cutout`}
+                  alt={`${category.name} appliances`}
                   fill
-                  sizes="(max-width: 760px) 85vw, 46vw"
+                  sizes="(max-width: 760px) 78vw, (max-width: 1024px) 38vw, 34vw"
                   priority
                   style={css({
                     objectFit: "contain",
@@ -634,41 +562,46 @@ export function HomeExperience() {
                     "--cat-x": `${category.art.x}%`,
                     "--cat-y": `${category.art.y}%`,
                     "--cat-rot": `${category.art.rotation ?? 0}deg`,
-                    "--cat-mobile-scale": category.art.scale,
-                    "--cat-mobile-y": `${category.art.y}%`,
+                    "--cat-mobile-scale": category.art.mobileScale ?? category.art.scale,
+                    "--cat-mobile-y": `${category.art.mobileY ?? category.art.y}%`,
                   })}
+                  className="cat-product-img"
                 />
               </div>
             </div>
             <div className="category-right">
               <div key={`cat-right-${category.slug}`} className="category-state-enter">
-                <p className="eyebrow">Explore</p>
                 <ul>
-                  {category.subcategories.map((sub, sIdx) => (
+                  {category.subcategories.map((sub) => (
                     <li key={sub.slug}>
                       <Link href={`/category/${category.slug}/${sub.slug}`}>
-                        <span>0{sIdx + 1}</span>
-                        {sub.name}
+                        <span>{sub.name}</span>
                         <b>↗</b>
                       </Link>
                     </li>
                   ))}
                 </ul>
-                <p className="temporary-note">Temporary cutout / final NS product image to replace</p>
               </div>
             </div>
 
             {/* Pagination dots */}
-            <div className="scene-dots" aria-hidden>
+            <div className="scene-dots" aria-label="Category navigation">
               {categories.map((_, dotIdx) => (
-                <i
+                <button
                   key={dotIdx}
                   className={dotIdx === activeCategory ? "active" : ""}
-                  onClick={() => goToCategory(dotIdx)}
-                  style={{ cursor: "pointer" }}
-                  role="button"
-                  tabIndex={0}
+                  type="button"
+                  aria-current={dotIdx === activeCategory ? "true" : undefined}
                   aria-label={`Category ${dotIdx + 1}`}
+                  onClick={() => {
+                    const track = categoryTrack.current;
+                    if (!track) return;
+                    const categoryStride = track.offsetHeight / categories.length;
+                    window.scrollTo({
+                      top: track.offsetTop + categoryStride * dotIdx,
+                      behavior: "smooth",
+                    });
+                  }}
                 />
               ))}
             </div>
@@ -681,7 +614,6 @@ export function HomeExperience() {
           className="visit-track cover-panel"
           ref={visitTrack}
           aria-labelledby="visit-cover-title"
-          style={{ height: "360svh" }}
         >
           <div className="visit-stage">
             {/* Atmospheric Background Layer — Stationary throughout entire track */}
@@ -714,33 +646,63 @@ export function HomeExperience() {
                   className="visit-cover-title"
                   ref={visitHeading}
                 >
-                  <span className="visit-title-line">Visit our store</span>
+                  <span className="visit-title-line">Visit our showroom</span>
                 </h2>
                 <p className="visit-supporting-note" ref={visitTagline}>
-                  Experience the appliances in person. Find what fits your home.
+                  Explore our appliances in person. Find us on Google Maps and plan your visit.
                 </p>
                 <div className="visit-settle-line" ref={visitSettleLine} aria-hidden="true" />
+                <a
+                  ref={visitCta}
+                  href={SHOWROOM_LOCATION.googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="visit-directions-btn"
+                  id="visit-get-directions"
+                  aria-label="Get directions to NS Home Appliances on Google Maps"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="visit-pin-icon"
+                  >
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>Get Directions</span>
+                  <span className="visit-directions-arrow" aria-hidden="true">↗</span>
+                </a>
               </div>
             </div>
-
-            {/* LAYER 5: FULL-SCREEN TRANSLUCENT FROSTED-GLASS FOOTER */}
-            <SiteFooter
-              ref={siteFooterRef}
-              variant="glass-overlay"
-              onCategoryClick={(index) => {
-                goToCategory(index);
-                if (categoryTrack.current) {
-                  categoryTrack.current.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
-              onSectionClick={(id) => {
-                const target = document.getElementById(id);
-                if (target) {
-                  target.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
-            />
           </div>
+
+          {/* COMPACT FROSTED-GLASS FOOTER — Enters naturally as next section in normal document flow */}
+          <SiteFooter
+            ref={siteFooterRef}
+            variant="glass-overlay"
+            onCategoryClick={(index) => {
+              const track = categoryTrack.current;
+              if (!track) return;
+              const categoryStride = track.offsetHeight / categories.length;
+              window.scrollTo({
+                top: track.offsetTop + categoryStride * index,
+                behavior: "smooth",
+              });
+            }}
+            onSectionClick={(id) => {
+              const target = document.getElementById(id);
+              if (target) {
+                target.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+          />
         </section>
       </main>
     </div>

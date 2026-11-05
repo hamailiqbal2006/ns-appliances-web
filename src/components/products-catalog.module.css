@@ -1,0 +1,298 @@
+/* =========================================================================
+   NS Home Appliances — All Products Catalog Design System
+   Target Reference Composition:
+    - Page Canvas: #E8E5E0
+    - Centered Layout, Max-Width: 1180px
+    - Compact Rounded Filter Rail with Edge Fades & Smooth Navigation
+    - 3-Column Cohesive Product Grid with Balanced Gaps
+   ========================================================================= */
+
+.catalogContainer {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* Category Navigation Rail with Interactive Carousel Controls */
+.railWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: clamp(24px, 3.2vh, 34px);
+}
+
+.categoryNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 4px 44px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+.categoryNav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Subtle circular arrow navigation buttons */
+.railArrow {
+  position: absolute;
+  top: calc(50% - 3px);
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FAF9F7;
+  border: 1px solid rgba(25, 29, 31, 0.12);
+  color: #191D1F;
+  box-shadow: 0 2px 8px rgba(25, 29, 31, 0.05);
+  cursor: pointer;
+  transition: opacity 180ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.railArrowLeft {
+  left: 2px;
+}
+
+.railArrowRight {
+  right: 2px;
+}
+
+.railArrowVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.railArrow:hover {
+  background: #ffffff;
+  border-color: rgba(25, 29, 31, 0.3);
+  color: #191D1F;
+  box-shadow: 0 4px 12px rgba(25, 29, 31, 0.09);
+  transform: translateY(-50%) scale(1.04);
+}
+
+.railArrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.railArrow:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+}
+
+/* Subtle edge fades only where content is actually hidden */
+.edgeFade {
+  position: absolute;
+  top: 0;
+  bottom: 10px;
+  width: 48px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.edgeFadeLeft {
+  left: 0;
+  background: linear-gradient(to right, #E8E5E0 25%, rgba(232, 229, 224, 0) 100%);
+}
+
+.edgeFadeRight {
+  right: 0;
+  background: linear-gradient(to left, #E8E5E0 25%, rgba(232, 229, 224, 0) 100%);
+}
+
+.edgeFadeVisible {
+  opacity: 1;
+}
+
+.categoryPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  background: #FAF9F7;
+  color: #555854;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.categoryPill:hover {
+  border-color: rgba(25, 29, 31, 0.28);
+  background: #FFFFFF;
+  color: #191D1F;
+}
+
+.categoryPillActive {
+  background: #191D1F;
+  color: #ffffff;
+  border-color: #191D1F;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.categoryPillActive:hover {
+  background: #282c2f;
+  color: #ffffff;
+  border-color: #282c2f;
+}
+
+/* Subcategory Filter Chips */
+.subcategoryChips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: -12px;
+  margin-bottom: clamp(24px, 3.5vh, 36px);
+}
+
+.subcategoryChip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  background: #FAF9F7;
+  color: #555854;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.subcategoryChip:hover {
+  border-color: rgba(25, 29, 31, 0.28);
+  color: #191D1F;
+  background: #FFFFFF;
+}
+
+.subcategoryChipActive {
+  border-color: #191D1F;
+  background: #191D1F;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Category Filter Header (when a specific category is active) */
+.activeCategoryHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(25, 29, 31, 0.08);
+  flex-wrap: wrap;
+}
+
+.activeCategoryTitle {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #191D1F;
+  margin: 0;
+}
+
+.activeCategoryCount {
+  font-family: var(--font-geist), monospace;
+  font-size: 12px;
+  color: #686D6C;
+  letter-spacing: 0.05em;
+}
+
+/* Responsive Adaptive Grid System */
+.productsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(18px, 1.8vw, 24px);
+  width: 100%;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.singleFeaturedWrap {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 1024px) {
+  .productsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .productsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* Empty State */
+.emptyState {
+  padding: 48px 24px;
+  text-align: center;
+  background: #FAF9F7;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  border-radius: 16px;
+  max-width: 580px;
+  margin: 20px auto 40px;
+  box-shadow: 0 4px 18px rgba(25, 29, 31, 0.03);
+}
+
+.emptyStateTitle {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 18px;
+  color: #191D1F;
+  margin: 0 0 10px 0;
+  font-weight: 650;
+}
+
+.emptyStateText {
+  font-family: var(--font-sora), sans-serif;
+  color: #686D6C;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+
+.emptyStateBtn {
+  display: inline-flex;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: #191D1F;
+  color: #ffffff;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+
+.emptyStateBtn:hover {
+  background: #282c2f;
+}

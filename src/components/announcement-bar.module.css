@@ -1,0 +1,427 @@
+/* NS Home Appliances — High-Performance Ultra-Smooth Announcement Bar */
+
+.bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.065em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  outline-offset: -2px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.bar:focus-visible {
+  outline: 2px solid currentColor;
+}
+
+/* Hidden container for accurate pixel measurement */
+.measureContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  height: 0;
+  overflow: hidden;
+  z-index: -10;
+}
+
+/* Stationary, lightweight edge fades without expensive mask-image */
+.fadeLeft,
+.fadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(24px, 3.5vw, 44px);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(90deg, var(--bar-edge-color, #111416) 0%, transparent 100%);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(270deg, var(--bar-edge-color, #111416) 0%, transparent 100%);
+}
+
+/* =========================================================
+   ORIGINAL PRESETS (Backward-Compatible)
+   ========================================================= */
+
+/* 1) Charcoal → Graphite */
+.themeCharcoal {
+  --bar-edge-color: #111416;
+  background: linear-gradient(90deg, #111416 0%, #1a2023 35%, #242c30 50%, #1a2023 65%, #111416 100%);
+  border-top: 1px solid rgba(247, 245, 237, 0.12);
+  border-bottom: 1px solid rgba(247, 245, 237, 0.12);
+  color: #f7f5ed;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeCharcoal .separator {
+  color: rgba(247, 245, 237, 0.50);
+}
+
+/* 2) Deep Navy → Teal */
+.themeNavy {
+  --bar-edge-color: #051016;
+  background: linear-gradient(90deg, #051016 0%, #091f27 35%, #0f303a 50%, #091f27 65%, #051016 100%);
+  border-top: 1px solid rgba(86, 178, 194, 0.18);
+  border-bottom: 1px solid rgba(86, 178, 194, 0.18);
+  color: #edf7f8;
+  box-shadow: inset 0 1px 0 rgba(110, 215, 230, 0.08), inset 0 -1px 0 rgba(3, 10, 14, 0.45);
+}
+.themeNavy .separator {
+  color: rgba(86, 178, 194, 0.60);
+}
+
+/* 3) Soft Black → Muted Blue */
+.themeObsidian {
+  --bar-edge-color: #090c10;
+  background: linear-gradient(90deg, #090c10 0%, #101622 35%, #182333 50%, #101622 65%, #090c10 100%);
+  border-top: 1px solid rgba(165, 188, 220, 0.16);
+  border-bottom: 1px solid rgba(165, 188, 220, 0.16);
+  color: #f1f4fa;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+}
+.themeObsidian .separator {
+  color: rgba(165, 188, 220, 0.55);
+}
+
+/* 4) Dark Olive → Charcoal */
+.themeOlive {
+  --bar-edge-color: #101410;
+  background: linear-gradient(90deg, #101410 0%, #192019 35%, #222c22 50%, #192019 65%, #101410 100%);
+  border-top: 1px solid rgba(185, 205, 175, 0.15);
+  border-bottom: 1px solid rgba(185, 205, 175, 0.15);
+  color: #f4f7f2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.themeOlive .separator {
+  color: rgba(185, 205, 175, 0.55);
+}
+
+/* 5) Warm Beige → Stone (Dark Obsidian text) */
+.themeBeige {
+  --bar-edge-color: #e7e3dc;
+  background: linear-gradient(90deg, #e7e3dc 0%, #dad4c8 35%, #d1cbbe 50%, #dad4c8 65%, #e7e3dc 100%);
+  border-top: 1px solid rgba(18, 23, 25, 0.15);
+  border-bottom: 1px solid rgba(18, 23, 25, 0.15);
+  color: #141a1d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+.themeBeige .separator {
+  color: rgba(20, 26, 29, 0.55);
+}
+
+/* =========================================================
+   VIBRANT COLOR PRESETS
+   ========================================================= */
+
+/* 6) Ruby Red (deep red to bright red) */
+.themeRubyRed {
+  --bar-edge-color: #8b0000;
+  background: linear-gradient(90deg, #8b0000 0%, #b81414 35%, #e01e1e 50%, #b81414 65%, #8b0000 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeRubyRed .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 7) Crimson Sunset (red to orange) */
+.themeCrimsonSunset {
+  --bar-edge-color: #991010;
+  background: linear-gradient(90deg, #991010 0%, #c82810 35%, #eb5515 50%, #c82810 65%, #991010 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeCrimsonSunset .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 8) Golden Yellow (vivid yellow to warm gold — Dark Obsidian text) */
+.themeGoldenYellow {
+  --bar-edge-color: #e69500;
+  background: linear-gradient(90deg, #e69500 0%, #f7b205 35%, #ffd414 50%, #f7b205 65%, #e69500 100%);
+  border-top: 1px solid rgba(30, 25, 10, 0.20);
+  border-bottom: 1px solid rgba(30, 25, 10, 0.20);
+  color: #191408;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+.themeGoldenYellow .separator {
+  color: rgba(25, 20, 8, 0.60);
+}
+
+/* 9) Sunset Orange (orange to warm amber) */
+.themeSunsetOrange {
+  --bar-edge-color: #b83504;
+  background: linear-gradient(90deg, #b83504 0%, #df4e08 35%, #f56d12 50%, #df4e08 65%, #b83504 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeSunsetOrange .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 10) Rose Pink (vivid pink to magenta) */
+.themeRosePink {
+  --bar-edge-color: #9e0e4f;
+  background: linear-gradient(90deg, #9e0e4f 0%, #c41869 35%, #e82e84 50%, #c41869 65%, #9e0e4f 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeRosePink .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 11) Royal Purple (purple to violet) */
+.themeRoyalPurple {
+  --bar-edge-color: #441275;
+  background: linear-gradient(90deg, #441275 0%, #5d1ca3 35%, #7e2cd6 50%, #5d1ca3 65%, #441275 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+}
+.themeRoyalPurple .separator {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* 12) Electric Blue (cobalt blue to royal blue) */
+.themeElectricBlue {
+  --bar-edge-color: #093482;
+  background: linear-gradient(90deg, #093482 0%, #104db8 35%, #1a6ff2 50%, #104db8 65%, #093482 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+}
+.themeElectricBlue .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 13) Ocean Cyan (cyan to turquoise) */
+.themeOceanCyan {
+  --bar-edge-color: #064c5c;
+  background: linear-gradient(90deg, #064c5c 0%, #0a6c82 35%, #1094b3 50%, #0a6c82 65%, #064c5c 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+}
+.themeOceanCyan .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 14) Emerald Green (rich green to bright emerald) */
+.themeEmeraldGreen {
+  --bar-edge-color: #0a4f27;
+  background: linear-gradient(90deg, #0a4f27 0%, #0e7239 35%, #149c4e 50%, #0e7239 65%, #0a4f27 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+}
+.themeEmeraldGreen .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 15) Lime Energy (fresh lime to vibrant green — Dark Graphite text) */
+.themeLimeEnergy {
+  --bar-edge-color: #588705;
+  background: linear-gradient(90deg, #588705 0%, #76b30a 35%, #95de0f 50%, #76b30a 65%, #588705 100%);
+  border-top: 1px solid rgba(15, 25, 5, 0.20);
+  border-bottom: 1px solid rgba(15, 25, 5, 0.20);
+  color: #0d1a03;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.40), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+.themeLimeEnergy .separator {
+  color: rgba(13, 26, 3, 0.60);
+}
+
+/* 16) Berry Fusion (red/pink to purple) */
+.themeBerryFusion {
+  --bar-edge-color: #820e3f;
+  background: linear-gradient(90deg, #820e3f 0%, #73135b 35%, #581678 50%, #73135b 65%, #820e3f 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeBerryFusion .separator {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* 17) Festival Gradient (tasteful multicolor combination) */
+.themeFestivalGradient {
+  --bar-edge-color: #991442;
+  background: linear-gradient(90deg, #991442 0%, #c73516 28%, #d97714 52%, #147a8c 80%, #531c8c 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.themeFestivalGradient .separator {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* =========================================================
+   HARDWARE-ACCELERATED CONTINUOUS MARQUEE
+   ========================================================= */
+
+.marqueeTrack {
+  display: flex;
+  flex: none;
+  width: max-content;
+  will-change: transform;
+  animation-name: marqueeLoop;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.bar:hover .marqueeTrack,
+.bar:focus-within .marqueeTrack {
+  animation-play-state: paused;
+}
+
+.marqueeGroup {
+  display: flex;
+  align-items: center;
+  flex: none;
+  white-space: nowrap;
+}
+
+.itemUnit {
+  display: inline-flex;
+  align-items: center;
+}
+
+.itemText {
+  display: inline-block;
+  line-height: 1;
+}
+
+.separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 clamp(18px, 2.4vw, 36px);
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.glyphSvg {
+  display: block;
+}
+
+@keyframes marqueeLoop {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION ACCESSIBILITY
+   ========================================================= */
+
+.reducedMotionTrack {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    display: none;
+    animation: none;
+  }
+  .reducedMotionTrack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    overflow-x: auto;
+    padding: 0 16px;
+    scrollbar-width: none;
+  }
+  .reducedMotionTrack::-webkit-scrollbar {
+    display: none;
+  }
+  .reducedItem {
+    display: inline-flex;
+    align-items: center;
+  }
+  .fadeLeft,
+  .fadeRight {
+    display: none;
+  }
+}
+
+/* =========================================================
+   MOBILE RESPONSIVENESS (390px, 430px, 760px)
+   ========================================================= */
+
+@media (max-width: 760px) {
+  .bar {
+    height: 34px;
+    min-height: 34px;
+    font-size: 10px;
+    letter-spacing: 0.055em;
+  }
+  .separator {
+    margin: 0 clamp(14px, 2.8vw, 20px);
+  }
+  .fadeLeft,
+  .fadeRight {
+    width: 24px;
+  }
+}
+
+/* =========================================================
+   ADMIN LIVE PREVIEW MODE
+   ========================================================= */
+
+.previewContainer {
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.previewEmpty {
+  justify-content: center;
+  border-radius: 6px;
+  opacity: 0.8;
+}
+
+.emptyNote {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}

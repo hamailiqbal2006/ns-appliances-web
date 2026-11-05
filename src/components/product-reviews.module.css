@@ -1,0 +1,346 @@
+.reviewsSection {
+  margin-top: 36px;
+  padding-top: 36px;
+  border-top: 1px solid rgba(25, 29, 31, 0.08);
+}
+
+/* Compact Headers */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.titleColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionTitle {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #191D1F;
+  margin: 0;
+}
+
+.emptyMessage {
+  font-size: 13.5px;
+  color: #686D6C;
+  margin: 0;
+}
+
+.ratingSummaryRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avgRatingText {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: #191D1F;
+}
+
+.starsRow {
+  display: inline-flex;
+  gap: 2px;
+  color: #191D1F;
+}
+
+.starFilled {
+  color: #191D1F;
+  fill: #191D1F;
+}
+
+.starEmpty {
+  color: rgba(25, 29, 31, 0.22);
+}
+
+/* Understated Write a Review Action Button */
+.writeReviewTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #191D1F;
+  font-family: var(--font-sora, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(25, 29, 31, 0.18);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.writeReviewTrigger:hover {
+  background-color: #FAF9F7;
+  border-color: #191D1F;
+}
+
+.writeReviewTrigger:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+}
+
+/* Review List: Compact Cards */
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.reviewCard {
+  background-color: #FAF9F7;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviewCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewerInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewerName {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #191D1F;
+}
+
+.reviewDate {
+  font-family: var(--font-geist, monospace);
+  font-size: 11.5px;
+  color: #8C918F;
+}
+
+.reviewBody {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #2D3133;
+  margin: 0;
+}
+
+/* Compact Integrated Review Form */
+.formCard {
+  background-color: #FAF9F7;
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-top: 16px;
+  animation: slideDown 0.2s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formTitle {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: #191D1F;
+  margin: 0 0 4px 0;
+}
+
+.formSubtitle {
+  font-size: 12.5px;
+  color: #686D6C;
+  margin: 0 0 18px 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ratingSelectRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ratingLabel {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #191D1F;
+}
+
+.interactiveStars {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.starButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px;
+  color: rgba(25, 29, 31, 0.22);
+  transition: transform 0.12s ease, color 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.starButton:hover {
+  transform: scale(1.15);
+}
+
+.starButton:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.starButtonActive {
+  color: #191D1F;
+  fill: #191D1F;
+}
+
+.inputGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .inputGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inputField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.inputFieldLabel {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #191D1F;
+}
+
+.optionalBadge {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #686D6C;
+  margin-left: 4px;
+}
+
+.textInput,
+.textareaInput {
+  background: #FFFFFF;
+  border: 1px solid rgba(25, 29, 31, 0.14);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #191D1F;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.textInput:focus,
+.textareaInput:focus {
+  outline: none;
+  border-color: #191D1F;
+  box-shadow: 0 0 0 2px rgba(25, 29, 31, 0.08);
+}
+
+.privacyNote {
+  font-size: 11px;
+  color: #686D6C;
+  margin-top: 2px;
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.submitButton {
+  align-self: flex-start;
+  background-color: #191D1F;
+  color: #FAF9F7;
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #2D3133;
+  transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submitButton:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+}
+
+.feedbackSuccess {
+  background: #EBF3ED;
+  border: 1px solid #C4DEC9;
+  border-radius: 8px;
+  padding: 14px 18px;
+  color: #1B5E30;
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.feedbackError {
+  background: #FDF0F0;
+  border: 1px solid #F5C6C6;
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #A31B1B;
+  font-size: 12.5px;
+}

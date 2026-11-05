@@ -1,143 +1,143 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { ContactInquiryForm } from "@/components/contact-inquiry-form";
+import { getPublicStoreSettings } from "@/lib/supabase-admin";
+import { CopyButton } from "./copy-button";
+import { SHOWROOM_LOCATION } from "@/lib/showroom-location";
+import styles from "./contact.module.css";
 
+// Read live store settings when published by admin; otherwise fallback to approved contact details
+export const instant = false;
 export const metadata: Metadata = {
-  title: "Contact Us & Showroom Visit | NS Home Appliances",
+  title: "Contact & Product Inquiries | NS Home Appliances",
   description:
-    "Contact NS Home Appliances or visit our physical showroom to inspect home appliances in person.",
+    "Have a question about an appliance or showroom availability? Give us a call at 0300 6791460 or send us an inquiry.",
 };
 
-export default function ContactPage() {
+const DEFAULT_PHONE = "0300 6791460";
+
+interface ContactPageProps {
+  searchParams?: Promise<{
+    product?: string;
+    id?: string;
+    slug?: string;
+  }>;
+}
+
+export default async function ContactPage({ searchParams }: ContactPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const productName = typeof params.product === "string" ? params.product : undefined;
+  const productId = typeof params.id === "string" ? params.id : undefined;
+  const productSlug = typeof params.slug === "string" ? params.slug : undefined;
+
+  const settings = await getPublicStoreSettings();
+
+  // Prefer verified store settings when published; fallback to approved authorized contact number
+  const displayPhone = settings?.phone?.trim() || DEFAULT_PHONE;
+  const telPhone = displayPhone.replace(/[^0-9+]/g, "") || "03006791460";
+
   return (
-    <div className="info-page">
-      <SiteNav detail />
-      <main className="info-main" id="main-content">
-        <p className="info-eyebrow">NS Home Appliances · Showroom Inquiries</p>
-        <h1 className="info-title">Contact & Visit Our Store</h1>
-        <p className="info-lead">
-          We welcome customers to visit our physical showroom to compare appliances,
-          verify dimensions, and receive guidance from our store specialists.
-        </p>
+    <div className={styles.page}>
+      <SiteNav homeLinks alwaysFormed />
 
-        <section aria-labelledby="contact-options-title" style={{ marginTop: "40px" }}>
-          <h2 id="contact-options-title" className="sr-only">
-            Showroom Guidance and Communication
-          </h2>
-          <div className="info-grid">
-            <div className="info-card">
-              <span className="info-card-num">01 / IN-PERSON VISIT</span>
-              <h3 className="info-card-title">Physical Showroom</h3>
-              <p className="info-card-body">
-                The most reliable way to experience appliances is in person. Walk
-                through our displays, check build finishes, and speak directly with
-                our team about availability and specifications.
-              </p>
-              <div style={{ marginTop: "18px" }}>
-                <Link
-                  href="/#visit"
-                  className="footer-nav-link"
-                  style={{ color: "#ffffff", fontWeight: 500 }}
-                >
-                  View Visit Section &rarr;
-                </Link>
-              </div>
+      <main className={styles.main} id="main-content">
+        <section className={styles.heroSection} aria-labelledby="contact-heading">
+          {/* Small Label */}
+          <p className={styles.label}>CONTACT &amp; INQUIRIES</p>
+
+          {/* Main Heading */}
+          <h1 id="contact-heading" className={styles.title}>
+            {productName ? "Inquire About Appliance" : "Want to know more?"}
+          </h1>
+
+          {/* Supporting Sentence */}
+          <p className={styles.supporting}>
+            {productName
+              ? `Have questions about ${productName}? Call our showroom or send an inquiry below.`
+              : "Have a question about an appliance? Give us a call or send an inquiry below."}
+          </p>
+
+          {/* Fine Divider */}
+          <div className={styles.divider} aria-hidden="true" />
+
+          {/* Contact Block */}
+          <div className={styles.contactBlock}>
+            <div className={styles.phoneCluster}>
+              <a
+                href={`tel:${telPhone}`}
+                className={styles.phoneNumber}
+                aria-label={`Call ${displayPhone}`}
+              >
+                {displayPhone}
+              </a>
+              <CopyButton textToCopy={displayPhone} />
             </div>
 
-            <div className="info-card">
-              <span className="info-card-num">02 / CONSULTATIONS</span>
-              <h3 className="info-card-title">Product Advice</h3>
-              <p className="info-card-body">
-                Need guidance on room cooler capacity, washing machine load sizing,
-                or geyser volume? Our showroom staff assists you with room-specific
-                recommendations during your visit.
-              </p>
-              <div style={{ marginTop: "18px" }}>
-                <Link
-                  href="/products"
-                  className="footer-nav-link"
-                  style={{ color: "#ffffff", fontWeight: 500 }}
+            <div className={styles.actionRow}>
+              <a
+                href={`tel:${telPhone}`}
+                className={styles.callButton}
+                id="call-now-button"
+                aria-label={`Call ${displayPhone} now`}
+              >
+                <svg
+                  className={styles.callIcon}
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  Browse Catalog &rarr;
-                </Link>
-              </div>
-            </div>
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <span>Call Now</span>
+              </a>
 
-            <div className="info-card">
-              <span className="info-card-num">03 / VERIFIED CHANNELS</span>
-              <h3 className="info-card-title">Direct Inquiries</h3>
-              <p className="info-card-body">
-                Official phone, messaging, and email lines are currently being
-                finalized for digital customer coordination. We prioritize verified
-                human communication over unmonitored online forms.
-              </p>
-              <div style={{ marginTop: "18px" }}>
-                <Link
-                  href="/faq"
-                  className="footer-nav-link"
-                  style={{ color: "#ffffff", fontWeight: 500 }}
+              <a
+                href={SHOWROOM_LOCATION.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.directionsButton}
+                id="contact-get-directions-button"
+                aria-label="Get directions to NS Home Appliances on Google Maps"
+              >
+                <svg
+                  className={styles.directionsIcon}
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  Read Common FAQs &rarr;
-                </Link>
-              </div>
+                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>Get Directions</span>
+                <span className={styles.directionsArrow} aria-hidden="true">↗</span>
+              </a>
             </div>
           </div>
         </section>
 
-        <section
-          aria-labelledby="contact-notice-title"
-          style={{
-            marginTop: "48px",
-            background: "rgba(255, 255, 255, 0.03)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "8px",
-            padding: "clamp(24px, 3vw, 36px)",
-          }}
-        >
-          <h2
-            id="contact-notice-title"
-            style={{
-              fontFamily: "var(--font-sora), sans-serif",
-              fontSize: "18px",
-              fontWeight: 600,
-              color: "#ffffff",
-              margin: "0 0 10px 0",
-            }}
-          >
-            Planning Your Showroom Visit
-          </h2>
-          <p
-            style={{
-              fontFamily: "var(--font-sora), sans-serif",
-              fontSize: "14px",
-              lineHeight: 1.6,
-              color: "rgba(245, 244, 239, 0.72)",
-              margin: 0,
-              maxWidth: "760px",
-            }}
-          >
-            Before visiting, you can search our catalog or explore our category
-            showcase to note model kinds that interest you. Our team will verify
-            specifications and current floor availability with you on site.
-          </p>
-        </section>
-
-        <section aria-labelledby="contact-cta-title" className="info-cta-bar">
-          <h2 id="contact-cta-title" className="sr-only">
-            Actions
-          </h2>
-          <Link href="/#visit" className="info-btn-primary">
-            Visit Our Store &rarr;
-          </Link>
-          <Link href="/products" className="info-btn-secondary">
-            Explore All Products
-          </Link>
-          <Link href="/about" className="info-btn-secondary">
-            About NS Home Appliances
-          </Link>
+        {/* Contact Inquiry Form Section */}
+        <section className={styles.formSection} id="inquiry-form" aria-label="Customer inquiry form">
+          <ContactInquiryForm
+            productName={productName}
+            productId={productId}
+            productSlug={productSlug}
+          />
         </section>
       </main>
+
       <SiteFooter variant="static" />
     </div>
   );

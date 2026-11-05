@@ -1,0 +1,464 @@
+.galleryRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Main Showcase Stage */
+.stageContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 560px;
+  background-color: #EDEBE7;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+  user-select: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stageContainer:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 3px;
+}
+
+.stageImageWrap {
+  position: relative;
+  width: 86%;
+  height: 86%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stageImage {
+  object-fit: contain;
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.stageImageLoading {
+  opacity: 0.4;
+  transform: scale(0.98);
+}
+
+.stageImageActive {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Zoom / Expand Indicator Button */
+.expandButton {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(250, 249, 247, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  color: #191D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  z-index: 2;
+}
+
+.expandButton:hover {
+  background: #FAF9F7;
+  transform: scale(1.06);
+}
+
+.expandButton:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+}
+
+/* Badge for primary/cover on stage */
+.primaryBadge {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  font-family: var(--font-sora, sans-serif);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #686D6C;
+  background: rgba(250, 249, 247, 0.9);
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  pointer-events: none;
+}
+
+/* Image Counter on Stage */
+.counterBadge {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  font-family: var(--font-geist, monospace);
+  font-size: 11px;
+  font-weight: 500;
+  color: #686D6C;
+  background: rgba(250, 249, 247, 0.9);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  pointer-events: none;
+}
+
+/* Navigation arrows on stage (hover/focus) */
+.stageArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(250, 249, 247, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  color: #191D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+  z-index: 2;
+}
+
+.stageArrow:hover {
+  opacity: 1;
+  background: #FAF9F7;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.stageArrowPrev {
+  left: 14px;
+}
+
+.stageArrowNext {
+  right: 14px;
+}
+
+/* Empty / Fallback Stage */
+.emptyStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #686D6C;
+  text-align: center;
+  padding: 24px;
+}
+
+.emptyStageIcon {
+  opacity: 0.4;
+}
+
+.emptyStageText {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  color: #686D6C;
+}
+
+/* Thumbnail Strip */
+.thumbnailStrip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(25, 29, 31, 0.2) transparent;
+}
+
+.thumbnailStrip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.thumbnailStrip::-webkit-scrollbar-thumb {
+  background: rgba(25, 29, 31, 0.2);
+  border-radius: 4px;
+}
+
+.thumbnailButton {
+  position: relative;
+  flex: 0 0 76px;
+  height: 76px;
+  background-color: #EDEBE7;
+  border: 1px solid rgba(25, 29, 31, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+
+.thumbnailButton:hover {
+  border-color: rgba(25, 29, 31, 0.35);
+  transform: translateY(-1px);
+}
+
+.thumbnailButton:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 2px;
+}
+
+.thumbnailActive {
+  border: 2px solid #191D1F;
+  background-color: #FAF9F7;
+}
+
+.thumbnailImage {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
+/* Video Thumbnail Indicator */
+.thumbnailPlayOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 20, 21, 0.42);
+  color: #FAF9F7;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.thumbnailButton:hover .thumbnailPlayOverlay {
+  background: rgba(18, 20, 21, 0.58);
+}
+
+.thumbnailPlayIcon {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+/* Video Stage (Main Gallery Canvas) */
+.stageVideoWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0c0f11;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stageVideo {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background-color: #0c0f11;
+  outline: none;
+}
+
+.lightboxVideo {
+  max-width: 92vw;
+  max-height: 76vh;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  outline: none;
+  background-color: #000;
+}
+
+/* Lightbox Modal */
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(18, 20, 21, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightboxContent {
+  position: relative;
+  width: 100%;
+  max-width: 1024px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.lightboxImageStage {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightboxImage {
+  object-fit: contain;
+  max-width: 92vw;
+  max-height: 78vh;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.lightboxCloseButton {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #FAF9F7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  z-index: 1010;
+}
+
+.lightboxCloseButton:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.06);
+}
+
+.lightboxCloseButton:focus-visible {
+  outline: 2px solid #FAF9F7;
+  outline-offset: 2px;
+}
+
+.lightboxArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #FAF9F7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  z-index: 1005;
+}
+
+.lightboxArrow:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.lightboxArrow:focus-visible {
+  outline: 2px solid #FAF9F7;
+  outline-offset: 2px;
+}
+
+.lightboxArrowPrev {
+  left: 12px;
+}
+
+.lightboxArrowNext {
+  right: 12px;
+}
+
+.lightboxFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 600px;
+  padding-top: 16px;
+  color: rgba(250, 249, 247, 0.8);
+  font-family: var(--font-sora, sans-serif);
+  font-size: 13px;
+}
+
+.lightboxCounter {
+  font-family: var(--font-geist, monospace);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: rgba(250, 249, 247, 0.9);
+}
+
+.lightboxCaption {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+  text-align: center;
+  color: rgba(250, 249, 247, 0.7);
+  font-size: 12px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .stageContainer {
+    max-height: 400px;
+    border-radius: 12px;
+  }
+
+  .stageArrow {
+    width: 34px;
+    height: 34px;
+  }
+
+  .thumbnailButton {
+    flex: 0 0 64px;
+    height: 64px;
+  }
+
+  .lightboxArrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lightboxArrowPrev {
+    left: 4px;
+  }
+
+  .lightboxArrowNext {
+    right: 4px;
+  }
+}

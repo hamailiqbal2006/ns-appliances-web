@@ -1,0 +1,358 @@
+/* =========================================================================
+   NS Home Appliances — Reference-Accurate Luxury Product Card Design System
+   Target Reference Composition:
+    - Page Canvas: #E8E5E0
+    - Product Canvas: #EDEBE7
+    - Information Strip: #FAF9F7 (Hover: #FFFFFF)
+    - Category Badge: #D9D6D0 capsule at top: 16px, left: 16px
+    - Text: #191D1F (Primary), #686D6C (Secondary)
+    - Borders: 1px solid rgba(25, 29, 31, 0.08)
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. Grid Flex Item Wrapper
+   ------------------------------------------------------------------------- */
+.gridItem {
+  min-width: 0;
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .gridItem {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   2. Reference-Style Standard Product Card
+   ------------------------------------------------------------------------- */
+.productCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  background: #EDEBE7;
+  color: #191D1F;
+  border-radius: 14px;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  box-shadow: 0 4px 16px -4px rgba(24, 27, 29, 0.04), 0 1px 3px rgba(24, 27, 29, 0.03);
+  overflow: hidden;
+  text-decoration: none;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  will-change: transform, box-shadow;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 240ms ease;
+}
+
+.productCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -8px rgba(24, 27, 29, 0.12), 0 2px 6px rgba(24, 27, 29, 0.04);
+  border-color: rgba(25, 29, 31, 0.14);
+}
+
+.productCard:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+/* Category Badge in UPPER-LEFT Corner of Card Canvas */
+.categoryBadge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #D9D6D0;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #191D1F;
+  line-height: 1.2;
+  box-shadow: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Floating Appliance Image Canvas Stage */
+.cardCanvasStage {
+  position: relative;
+  width: 100%;
+  height: clamp(310px, 27vw, 370px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 28px 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.38) 0%, rgba(237, 235, 231, 0) 72%);
+}
+
+.imageInnerWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.productCard:hover .cardImage,
+.featuredVerticalCard:hover .cardImage {
+  transform: scale(1.028);
+}
+
+/* Compact Integrated White Information Strip at Bottom */
+.infoStrip {
+  margin: 0 10px 10px 10px;
+  padding: 12px 16px;
+  background: #FAF9F7;
+  border-radius: 10px;
+  border: 1px solid rgba(25, 29, 31, 0.06);
+  box-shadow: 0 2px 6px rgba(24, 27, 29, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-sizing: border-box;
+  transition: background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.productCard:hover .infoStrip,
+.featuredVerticalCard:hover .featuredInfoStrip {
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(24, 27, 29, 0.06);
+  border-color: rgba(25, 29, 31, 0.1);
+}
+
+.infoContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cardTitle {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #191D1F;
+  margin: 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardPrice {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #686D6C;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Small Circular Arrow Action Button */
+.arrowCircle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(25, 29, 31, 0.05);
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  color: #191D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.arrowSvg {
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.productCard:hover .arrowCircle,
+.featuredVerticalCard:hover .featuredArrowCircle {
+  background: #191D1F;
+  color: #ffffff;
+  border-color: #191D1F;
+  transform: scale(1.04);
+}
+
+.productCard:hover .arrowSvg,
+.featuredVerticalCard:hover .arrowSvg {
+  transform: translate(1.5px, -1.5px);
+}
+
+/* -------------------------------------------------------------------------
+   3. Single Featured Vertical Product Card (variant="featured")
+   ------------------------------------------------------------------------- */
+.featuredWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.featuredVerticalCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  background: #EDEBE7;
+  color: #191D1F;
+  border-radius: 16px;
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  box-shadow: 0 4px 18px rgba(24, 27, 29, 0.05);
+  overflow: hidden;
+  text-decoration: none;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  will-change: transform, box-shadow;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 240ms ease;
+}
+
+.featuredVerticalCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px -10px rgba(24, 27, 29, 0.14);
+  border-color: rgba(25, 29, 31, 0.14);
+}
+
+.featuredVerticalCard:focus-visible {
+  outline: 2px solid #191D1F;
+  outline-offset: 3px;
+  border-radius: 16px;
+}
+
+.featuredCanvasStage {
+  position: relative;
+  width: 100%;
+  height: clamp(320px, 30vw, 390px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 30px 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.38) 0%, rgba(237, 235, 231, 0) 72%);
+}
+
+.featuredInfoStrip {
+  margin: 0 10px 10px 10px;
+  padding: 14px 18px;
+  background: #FAF9F7;
+  border-radius: 12px;
+  border: 1px solid rgba(25, 29, 31, 0.06);
+  box-shadow: 0 2px 8px rgba(24, 27, 29, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-sizing: border-box;
+  transition: background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.featuredTitle {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #191D1F;
+  margin: 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featuredPrice {
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #686D6C;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.featuredArrowCircle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(25, 29, 31, 0.05);
+  border: 1px solid rgba(25, 29, 31, 0.1);
+  color: #191D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* -------------------------------------------------------------------------
+   4. Neutral Restrained Missing Image Placeholder
+   ------------------------------------------------------------------------- */
+.missingImageCanvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #727e7a;
+}
+
+.missingImageGlyph {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(25, 29, 31, 0.04);
+  border: 1.5px dashed rgba(25, 29, 31, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #686D6C;
+}
+
+/* -------------------------------------------------------------------------
+   5. Reduced Motion
+   ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .productCard,
+  .featuredVerticalCard,
+  .cardImage,
+  .arrowCircle,
+  .featuredArrowCircle,
+  .arrowSvg {
+    transition: none !important;
+    transform: none !important;
+  }
+}

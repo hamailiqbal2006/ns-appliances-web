@@ -20,6 +20,8 @@ starts fail-closed: without a configured Supabase project, `/admin` redirects to
    9. `supabase/migrations/20261030_welcome_popup_leads.sql`
    10. `supabase/migrations/20261030_product_availability.sql`
    11. `supabase/migrations/20261031_retire_reservations_safely.sql` (Decommissions reservations safely while preserving historical data)
+   12. `supabase/migrations/20261106_dual_responsive_banners.sql` (Dual desktop and mobile banner artwork paths)
+   13. `supabase/migrations/20261106_homepage_slider_settings.sql` (Configurable banner quantity and transition interval)
 3. In Supabase Auth, create or invite the owner account. Keep public sign-up off.
 4. Replace the example email in the final commented block of that SQL file with
    the owner's exact Auth email, then run that one promotion statement. This is

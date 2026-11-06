@@ -17,6 +17,7 @@ import {
   assertAnnouncementBarReady,
   deleteHomepageBannerImage,
   saveHomepageBanners,
+  saveHomepageSliderSettings,
   saveAnnouncementBar,
   uploadHomepageBannerImage,
   uploadProductImage,
@@ -572,6 +573,34 @@ function parseBannerConfiguration(value: string): BannerConfiguration[] {
   }
   if (new Set(parsed.map((item) => item.slot_key)).size !== 3) throw new Error("Each homepage banner slot must appear once.");
   return parsed as BannerConfiguration[];
+}
+
+
+export async function saveBannerSliderSettingsAction(_: FormState, formData: FormData): Promise<FormState> {
+  try {
+    const { accessToken } = await requireAdminForAction();
+    const bannerCount = Number(formData.get("banner_count"));
+    const intervalSeconds = Number(formData.get("interval_seconds"));
+
+    if (!Number.isInteger(bannerCount) || bannerCount < 1 || bannerCount > 10) {
+      throw new Error("Number of banners to display must be between 1 and 10.");
+    }
+    if (!Number.isInteger(intervalSeconds) || intervalSeconds < 2 || intervalSeconds > 30) {
+      throw new Error("Slide interval must be between 2 and 30 seconds.");
+    }
+
+    await saveHomepageSliderSettings(bannerCount, intervalSeconds, accessToken);
+    updateTag("homepage-banner-settings");
+    updateTag("homepage-banners");
+    revalidatePath("/");
+    revalidatePath("/admin/banners");
+    return { error: null, success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "The banner slider settings could not be saved.",
+      success: false,
+    };
+  }
 }
 
 export async function saveHomepageBannersAction(_: FormState, formData: FormData): Promise<FormState> {

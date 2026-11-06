@@ -54,7 +54,7 @@ export type StoreSettings = {
   publish_contact_details?: boolean;
 };
 
-type HomepageBannerSlot = "brand" | "climate" | "utility";
+type HomepageBannerSlot = string;
 
 export type InquiryStatus = "new" | "reviewed" | "resolved";
 
@@ -863,6 +863,51 @@ export async function uploadHomepageBannerImage(
   }, accessToken);
   if (!response.ok) throw new Error(`The ${kind} banner image could not be uploaded.`);
   return path;
+}
+
+export async function saveHomepageSliderSettings(
+  bannerCount: number,
+  intervalSeconds: number,
+  accessToken: string,
+) {
+  const count = Math.max(1, Math.min(bannerCount, 10));
+  const interval = Math.max(2, Math.min(intervalSeconds, 30));
+
+  const response = await supabaseFetch(
+    "/rest/v1/homepage_banner_settings",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal",
+      },
+      body: JSON.stringify({
+        singleton: true,
+        banner_count: count,
+        interval_seconds: interval,
+      }),
+    },
+    accessToken,
+  );
+
+  if (response.ok) return;
+
+  const errorText = await response.text();
+  let errorMessage = "Could not save homepage slider settings.";
+  try {
+    const parsed = JSON.parse(errorText);
+    if (parsed && typeof parsed.message === "string") {
+      if (parsed.code === "PGRST205" || parsed.message.includes("homepage_banner_settings")) {
+        errorMessage =
+          "The slider settings table is not configured. Please run supabase/migrations/20261106_homepage_slider_settings.sql in your Supabase SQL Editor.";
+      } else {
+        errorMessage = parsed.message;
+      }
+    }
+  } catch {
+    if (errorText) errorMessage = errorText;
+  }
+  throw new Error(errorMessage);
 }
 
 export async function saveHomepageBanners(

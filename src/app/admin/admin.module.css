@@ -1490,6 +1490,155 @@
 /* --------------------------------------------------------------------------
    11. Banners Editor
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   Banner Slider Settings Card & Controls
+   -------------------------------------------------------------------------- */
+.sliderSettingsCard {
+  margin-top: 24px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e1e6e3;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sliderSettingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #edf1ef;
+}
+
+.sliderSettingsTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #172323;
+  letter-spacing: -0.02em;
+}
+
+.sliderSettingsSubtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #61716d;
+}
+
+.sliderSettingsForm {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.sliderSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.sliderSettingsField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sliderSettingsLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #233431;
+}
+
+.sliderSettingsSelect {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #cfd7d3;
+  border-radius: 6px;
+  background-color: #fafbfa;
+  font-size: 13.5px;
+  color: #172323;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.sliderSettingsSelect:focus {
+  outline: none;
+  border-color: #172323;
+  box-shadow: 0 0 0 3px rgba(23, 35, 35, 0.1);
+  background-color: #ffffff;
+}
+
+.sliderIntervalGroup {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sliderCustomIntervalInputWrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.sliderCustomIntervalInput {
+  width: 80px;
+  height: 40px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #cfd7d3;
+  border-radius: 6px;
+  background-color: #ffffff;
+  font-size: 13.5px;
+  color: #172323;
+}
+
+.sliderCustomIntervalInput:focus {
+  outline: none;
+  border-color: #172323;
+  box-shadow: 0 0 0 3px rgba(23, 35, 35, 0.1);
+}
+
+.sliderCustomIntervalSuffix {
+  position: absolute;
+  right: 8px;
+  font-size: 12px;
+  color: #7b8b87;
+  pointer-events: none;
+}
+
+.sliderSettingsHelp {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #6d7f7b;
+  line-height: 1.4;
+}
+
+.sliderSettingsActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.bannerEnabledCheckboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2e3e3b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bannerEnabledCheckboxLabel input {
+  width: 16px;
+  height: 16px;
+  accent-color: #172323;
+  cursor: pointer;
+}
+
 .bannerEditorList {
   display: grid;
   gap: 24px;

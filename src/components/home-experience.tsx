@@ -3,17 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { StorefrontPanorama } from "./storefront-panorama";
-import { HeroDistortion } from "@/components/hero-distortion";
 import type { AnnouncementBar } from "@/lib/announcement-bar";
 import { AnnouncementBarView } from "@/components/announcement-bar";
-import type { HomepageBanner } from "@/lib/homepage-banners";
+import type { HomepageBanner, HomepageSliderSettings } from "@/lib/homepage-banners";
 import { SHOWROOM_LOCATION } from "@/lib/showroom-location";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -28,9 +27,15 @@ const css = (values: Record<string, string | number>) => values as React.CSSProp
 // Exterior showroom photography configuration
 const STOREFRONT_IMAGE_PATH = "/images/storefront.jpg";
 
-const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
-
-export function HomeExperience({ banners, announcement }: { banners: HomepageBanner[]; announcement: AnnouncementBar }) {
+export function HomeExperience({
+  banners,
+  announcement,
+  sliderSettings = { bannerCount: 3, intervalSeconds: 5 },
+}: {
+  banners: HomepageBanner[];
+  announcement: AnnouncementBar;
+  sliderSettings?: HomepageSliderSettings;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const categoryCover = useRef<HTMLElement>(null);
   const coverEditorialBody = useRef<HTMLDivElement>(null);
@@ -48,23 +53,42 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
   const visitSettleLine = useRef<HTMLDivElement>(null);
   const visitCta = useRef<HTMLAnchorElement>(null);
   const siteFooterRef = useRef<HTMLElement>(null);
-  const [isHeroInteractive, setIsHeroInteractive] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
+  // Dynamically resolve enabled banners according to admin slider configuration
+  const enabledBanners = useMemo(() => {
+    const list = banners.filter((b) => b.isEnabled !== false);
+    return list.length > 0 ? list : banners.slice(0, 1);
+  }, [banners]);
 
-  // Exactly 3 automatic rotating banners
+  const visibleBanners = useMemo(() => {
+    const count = Math.max(1, Math.min(sliderSettings?.bannerCount ?? 3, enabledBanners.length));
+    return enabledBanners.slice(0, count);
+  }, [enabledBanners, sliderSettings?.bannerCount]);
+
   const [activeBanner, setActiveBanner] = useState(0);
+  const [timerResetKey, setTimerResetKey] = useState(0);
 
-  // Automatic continuous loop: Banner 1 -> Banner 2 -> Banner 3 -> Banner 1
+  const safeActiveBanner = activeBanner < visibleBanners.length ? activeBanner : 0;
+  const currentBanner = visibleBanners[safeActiveBanner] ?? visibleBanners[0]!;
+  const hasCustomArtwork = Boolean(currentBanner?.imageUrl || currentBanner?.mobileImageUrl);
+
+  const handleSelectBanner = useCallback((index: number) => {
+    setActiveBanner(index);
+    setTimerResetKey((prev) => prev + 1);
+  }, []);
+
+  // Configurable automatic banner rotation timer
   useEffect(() => {
-    if (shouldReduceMotion) return;
+    if (visibleBanners.length <= 1 || shouldReduceMotion) return;
 
+    const intervalMs = Math.max(2, Math.min(sliderSettings?.intervalSeconds ?? 5, 30)) * 1000;
     const timer = setInterval(() => {
-      setActiveBanner((curr) => (curr + 1) % banners.length);
-    }, BANNER_DURATION);
+      setActiveBanner((curr) => (curr + 1) % visibleBanners.length);
+    }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [banners.length, shouldReduceMotion]);
+  }, [visibleBanners.length, sliderSettings?.intervalSeconds, shouldReduceMotion, timerResetKey]);
 
   // Ensure homepage begins at the top (Hero) on initial mount, refresh, and back/forward unless an explicit section hash is requested
   useLayoutEffect(() => {
@@ -258,13 +282,6 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
     // DESKTOP: (min-width: 1025px) -> EXACT APPROVED DESKTOP TIMELINE & INTERACTION (100% UNCHANGED)
     mm.add("(min-width: 1025px)", () => {
       if (categoryCover.current) {
-        let heroIsCovered = false;
-        const setHeroCovered = (covered: boolean) => {
-          if (heroIsCovered === covered) return;
-          heroIsCovered = covered;
-          setIsHeroInteractive(!covered);
-        };
-
         let lastCoverVisible: boolean | null = null;
 
         const coverTimeline = gsap.timeline({
@@ -275,7 +292,6 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
             scrub: 0.12,
             invalidateOnRefresh: true,
             onUpdate: ({ progress }) => {
-              setHeroCovered(progress > 0.85);
               const isVisible = progress > 0;
               if (lastCoverVisible !== isVisible) {
                 lastCoverVisible = isVisible;
@@ -428,8 +444,7 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
     return () => mm.revert();
   }, []);
 
-  const currentBanner = banners[activeBanner] ?? banners[0]!;
-  const hasCustomArtwork = Boolean(currentBanner?.imageUrl || currentBanner?.mobileImageUrl);
+
 
   return (
     <div className="showroom" ref={root}>
@@ -442,8 +457,8 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
         >
           <div className={`hero-stage ${hasCustomArtwork ? "has-custom-artwork" : ""}`}>
             <div className="hero-banners" aria-hidden="true">
-              {banners.map((banner, index) => {
-                const isActive = activeBanner === index;
+              {visibleBanners.map((banner, index) => {
+                const isActive = safeActiveBanner === index;
                 const hasArtwork = Boolean(banner.imageUrl || banner.mobileImageUrl);
                 return (
                   <div
@@ -499,10 +514,21 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
 
             <div className="hero-grain" aria-hidden="true" />
 
-            <HeroDistortion
-              activePalette={currentBanner.palette}
-              isActive={isHeroInteractive && !hasCustomArtwork}
-            />
+            {/* Slider navigation controls (hidden when only 1 banner is configured) */}
+            {visibleBanners.length > 1 ? (
+              <nav className="hero-dots" aria-label="Homepage banner navigation">
+                {visibleBanners.map((banner, idx) => (
+                  <button
+                    key={banner.id}
+                    type="button"
+                    className={`hero-dot ${safeActiveBanner === idx ? "is-active" : ""}`}
+                    onClick={() => handleSelectBanner(idx)}
+                    aria-label={`Go to banner ${idx + 1}`}
+                    aria-current={safeActiveBanner === idx ? "true" : undefined}
+                  />
+                ))}
+              </nav>
+            ) : null}
 
             <h1 id="hero-title" className="sr-only">
               NS Home Appliances — Digital Showroom

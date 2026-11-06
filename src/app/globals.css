@@ -77,7 +77,10 @@
 .hero-banner-layer{position:absolute;inset:-15%;pointer-events:none;will-change:opacity,transform}
 .hero-banner-layer.has-artwork,
 .hero-banner-layer:has(.hero-banner-artwork){inset:0;animation:none !important;transform:none !important}
-.hero-distortion-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.hero-dots{position:absolute;z-index:10;bottom:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:9999px;background:rgba(4,14,14,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:auto}
+.hero-dot{width:8px;height:8px;padding:0;border:1px solid rgba(255,255,255,.45);border-radius:50%;background:transparent;cursor:pointer;transition:all 240ms ease}
+.hero-dot.is-active{width:22px;border-radius:9999px;background:#ffffff;border-color:#ffffff}
+.hero-dot:focus-visible{outline:2px solid #ffffff;outline-offset:2px}
 .hero-ambient{position:absolute;inset:-15%;opacity:.95;will-change:transform}
 .hero-banner-backdrop{position:absolute;z-index:0;inset:-6%;overflow:hidden;pointer-events:none;background:#061414}
 .hero-banner-backdrop::after{content:"";position:absolute;inset:0;background:rgba(4,14,14,.14)}
@@ -276,6 +279,9 @@
   .nav-search-results{padding:8px 10px 12px}
   .nav-search-item{padding:12px 14px}
   .hero-stage{min-height:0;height:100svh}
+  .hero-dots{bottom:16px;padding:5px 10px;gap:6px}
+  .hero-dot{width:7px;height:7px}
+  .hero-dot.is-active{width:18px}
   .hero-banner-picture {
     inset: 0;
   }

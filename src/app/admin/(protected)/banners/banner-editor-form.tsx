@@ -7,26 +7,44 @@ import type { HomepageBanner } from "@/lib/homepage-banners";
 import { saveHomepageBannersAction } from "../../actions";
 import styles from "../../admin.module.css";
 
-type EditorBanner = HomepageBanner & { previewUrl: string | null; removeArtwork: boolean };
+type EditorBanner = HomepageBanner & {
+  desktopPreviewUrl: string | null;
+  desktopDimensions: { width: number; height: number } | null;
+  removeDesktopArtwork: boolean;
+  mobilePreviewUrl: string | null;
+  mobileDimensions: { width: number; height: number } | null;
+  removeMobileArtwork: boolean;
+};
 
 const prepare = (banners: HomepageBanner[]): EditorBanner[] =>
   banners.map((banner) => ({
     ...banner,
-    previewUrl: banner.imageUrl,
-    removeArtwork: false,
+    desktopPreviewUrl: banner.imageUrl,
+    desktopDimensions: null,
+    removeDesktopArtwork: false,
+    mobilePreviewUrl: banner.mobileImageUrl,
+    mobileDimensions: null,
+    removeMobileArtwork: false,
   }));
 
 export function BannerEditorForm({
   banners,
   isReady,
+  supportsMobileImage = true,
 }: {
   banners: HomepageBanner[];
   isReady: boolean;
+  supportsMobileImage?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveHomepageBannersAction, { error: null });
   const [items, setItems] = useState<EditorBanner[]>(() => prepare(banners));
   const [fileError, setFileError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<Record<string, "desktop" | "mobile" | "both">>({
+    brand: "both",
+    climate: "both",
+    utility: "both",
+  });
 
   useEffect(() => {
     if (state.success) router.refresh();
@@ -38,7 +56,8 @@ export function BannerEditorForm({
         items.map((item, sort_order) => ({
           slot_key: item.id,
           sort_order,
-          remove_artwork: item.removeArtwork,
+          remove_desktop_artwork: item.removeDesktopArtwork,
+          remove_mobile_artwork: item.removeMobileArtwork,
         })),
       ),
     [items],
@@ -53,14 +72,14 @@ export function BannerEditorForm({
       return next;
     });
 
-  const chooseArtwork = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const chooseDesktopArtwork = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setFileError(null);
     if (!file) return;
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
       event.target.value = "";
-      setFileError("Use a JPEG, PNG, or WebP image up to 5 MB.");
+      setFileError("Use a JPEG, PNG, or WebP desktop image up to 5 MB.");
       return;
     }
 
@@ -75,19 +94,72 @@ export function BannerEditorForm({
       ) {
         event.target.value = "";
         URL.revokeObjectURL(previewUrl);
-        setFileError("Banner images must be between 960 × 540 and 6000 × 6000 pixels.");
+        setFileError("Desktop banner images must be between 960 × 540 and 6000 × 6000 pixels (recommended 1920 × 1080 px, 16:9).");
         return;
       }
       setItems((current) =>
         current.map((item, itemIndex) =>
-          itemIndex === index ? { ...item, previewUrl, removeArtwork: false } : item,
+          itemIndex === index
+            ? {
+                ...item,
+                desktopPreviewUrl: previewUrl,
+                desktopDimensions: { width: image.naturalWidth, height: image.naturalHeight },
+                removeDesktopArtwork: false,
+              }
+            : item,
         ),
       );
     };
     image.onerror = () => {
       event.target.value = "";
       URL.revokeObjectURL(previewUrl);
-      setFileError("That file could not be read as an image.");
+      setFileError("That desktop image file could not be read.");
+    };
+    image.src = previewUrl;
+  };
+
+  const chooseMobileArtwork = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setFileError(null);
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      setFileError("Use a JPEG, PNG, or WebP mobile image up to 5 MB.");
+      return;
+    }
+
+    const image = new Image();
+    const previewUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      if (
+        image.naturalWidth < 540 ||
+        image.naturalHeight < 540 ||
+        image.naturalWidth > 6000 ||
+        image.naturalHeight > 6000
+      ) {
+        event.target.value = "";
+        URL.revokeObjectURL(previewUrl);
+        setFileError("Mobile banner images must be between 540 × 540 and 6000 × 6000 pixels (recommended 1080 × 1920 px, 9:16).");
+        return;
+      }
+      setItems((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                mobilePreviewUrl: previewUrl,
+                mobileDimensions: { width: image.naturalWidth, height: image.naturalHeight },
+                removeMobileArtwork: false,
+              }
+            : item,
+        ),
+      );
+    };
+    image.onerror = () => {
+      event.target.value = "";
+      URL.revokeObjectURL(previewUrl);
+      setFileError("That mobile image file could not be read.");
     };
     image.src = previewUrl;
   };
@@ -95,11 +167,17 @@ export function BannerEditorForm({
   return (
     <form className={styles.editorForm} action={formAction} noValidate>
       <fieldset>
-        <legend>Approved Rotating Hero Slots (3 ambient slides)</legend>
+        <legend>Approved Rotating Hero Slots (3 ambient slides with Dual Desktop &amp; Mobile Artwork)</legend>
 
         {!isReady ? (
           <div className={styles.setupNotice} style={{ marginTop: "16px" }}>
             Banner changes are safely blocked until <code>supabase/migrations/20261029_homepage_banners.sql</code> is applied. The public storefront uses its default ambient fallback.
+          </div>
+        ) : null}
+
+        {!supportsMobileImage ? (
+          <div className={styles.setupNotice} style={{ marginTop: "16px", borderColor: "#f59e0b", background: "#fffbeb" }}>
+            <strong>Note:</strong> Apply <code>supabase/migrations/20261106_dual_responsive_banners.sql</code> in your Supabase SQL Editor to persist independent mobile banner images. Existing desktop banners continue displaying normally.
           </div>
         ) : null}
 
@@ -114,73 +192,213 @@ export function BannerEditorForm({
                 ? "Climate Ambience"
                 : "Utility Ambience";
 
+            const cardMode = previewMode[item.id] || "both";
+            const effectiveDesktopSrc = !item.removeDesktopArtwork ? item.desktopPreviewUrl : null;
+            const effectiveMobileSrc = !item.removeMobileArtwork ? item.mobilePreviewUrl : null;
+            const mobileIsUsingDesktopFallback = !effectiveMobileSrc && !!effectiveDesktopSrc;
+            const renderedMobileSrc = effectiveMobileSrc || (mobileIsUsingDesktopFallback ? effectiveDesktopSrc : null);
+
             return (
               <section className={styles.bannerEditorCard} key={item.id}>
-                <div className={styles.bannerPreviewRow}>
-                  <div
-                    className={styles.bannerDesktopPreview}
-                    style={{ background: item.palette.primary }}
-                    aria-label={`Desktop preview for ${slotTitle}`}
-                  >
-                    {item.previewUrl && !item.removeArtwork ? <img src={item.previewUrl} alt="" /> : null}
-                    <span>Desktop (16:9)</span>
+                {/* PREVIEW STAGE WITH DESKTOP | MOBILE SWITCH */}
+                <div className={styles.bannerPreviewContainer}>
+                  <div className={styles.bannerPreviewHeader}>
+                    <p className={styles.kicker} style={{ margin: 0 }}>
+                      Live Crop Preview ({slotTitle})
+                    </p>
+                    <div className={styles.bannerPreviewSwitch} role="group" aria-label="Preview viewport toggle">
+                      <button
+                        type="button"
+                        className={`${styles.bannerSwitchBtn} ${cardMode === "desktop" ? styles.bannerSwitchBtnActive : ""}`}
+                        onClick={() => setPreviewMode((prev) => ({ ...prev, [item.id]: "desktop" }))}
+                      >
+                        Desktop
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.bannerSwitchBtn} ${cardMode === "mobile" ? styles.bannerSwitchBtnActive : ""}`}
+                        onClick={() => setPreviewMode((prev) => ({ ...prev, [item.id]: "mobile" }))}
+                      >
+                        Mobile
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.bannerSwitchBtn} ${cardMode === "both" ? styles.bannerSwitchBtnActive : ""}`}
+                        onClick={() => setPreviewMode((prev) => ({ ...prev, [item.id]: "both" }))}
+                      >
+                        Both
+                      </button>
+                    </div>
                   </div>
-                  <div
-                    className={styles.bannerMobilePreview}
-                    style={{ background: item.palette.primary }}
-                    aria-label={`Mobile preview for ${slotTitle}`}
-                  >
-                    {item.previewUrl && !item.removeArtwork ? <img src={item.previewUrl} alt="" /> : null}
-                    <span>Mobile</span>
+
+                  <div className={styles.bannerPreviewStage}>
+                    <div className={styles.bannerPreviewRow}>
+                      {(cardMode === "desktop" || cardMode === "both") && (
+                        <div
+                          className={styles.bannerDesktopPreview}
+                          style={{ background: item.palette.primary }}
+                          aria-label={`Desktop preview for ${slotTitle}`}
+                        >
+                          {effectiveDesktopSrc ? (
+                            <img src={effectiveDesktopSrc} alt="" />
+                          ) : null}
+                          <span>Desktop (16:9)</span>
+                        </div>
+                      )}
+
+                      {(cardMode === "mobile" || cardMode === "both") && (
+                        <div
+                          className={styles.bannerMobilePreview}
+                          style={{ background: item.palette.primary }}
+                          aria-label={`Mobile preview for ${slotTitle}`}
+                        >
+                          {renderedMobileSrc ? (
+                            <img src={renderedMobileSrc} alt="" />
+                          ) : null}
+                          {mobileIsUsingDesktopFallback ? (
+                            <div className={styles.bannerFallbackBadge} title="Mobile artwork not uploaded; using desktop artwork as fallback">
+                              Fallback
+                            </div>
+                          ) : null}
+                          <span>Mobile (9:16)</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* DETAILS & DUAL UPLOAD CONTROLS */}
                 <div className={styles.bannerEditorDetails}>
-                  <p className={styles.kicker}>Rotation Position {index + 1} of 3</p>
-                  <h2>{slotTitle}</h2>
-                  <p>
-                    JPEG, PNG, or WebP; 960 × 540 to 6000 × 6000 px; 5 MB maximum.
-                  </p>
+                  <div>
+                    <p className={styles.kicker}>Rotation Position {index + 1} of 3</p>
+                    <h2>{slotTitle}</h2>
+                  </div>
 
-                  <label className={styles.bannerFileLabel}>
-                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#2d3a37" }}>
-                      Upload / Replace Artwork
-                    </span>
-                    <input
-                      name={`banner_${item.id}`}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      disabled={!isReady || pending}
-                      onChange={(event) => chooseArtwork(index, event)}
-                    />
-                  </label>
+                  <div className={styles.bannerDualUploadGrid}>
+                    {/* 1. DESKTOP IMAGE CONTROLS */}
+                    <div className={styles.bannerUploadBox}>
+                      <div className={styles.bannerUploadBoxHeader}>
+                        <span className={styles.bannerUploadBoxTitle}>Desktop Image</span>
+                        {effectiveDesktopSrc ? (
+                          <span className={styles.bannerBadgeSuccess}>Active</span>
+                        ) : (
+                          <span className={styles.bannerBadgeMuted}>Ambient Gradient</span>
+                        )}
+                      </div>
+                      <div className={styles.bannerUploadBoxSpec}>
+                        Recommended: 1920 × 1080 px (16:9) &bull; Max 5 MB
+                      </div>
+                      {item.desktopDimensions ? (
+                        <div className={styles.bannerDimensions}>
+                          Uploaded: {item.desktopDimensions.width} × {item.desktopDimensions.height} px
+                        </div>
+                      ) : null}
 
-                  {item.imagePath && !item.removeArtwork ? (
-                    <button
-                      type="button"
-                      className={styles.secondaryButton}
-                      style={{ minHeight: "32px", padding: "4px 10px", fontSize: "12px", alignSelf: "start" }}
-                      disabled={!isReady || pending}
-                      onClick={() =>
-                        setItems((current) =>
-                          current.map((entry, itemIndex) =>
-                            itemIndex === index
-                              ? { ...entry, removeArtwork: true, previewUrl: null }
-                              : entry,
-                          ),
-                        )
-                      }
-                    >
-                      Remove custom artwork
-                    </button>
-                  ) : null}
+                      <label className={styles.bannerFileLabel}>
+                        <input
+                          name={`banner_desktop_${item.id}`}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={!isReady || pending}
+                          onChange={(event) => chooseDesktopArtwork(index, event)}
+                        />
+                      </label>
 
-                  {item.removeArtwork ? (
-                    <p className={styles.fieldHelp} style={{ color: "#b45309" }}>
-                      Artwork will be removed after saving; the default ambient background remains in place.
-                    </p>
-                  ) : null}
+                      {effectiveDesktopSrc ? (
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          style={{ minHeight: "28px", padding: "2px 8px", fontSize: "11px", justifySelf: "start" }}
+                          disabled={!isReady || pending}
+                          onClick={() =>
+                            setItems((current) =>
+                              current.map((entry, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...entry, removeDesktopArtwork: true, desktopPreviewUrl: null, desktopDimensions: null }
+                                  : entry,
+                              ),
+                            )
+                          }
+                        >
+                          Remove Desktop Artwork
+                        </button>
+                      ) : null}
 
+                      {item.removeDesktopArtwork ? (
+                        <p className={styles.fieldHelp} style={{ color: "#b45309", fontSize: "11px", margin: 0 }}>
+                          Desktop artwork will be removed after saving; default ambient background will apply.
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {/* 2. MOBILE IMAGE CONTROLS */}
+                    <div className={styles.bannerUploadBox}>
+                      <div className={styles.bannerUploadBoxHeader}>
+                        <span className={styles.bannerUploadBoxTitle}>Mobile Image</span>
+                        {effectiveMobileSrc ? (
+                          <span className={styles.bannerBadgeSuccess}>Custom Mobile</span>
+                        ) : effectiveDesktopSrc ? (
+                          <span className={styles.bannerBadgeWarning}>Desktop Fallback</span>
+                        ) : (
+                          <span className={styles.bannerBadgeMuted}>Ambient Gradient</span>
+                        )}
+                      </div>
+                      <div className={styles.bannerUploadBoxSpec}>
+                        Recommended: 1080 × 1920 px (9:16) &bull; Max 5 MB
+                      </div>
+                      {item.mobileDimensions ? (
+                        <div className={styles.bannerDimensions}>
+                          Uploaded: {item.mobileDimensions.width} × {item.mobileDimensions.height} px
+                        </div>
+                      ) : null}
+
+                      {!effectiveMobileSrc && (
+                        <p className={styles.fieldHelp} style={{ margin: 0, fontSize: "11.5px", color: effectiveDesktopSrc ? "#b45309" : "#61716d" }}>
+                          {effectiveDesktopSrc
+                            ? "Mobile image not added — phone viewports will display the desktop image."
+                            : "No mobile image uploaded."}
+                        </p>
+                      )}
+
+                      <label className={styles.bannerFileLabel}>
+                        <input
+                          name={`banner_mobile_${item.id}`}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={!isReady || pending}
+                          onChange={(event) => chooseMobileArtwork(index, event)}
+                        />
+                      </label>
+
+                      {effectiveMobileSrc ? (
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          style={{ minHeight: "28px", padding: "2px 8px", fontSize: "11px", justifySelf: "start" }}
+                          disabled={!isReady || pending}
+                          onClick={() =>
+                            setItems((current) =>
+                              current.map((entry, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...entry, removeMobileArtwork: true, mobilePreviewUrl: null, mobileDimensions: null }
+                                  : entry,
+                              ),
+                            )
+                          }
+                        >
+                          Remove Mobile Artwork
+                        </button>
+                      ) : null}
+
+                      {item.removeMobileArtwork ? (
+                        <p className={styles.fieldHelp} style={{ color: "#b45309", fontSize: "11px", margin: 0 }}>
+                          Mobile artwork will be removed after saving; desktop artwork fallback will apply.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* ORDER CONTROLS */}
                   <div className={styles.bannerOrderControls}>
                     <button
                       type="button"
@@ -189,7 +407,7 @@ export function BannerEditorForm({
                       disabled={!isReady || pending || index === 0}
                       onClick={() => move(index, -1)}
                     >
-                      ↑ Move earlier
+                      &uarr; Move earlier
                     </button>
                     <button
                       type="button"
@@ -198,7 +416,7 @@ export function BannerEditorForm({
                       disabled={!isReady || pending || index === items.length - 1}
                       onClick={() => move(index, 1)}
                     >
-                      ↓ Move later
+                      &darr; Move later
                     </button>
                   </div>
                 </div>

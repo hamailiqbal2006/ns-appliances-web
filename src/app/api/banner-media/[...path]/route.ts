@@ -24,10 +24,23 @@ export async function GET(
   const path = safePath((await params).path);
   if (!config || !path) return new NextResponse(null, { status: 404 });
 
-  const query = new URLSearchParams({ select: "slot_key", image_path: `eq.${path}`, limit: "1" });
-  const record = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
-    headers: { apikey: config.key }, cache: "no-store",
+  let query = new URLSearchParams({
+    select: "slot_key",
+    or: `(image_path.eq.${path},mobile_image_path.eq.${path})`,
+    limit: "1",
   });
+  let record = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+    headers: { apikey: config.key },
+    cache: "no-store",
+  });
+  // Resilient fallback if mobile_image_path column is not yet applied in the database
+  if (!record.ok && record.status === 400) {
+    query = new URLSearchParams({ select: "slot_key", image_path: `eq.${path}`, limit: "1" });
+    record = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+      headers: { apikey: config.key },
+      cache: "no-store",
+    });
+  }
   if (!record.ok || !(await record.json() as unknown[]).length) return new NextResponse(null, { status: 404 });
 
   const object = await fetch(

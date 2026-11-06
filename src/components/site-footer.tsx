@@ -140,18 +140,23 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
               </ul>
             </div>
 
-            {/* COLUMN 4 — CUSTOMER SUPPORT */}
-            <div className="site-footer-col">
-              <h3 className="site-footer-col-heading">Support</h3>
-              <ul className="site-footer-link-list">
+            {/* COLUMN 4 — SUPPORT & SHOWROOM */}
+            <div className="site-footer-col site-footer-col-support">
+              <h3 className="site-footer-col-heading">Support &amp; Showroom</h3>
+              <ul className="site-footer-link-list site-footer-support-list">
                 <li>
-                  <Link href="/faq" className="site-footer-link">
-                    FAQs
+                  <Link href="/about" className="site-footer-link">
+                    About Us
                   </Link>
                 </li>
                 <li>
                   <Link href="/contact" className="site-footer-link">
                     Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/faq" className="site-footer-link">
+                    FAQs
                   </Link>
                 </li>
                 <li>
@@ -164,23 +169,6 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
                   >
                     Google Maps Location
                   </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* COLUMN 5 — COMPANY */}
-            <div className="site-footer-col">
-              <h3 className="site-footer-col-heading">Company</h3>
-              <ul className="site-footer-link-list">
-                <li>
-                  <Link href="/about" className="site-footer-link">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="site-footer-link">
-                    Privacy Policy
-                  </Link>
                 </li>
               </ul>
             </div>

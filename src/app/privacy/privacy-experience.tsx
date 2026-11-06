@@ -128,7 +128,7 @@ export function PrivacyExperience() {
               </p>
               <ul className={styles.sectionList}>
                 <li>
-                  <strong>WhatsApp Phone Numbers:</strong> When you voluntarily submit your phone number through our Welcome Offer modal, we record your phone number along with your affirmative opt-in preference to receive store updates.
+                  <strong>WhatsApp Phone Numbers:</strong> When you voluntarily submit your phone number through showroom contact forms or previously through our welcome invitations, we record your phone number along with your affirmative opt-in preference to receive store updates.
                 </li>
                 <li>
                   <strong>Showroom &amp; Product Inquiries:</strong> When you submit a request through our Contact Us page or inquire about specific appliances, we collect your name, phone number or email address, inquiry topic, and message details to provide an accurate consultation.
@@ -171,7 +171,7 @@ export function PrivacyExperience() {
               </p>
               <ul className={styles.sectionList}>
                 <li>
-                  <strong>Affirmative Opt-In:</strong> Registering your WhatsApp phone number in the Welcome Offer records your interest. Promotional announcements or group invites are sent only if you explicitly choose to opt in.
+                  <strong>Affirmative Opt-In:</strong> Registering your WhatsApp phone number records your interest. While new online welcome offer popup registrations are currently retired, promotional announcements or group invites are sent only to customers who explicitly chose to opt in.
                 </li>
                 <li>
                   <strong>Direct Human Assistance:</strong> All WhatsApp interactions are conducted by authorized showroom personnel rather than automated spam bots.
@@ -217,7 +217,7 @@ export function PrivacyExperience() {
               </p>
               <ul className={styles.sectionList}>
                 <li>
-                  <strong>Essential Local Storage:</strong> First-party browser storage is used solely to remember functional preferences—such as remembering when you dismiss the Welcome Offer modal during your visit, honoring reduced motion preferences, and caching image assets for smooth navigation.
+                  <strong>Essential Local Storage:</strong> First-party browser storage is used solely to remember functional preferences—such as honoring reduced motion preferences and caching image assets for smooth navigation.
                 </li>
                 <li>
                   <strong>Private In-Browser Search:</strong> Our catalog search (which supports English and Roman Urdu search terms like &apos;dhulai&apos; or &apos;pankha&apos;) runs entirely inside your browser against a local catalog index. Your search queries are never transmitted or logged on our servers.

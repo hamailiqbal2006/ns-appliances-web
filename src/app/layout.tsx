@@ -1,9 +1,5 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Anton, Bodoni_Moda, Geist, Instrument_Serif, Fraunces, Newsreader, Sora } from "next/font/google";
-import { WelcomePopup } from "@/components/welcome-popup";
-import { getWelcomePopupConfig } from "@/lib/welcome-popup-data";
-import { hasRecognizedCustomerCookie } from "@/lib/customer-recognition";
 import { getStorefrontOrigin } from "@/lib/product-inquiry.server";
 import "./globals.css";
 
@@ -55,14 +51,6 @@ export const metadata: Metadata = {
   description: "A product-led digital showroom for NS Home Appliances.",
 };
 
-async function WelcomePopupContainer() {
-  const [welcomePopupConfig, isRecognizedCustomer] = await Promise.all([
-    getWelcomePopupConfig(),
-    hasRecognizedCustomerCookie(),
-  ]);
-  return <WelcomePopup config={welcomePopupConfig} isRecognizedCustomer={isRecognizedCustomer} />;
-}
-
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
@@ -80,9 +68,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body suppressHydrationWarning>
         {children}
-        <Suspense fallback={null}>
-          <WelcomePopupContainer />
-        </Suspense>
       </body>
     </html>
   );

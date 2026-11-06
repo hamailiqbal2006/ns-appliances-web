@@ -849,29 +849,51 @@ export async function uploadHomepageBannerImage(
   file: File,
   slot: HomepageBannerSlot,
   accessToken: string,
+  kind: "desktop" | "mobile" = "desktop",
 ) {
-  const validImage = await validateBannerImage(file);
+  const validImage = await validateBannerImage(file, kind);
   if (!validImage.ok) throw new Error(validImage.error);
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const path = `${slot}/${crypto.randomUUID()}.${extension}`;
+  const prefix = kind === "mobile" ? "m-" : "";
+  const path = `${slot}/${prefix}${crypto.randomUUID()}.${extension}`;
   const response = await supabaseFetch(`/storage/v1/object/homepage-banners/${path}`, {
     method: "POST",
     headers: { "Content-Type": file.type, "x-upsert": "false" },
     body: file,
   }, accessToken);
-  if (!response.ok) throw new Error("The banner image could not be uploaded.");
+  if (!response.ok) throw new Error(`The ${kind} banner image could not be uploaded.`);
   return path;
 }
 
 export async function saveHomepageBanners(
-  slots: Array<{ slot_key: HomepageBannerSlot; sort_order: number; image_path: string | null }>,
+  slots: Array<{
+    slot_key: HomepageBannerSlot;
+    sort_order: number;
+    image_path: string | null;
+    mobile_image_path?: string | null;
+  }>,
   accessToken: string,
 ) {
-  const response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
+  let response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ p_slots: slots }),
   }, accessToken);
+
+  // Resilient fallback if the database has not yet been upgraded with the mobile_image_path migration
+  if (!response.ok) {
+    const fallbackSlots = slots.map(({ slot_key, sort_order, image_path }) => ({
+      slot_key,
+      sort_order,
+      image_path,
+    }));
+    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slots: fallbackSlots }),
+    }, accessToken);
+  }
+
   if (!response.ok) throw new Error("Could not save the homepage banner configuration.");
 }
 
@@ -1308,7 +1330,10 @@ function dimensionsFromImage(bytes: Uint8Array, mime: string): { width: number; 
   return null;
 }
 
-async function validateBannerImage(file: File): Promise<{ ok: true } | { ok: false; error: string }> {
+async function validateBannerImage(
+  file: File,
+  kind: "desktop" | "mobile" = "desktop",
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const basic = await validateImage(file);
   if (!basic.ok) return basic;
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -1316,8 +1341,20 @@ async function validateBannerImage(file: File): Promise<{ ok: true } | { ok: fal
   if (!dimensions || !Number.isFinite(dimensions.width) || !Number.isFinite(dimensions.height)) {
     return { ok: false, error: "The banner image dimensions could not be verified." };
   }
-  if (dimensions.width < 960 || dimensions.height < 540 || dimensions.width > 6000 || dimensions.height > 6000) {
-    return { ok: false, error: "Banner images must be between 960 × 540 and 6000 × 6000 pixels." };
+  if (kind === "mobile") {
+    if (dimensions.width < 540 || dimensions.height < 540 || dimensions.width > 6000 || dimensions.height > 6000) {
+      return {
+        ok: false,
+        error: "Mobile banner images must be between 540 × 540 and 6000 × 6000 pixels (recommended: 1080 × 1920, 9:16 aspect ratio).",
+      };
+    }
+  } else {
+    if (dimensions.width < 960 || dimensions.height < 540 || dimensions.width > 6000 || dimensions.height > 6000) {
+      return {
+        ok: false,
+        error: "Desktop banner images must be between 960 × 540 and 6000 × 6000 pixels (recommended: 1920 × 1080, 16:9 aspect ratio).",
+      };
+    }
   }
   return { ok: true };
 }

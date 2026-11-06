@@ -26,7 +26,7 @@ export default async function AdminDashboard() {
     getAdminProducts(),
   ]);
 
-  const { productCount, customerLeadCount = 0 } = overview;
+  const { productCount } = overview;
   const { categories, isDatabaseConnected: categoriesReady } = categoryState;
   const recentProducts = products.slice(0, 5);
 
@@ -37,7 +37,7 @@ export default async function AdminDashboard() {
           <p className={styles.kicker}>Dashboard</p>
           <h1>Store Overview</h1>
           <p className={styles.subtitle}>
-            Central management for NS Home Appliances catalog, customer leads, and storefront settings.
+            Central management for NS Home Appliances catalog, store settings, and website presentation.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -54,7 +54,7 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Exactly 3 Balanced Metric Cards */}
+      {/* Balanced Metric Cards */}
       <section className={styles.metrics} aria-label="Current store data">
         <article className={styles.metric}>
           <p className={styles.metricLabel}>Active Products</p>
@@ -66,12 +66,6 @@ export default async function AdminDashboard() {
           <p className={styles.metricLabel}>Product Categories</p>
           <strong className={styles.metricValue}>{categories.length}</strong>
           <p className={styles.metricNote}>Organized showroom collections</p>
-        </article>
-
-        <article className={styles.metric}>
-          <p className={styles.metricLabel}>Customer Leads</p>
-          <strong className={styles.metricValue}>{customerLeadCount}</strong>
-          <p className={styles.metricNote}>WhatsApp leads captured via Welcome Offer</p>
         </article>
       </section>
 
@@ -96,15 +90,6 @@ export default async function AdminDashboard() {
               <strong>Store Categories</strong>
               <span style={{ display: "block", fontSize: "12px", color: "#687370", marginTop: "2px" }}>
                 Organize appliance collections and filters
-              </span>
-            </div>
-          </Link>
-          <Link href="/admin/customers" className={styles.shortcutCard}>
-            <span style={{ fontSize: "18px" }}>📱</span>
-            <div>
-              <strong>WhatsApp Leads</strong>
-              <span style={{ display: "block", fontSize: "12px", color: "#687370", marginTop: "2px" }}>
-                Export opted-in customer phone numbers
               </span>
             </div>
           </Link>

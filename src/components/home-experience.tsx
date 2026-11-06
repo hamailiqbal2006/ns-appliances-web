@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- banner artwork is a private Storage stream with an owner-configured host. */
 "use client";
 
 import Image from "next/image";
@@ -10,6 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { categories } from "@/data/catalog";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { StorefrontPanorama } from "./storefront-panorama";
 import { HeroDistortion } from "@/components/hero-distortion";
 import type { AnnouncementBar } from "@/lib/announcement-bar";
 import { AnnouncementBarView } from "@/components/announcement-bar";
@@ -26,8 +26,6 @@ if (typeof window !== "undefined") {
 const css = (values: Record<string, string | number>) => values as React.CSSProperties;
 
 // Exterior showroom photography configuration
-// Set to true when the physical storefront photograph is placed at /public/images/storefront.jpg
-const HAS_STOREFRONT_IMAGE = false;
 const STOREFRONT_IMAGE_PATH = "/images/storefront.jpg";
 
 const BANNER_DURATION = 5500; // 5.5s automatic continuous rotation
@@ -431,6 +429,7 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
   }, []);
 
   const currentBanner = banners[activeBanner] ?? banners[0]!;
+  const hasCustomArtwork = Boolean(currentBanner?.imageUrl || currentBanner?.mobileImageUrl);
 
   return (
     <div className="showroom" ref={root}>
@@ -441,14 +440,15 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
           className="hero-track"
           aria-label="NS Home Appliances showroom introduction"
         >
-          <div className="hero-stage">
+          <div className={`hero-stage ${hasCustomArtwork ? "has-custom-artwork" : ""}`}>
             <div className="hero-banners" aria-hidden="true">
               {banners.map((banner, index) => {
                 const isActive = activeBanner === index;
+                const hasArtwork = Boolean(banner.imageUrl || banner.mobileImageUrl);
                 return (
                   <div
                     key={banner.id}
-                    className={`hero-ambient hero-banner-layer ${banner.className} ${isActive ? "is-active" : ""}`}
+                    className={`hero-ambient hero-banner-layer ${banner.className} ${isActive ? "is-active" : ""} ${hasArtwork ? "has-artwork" : ""}`}
                     style={{
                       opacity: isActive ? 1 : 0,
                       zIndex: isActive ? 2 : 1,
@@ -457,7 +457,41 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
                         : "opacity 1600ms cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    {banner.imageUrl ? <img className="hero-banner-artwork" src={banner.imageUrl} alt="" /> : null}
+                    {hasArtwork ? (
+                        <>
+                          {/* The blurred copy fills any viewport/artwork ratio gap without cropping the artwork itself. */}
+                          <picture className="hero-banner-backdrop">
+                            {banner.imageUrl ? (
+                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
+                            ) : null}
+                            {banner.mobileImageUrl ? (
+                              <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
+                            ) : null}
+                            <img
+                              src={banner.imageUrl || banner.mobileImageUrl || ""}
+                              alt=""
+                              aria-hidden="true"
+                              loading={index === 0 ? "eager" : "lazy"}
+                              decoding="async"
+                            />
+                          </picture>
+                          <picture className="hero-banner-picture">
+                            {banner.imageUrl ? (
+                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
+                            ) : null}
+                            {banner.mobileImageUrl ? (
+                              <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
+                            ) : null}
+                            <img
+                              className="hero-banner-artwork"
+                              src={banner.imageUrl || banner.mobileImageUrl || ""}
+                              alt=""
+                              loading={index === 0 ? "eager" : "lazy"}
+                              decoding={index === 0 ? "sync" : "async"}
+                            />
+                          </picture>
+                        </>
+                    ) : null}
                   </div>
                 );
               })}
@@ -467,7 +501,7 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
 
             <HeroDistortion
               activePalette={currentBanner.palette}
-              isActive={isHeroInteractive}
+              isActive={isHeroInteractive && !hasCustomArtwork}
             />
 
             <h1 id="hero-title" className="sr-only">
@@ -616,25 +650,12 @@ export function HomeExperience({ banners, announcement }: { banners: HomepageBan
           aria-labelledby="visit-cover-title"
         >
           <div className="visit-stage">
-            {/* Atmospheric Background Layer — Stationary throughout entire track */}
+            {/* Atmospheric Background Layer with Mathematical Storefront Panorama */}
             <div className="visit-bg" aria-hidden="true">
-              {HAS_STOREFRONT_IMAGE ? (
-                <Image
-                  src={STOREFRONT_IMAGE_PATH}
-                  alt="NS Home Appliances Storefront Exterior"
-                  fill
-                  sizes="100vw"
-                  style={{ objectFit: "cover" }}
-                  priority={false}
-                />
-              ) : (
-                <div className="visit-atmospheric-viewport">
-                  <div className="visit-ambient-base" />
-                  <div className="visit-ambient-glow" />
-                  <div className="visit-ambient-horizon" />
-                  <div className="visit-grain" />
-                </div>
-              )}
+              <StorefrontPanorama
+                src={STOREFRONT_IMAGE_PATH}
+                alt="NS Home Appliances Showroom Exterior"
+              />
               <div className="visit-scrim" />
             </div>
 

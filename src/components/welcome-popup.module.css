@@ -412,33 +412,22 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Compact Appliance Visual Section */
+  /* Premium Appliance Visual Section — Clean Studio Presentation */
   .visualColumn {
     position: relative;
-    height: 112px;
-    min-height: 112px;
-    flex: 0 0 112px;
-    background: #e9ece9;
+    height: 144px;
+    min-height: 144px;
+    flex: 0 0 144px;
+    background: linear-gradient(180deg, #f2f3f1 0%, #f6f7f5 70%, #fcfcfa 100%);
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     overflow: hidden;
   }
 
-  .watermark {
-    top: 4px;
-    left: 4px;
-    font-size: 76px;
-    letter-spacing: -0.08em;
-    line-height: 0.8;
-    color: rgba(21, 27, 28, 0.05);
-  }
-
+  /* Remove oversized background watermark on mobile */
+  .watermark,
   .watermarkWord {
-    top: 60px;
-    left: 10px;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: rgba(21, 27, 28, 0.05);
+    display: none !important;
   }
 
   .imageStage {
@@ -449,14 +438,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 36px;
+    padding: 10px 28px;
     box-sizing: border-box;
   }
 
   .applianceImage {
     position: relative !important;
     width: auto !important;
-    height: 100px !important;
+    height: 124px !important;
     max-width: 100%;
     object-fit: contain;
     object-position: center center;
@@ -477,12 +466,14 @@
     height: 32px;
     min-width: 32px;
     min-height: 32px;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(18, 21, 22, 0.08);
     border-radius: 50%;
     color: #171a1b;
     font-size: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     transition: background-color 160ms ease, color 160ms ease;
   }
 
@@ -613,12 +604,18 @@
   }
 
   .visualColumn {
-    width: 190px;
+    width: 200px;
     min-height: 100%;
-    flex: 0 0 190px;
+    flex: 0 0 200px;
     height: auto;
+    background: linear-gradient(90deg, #f2f3f1 0%, #f6f7f5 75%, #fcfcfa 100%);
     border-top-right-radius: 0;
     border-bottom-left-radius: 16px;
+  }
+
+  .watermark,
+  .watermarkWord {
+    display: none !important;
   }
 
   .imageStage {
@@ -626,7 +623,7 @@
   }
 
   .applianceImage {
-    height: 110px !important;
+    height: 120px !important;
   }
 
   .contentColumn {
@@ -672,12 +669,12 @@
     width: calc(100vw - 20px);
   }
   .visualColumn {
-    height: 98px;
-    min-height: 98px;
-    flex: 0 0 98px;
+    height: 122px;
+    min-height: 122px;
+    flex: 0 0 122px;
   }
   .applianceImage {
-    height: 86px !important;
+    height: 106px !important;
   }
   .contentColumn {
     padding: 14px 14px 16px;

@@ -21,17 +21,12 @@ import {
   uploadHomepageBannerImage,
   uploadProductImage,
   uploadProductVideo,
-  assertWelcomePopupReady,
   deleteAdminCustomerLead,
   deleteAdminCustomerLeadsBulk,
   type CustomerLeadDeletionOutcome,
-  deleteWelcomePopupImage,
-  saveWelcomePopupSettings,
   updateAdminCustomerLeadStatus,
-  uploadWelcomePopupImage,
   type CustomerLeadStatus,
 } from "@/lib/supabase-admin";
-import { getAdminWelcomePopupConfig } from "@/lib/welcome-popup-data";
 import { getAdminHomepageBanners } from "@/lib/homepage-banners";
 import {
   getAdminAnnouncementBar,
@@ -551,7 +546,9 @@ export async function saveSettingsAction(_: FormState, formData: FormData): Prom
 type BannerConfiguration = {
   slot_key: "brand" | "climate" | "utility";
   sort_order: number;
-  remove_artwork: boolean;
+  remove_artwork?: boolean;
+  remove_desktop_artwork?: boolean;
+  remove_mobile_artwork?: boolean;
 };
 
 function parseBannerConfiguration(value: string): BannerConfiguration[] {
@@ -561,7 +558,13 @@ function parseBannerConfiguration(value: string): BannerConfiguration[] {
   const slots = new Set(["brand", "climate", "utility"]);
   const orders = new Set<number>();
   for (const item of parsed) {
-    if (!item || !slots.has(item.slot_key) || !Number.isInteger(item.sort_order) || item.sort_order < 0 || item.sort_order > 2 || typeof item.remove_artwork !== "boolean") {
+    if (
+      !item ||
+      !slots.has(item.slot_key) ||
+      !Number.isInteger(item.sort_order) ||
+      item.sort_order < 0 ||
+      item.sort_order > 2
+    ) {
       throw new Error("The homepage banner configuration is invalid.");
     }
     if (orders.has(item.sort_order)) throw new Error("Each homepage banner must have a different rotation position.");
@@ -580,20 +583,48 @@ export async function saveHomepageBannersAction(_: FormState, formData: FormData
     if (!current.isReady) throw new Error("Homepage banner setup is incomplete. Apply the banner migration, then reload this page.");
     const changes = parseBannerConfiguration(text(formData.get("banner_configuration")));
     const existing = new Map(current.banners.map((banner) => [banner.id, banner]));
-    const next = [] as Array<{ slot_key: "brand" | "climate" | "utility"; sort_order: number; image_path: string | null }>;
+    const next = [] as Array<{
+      slot_key: "brand" | "climate" | "utility";
+      sort_order: number;
+      image_path: string | null;
+      mobile_image_path: string | null;
+    }>;
     const pathsToRemove: string[] = [];
 
     for (const change of changes) {
       const previous = existing.get(change.slot_key);
       if (!previous) throw new Error("The homepage banner configuration is incomplete.");
-      const file = formData.get(`banner_${change.slot_key}`);
-      let imagePath = change.remove_artwork ? null : previous.imagePath;
-      if (!change.remove_artwork && file instanceof File && file.size > 0) {
-        imagePath = await uploadHomepageBannerImage(file, change.slot_key, accessToken);
+
+      // 1. Desktop Image
+      const removeDesktop = change.remove_desktop_artwork ?? change.remove_artwork ?? false;
+      const desktopFile = formData.get(`banner_desktop_${change.slot_key}`) || formData.get(`banner_${change.slot_key}`);
+      let imagePath = removeDesktop ? null : previous.imagePath;
+      if (!removeDesktop && desktopFile instanceof File && desktopFile.size > 0) {
+        imagePath = await uploadHomepageBannerImage(desktopFile, change.slot_key, accessToken, "desktop");
         uploadedPaths.push(imagePath);
       }
-      if (previous.imagePath && previous.imagePath !== imagePath) pathsToRemove.push(previous.imagePath);
-      next.push({ slot_key: change.slot_key, sort_order: change.sort_order, image_path: imagePath });
+      if (previous.imagePath && previous.imagePath !== imagePath) {
+        pathsToRemove.push(previous.imagePath);
+      }
+
+      // 2. Mobile Image
+      const removeMobile = change.remove_mobile_artwork ?? false;
+      const mobileFile = formData.get(`banner_mobile_${change.slot_key}`);
+      let mobileImagePath = removeMobile ? null : previous.mobileImagePath;
+      if (!removeMobile && mobileFile instanceof File && mobileFile.size > 0) {
+        mobileImagePath = await uploadHomepageBannerImage(mobileFile, change.slot_key, accessToken, "mobile");
+        uploadedPaths.push(mobileImagePath);
+      }
+      if (previous.mobileImagePath && previous.mobileImagePath !== mobileImagePath) {
+        pathsToRemove.push(previous.mobileImagePath);
+      }
+
+      next.push({
+        slot_key: change.slot_key,
+        sort_order: change.sort_order,
+        image_path: imagePath,
+        mobile_image_path: mobileImagePath,
+      });
     }
 
     await saveHomepageBanners(next, accessToken);
@@ -675,63 +706,8 @@ export async function saveAnnouncementBarAction(_: FormState, formData: FormData
   }
 }
 
-export async function saveWelcomePopupAction(_: FormState, formData: FormData): Promise<FormState> {
-  let uploadedPath: string | null = null;
-  try {
-    const { accessToken } = await requireAdminForAction();
-    await assertWelcomePopupReady(accessToken);
-    const current = await getAdminWelcomePopupConfig(accessToken);
-    if (!current.isReady) throw new Error("Welcome offer setup is incomplete. Apply supabase/migrations/20261030_welcome_popup_leads.sql, then reload this page.");
-
-    const eyebrow = text(formData.get("eyebrow"));
-    const headline = text(formData.get("headline"));
-    const description = text(formData.get("description"));
-    const offerText = optionalText(formData.get("offer_text"), "Optional offer text", 180);
-    const buttonLabel = text(formData.get("button_label"));
-    const imageAlt = text(formData.get("image_alt"));
-    const delay = Number(text(formData.get("display_delay_seconds")));
-    if (!eyebrow || eyebrow.length > 60 || !headline || headline.length > 90 || !description || description.length > 280 || !buttonLabel || buttonLabel.length > 50 || !imageAlt || imageAlt.length > 160 || !Number.isInteger(delay) || delay < 0 || delay > 600) {
-      return { error: "Check the welcome-offer text, image description, and delay before saving." };
-    }
-
-    const file = formData.get("image");
-    const removeImage = formData.get("remove_image") === "on";
-    let imagePath = removeImage ? null : current.imagePath;
-    if (!removeImage && file instanceof File && file.size > 0) {
-      imagePath = await uploadWelcomePopupImage(file, accessToken);
-      uploadedPath = imagePath;
-    }
-    const enabled = formData.get("enabled") === "on";
-    if (enabled && !imagePath) return { error: "Upload a welcome-offer image before enabling the public popup." };
-
-    await saveWelcomePopupSettings({
-      enabled,
-      eyebrow,
-      headline,
-      description,
-      offerText,
-      buttonLabel,
-      imagePath,
-      imageAlt,
-      displayDelaySeconds: delay,
-    }, accessToken);
-
-    if (current.imagePath && current.imagePath !== imagePath) {
-      await deleteWelcomePopupImage(current.imagePath, accessToken).catch(() => undefined);
-    }
-    updateTag("welcome-popup");
-    revalidatePath("/");
-    revalidatePath("/admin/welcome-offer");
-    return { error: null, success: true };
-  } catch (error) {
-    if (uploadedPath) {
-      try {
-        const { accessToken } = await requireAdminForAction();
-        await deleteWelcomePopupImage(uploadedPath, accessToken);
-      } catch { /* best-effort cleanup; never reveal storage details */ }
-    }
-    return { error: error instanceof Error ? error.message : "The welcome offer could not be saved." };
-  }
+export async function saveWelcomePopupAction(): Promise<FormState> {
+  return { error: "The Welcome Offer feature is currently retired." };
 }
 
 export async function updateCustomerLeadStatusAction(formData: FormData) {

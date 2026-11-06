@@ -27,6 +27,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Banner saves may contain up to six independently validated 5 MB images
+    // (three desktop and three mobile), plus multipart form overhead.
+    serverActions: {
+      bodySizeLimit: "32mb",
+    },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -7,7 +7,7 @@ export const instant = false;
 
 export default async function HomepageBannersPage() {
   const token = (await cookies()).get("ns-admin-access")?.value ?? null;
-  const { banners, isReady } = await getAdminHomepageBanners(token);
+  const { banners, isReady, supportsMobileImage } = await getAdminHomepageBanners(token);
 
   return (
     <>
@@ -20,7 +20,11 @@ export default async function HomepageBannersPage() {
           </p>
         </div>
       </div>
-      <BannerEditorForm banners={banners} isReady={isReady} />
+      <BannerEditorForm
+        banners={banners}
+        isReady={isReady}
+        supportsMobileImage={supportsMobileImage}
+      />
     </>
   );
 }

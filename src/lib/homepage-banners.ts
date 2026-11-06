@@ -13,6 +13,8 @@ export type HomepageBanner = {
   };
   imagePath: string | null;
   imageUrl: string | null;
+  mobileImagePath: string | null;
+  mobileImageUrl: string | null;
   sortOrder: number;
 };
 
@@ -20,6 +22,7 @@ type HomepageBannerRow = {
   slot_key: HomepageBanner["id"];
   sort_order: number;
   image_path: string | null;
+  mobile_image_path?: string | null;
 };
 
 /**
@@ -27,7 +30,10 @@ type HomepageBannerRow = {
  * remain code-owned so the banner editor cannot introduce a fourth slide or a
  * new, unreviewed layout. Supabase owns only their order and optional artwork.
  */
-const approvedSlots: Omit<HomepageBanner, "imagePath" | "imageUrl" | "sortOrder">[] = [
+const approvedSlots: Omit<
+  HomepageBanner,
+  "imagePath" | "imageUrl" | "mobileImagePath" | "mobileImageUrl" | "sortOrder"
+>[] = [
   {
     id: "brand",
     className: "hero-ambient-slide-1",
@@ -67,6 +73,8 @@ export function defaultHomepageBanners(): HomepageBanner[] {
     ...slot,
     imagePath: null,
     imageUrl: null,
+    mobileImagePath: null,
+    mobileImageUrl: null,
     sortOrder,
   }));
 }
@@ -95,10 +103,13 @@ function hydrate(rows: HomepageBannerRow[]): HomepageBanner[] {
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((row) => {
       const slot = slots.get(row.slot_key)!;
+      const mobilePath = row.mobile_image_path ?? null;
       return {
         ...slot,
         imagePath: row.image_path,
         imageUrl: mediaUrl(row.image_path),
+        mobileImagePath: mobilePath,
+        mobileImageUrl: mediaUrl(mobilePath),
         sortOrder: row.sort_order,
       };
     });
@@ -113,13 +124,23 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
   if (!config) return defaultHomepageBanners();
 
   try {
-    const query = new URLSearchParams({
-      select: "slot_key,sort_order,image_path",
+    let query = new URLSearchParams({
+      select: "slot_key,sort_order,image_path,mobile_image_path",
       order: "sort_order.asc",
     });
-    const response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+    let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key },
     });
+    // Resilient fallback if mobile_image_path column is not yet applied in the database
+    if (!response.ok && response.status === 400) {
+      query = new URLSearchParams({
+        select: "slot_key,sort_order,image_path",
+        order: "sort_order.asc",
+      });
+      response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+        headers: { apikey: config.key },
+      });
+    }
     if (!response.ok) return defaultHomepageBanners();
     return hydrate((await response.json()) as HomepageBannerRow[]);
   } catch {
@@ -131,23 +152,40 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
 export async function getAdminHomepageBanners(accessToken: string | null): Promise<{
   banners: HomepageBanner[];
   isReady: boolean;
+  supportsMobileImage: boolean;
 }> {
   const config = getSupabaseConfig();
-  if (!config || !accessToken) return { banners: defaultHomepageBanners(), isReady: false };
+  if (!config || !accessToken) return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false };
 
   try {
-    const query = new URLSearchParams({
-      select: "slot_key,sort_order,image_path",
+    let supportsMobileImage = true;
+    let query = new URLSearchParams({
+      select: "slot_key,sort_order,image_path,mobile_image_path",
       order: "sort_order.asc",
     });
-    const response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+    let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key, Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
-    if (!response.ok) return { banners: defaultHomepageBanners(), isReady: false };
+    if (!response.ok && response.status === 400) {
+      supportsMobileImage = false;
+      query = new URLSearchParams({
+        select: "slot_key,sort_order,image_path",
+        order: "sort_order.asc",
+      });
+      response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+        headers: { apikey: config.key, Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+    }
+    if (!response.ok) return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false };
     const rows = (await response.json()) as HomepageBannerRow[];
-    return { banners: hydrate(rows), isReady: isCompleteConfiguration(rows) };
+    return {
+      banners: hydrate(rows),
+      isReady: isCompleteConfiguration(rows),
+      supportsMobileImage,
+    };
   } catch {
-    return { banners: defaultHomepageBanners(), isReady: false };
+    return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false };
   }
 }

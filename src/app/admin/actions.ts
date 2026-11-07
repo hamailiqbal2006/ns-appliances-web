@@ -193,7 +193,8 @@ import { saveProductImages } from "@/lib/supabase-admin";
 import { updateAdminReviewStatus, deleteAdminReview } from "@/lib/reviews";
 
 export async function saveProductAction(_: FormState, formData: FormData): Promise<FormState> {
-  let savedProductId: string;
+  let savedProductId: string | null = null;
+  let directUploadPaths: string[] = [];
 
   try {
     const { accessToken } = await requireAdminForAction();
@@ -203,6 +204,24 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
     const newFiles = formData.getAll("new_images");
     const videoFile = formData.get("product_video");
     const singleImage = formData.get("image");
+    const directUploadsRaw = text(formData.get("direct_media_uploads"));
+    const directUploads: Array<{ path: string; kind: "image" | "video" }> = directUploadsRaw
+      ? (() => {
+          try {
+            const parsed = JSON.parse(directUploadsRaw);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(
+              (item): item is { path: string; kind: "image" | "video" } =>
+                typeof item?.path === "string" &&
+                (item.kind === "image" || item.kind === "video") &&
+                /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(item.path),
+            );
+          } catch {
+            return [];
+          }
+        })()
+      : [];
+    directUploadPaths = directUploads.map((upload) => upload.path);
 
     // Parse existing or manipulated gallery items from form JSON
     const galleryItemsRaw = text(formData.get("gallery_items"));
@@ -232,7 +251,8 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
     const hasNewMedia =
       newFiles.some((file) => file instanceof File && file.size > 0) ||
       (videoFile instanceof File && videoFile.size > 0) ||
-      (singleImage instanceof File && singleImage.size > 0);
+      (singleImage instanceof File && singleImage.size > 0) ||
+      directUploads.length > 0;
     const needsGallerySync =
       galleryItems.length > 0 ||
       text(formData.get("has_existing_gallery")) === "true" ||
@@ -257,6 +277,16 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
       }
     }
 
+    for (const upload of directUploads.filter((entry) => entry.kind === "image")) {
+      galleryItems.push({
+        storage_path: upload.path,
+        alt_text: product.name,
+        sort_order: galleryItems.length,
+        is_primary: galleryItems.length === 0,
+        media_type: "image",
+      });
+    }
+
     // Process optional product video upload
     if (videoFile instanceof File && videoFile.size > 0) {
       if (galleryItems.some((item) => item.media_type === "video" || /\.(mp4|webm)$/i.test(item.storage_path))) {
@@ -268,6 +298,19 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
         alt_text: `${product.name} product demonstration video`,
         sort_order: galleryItems.length,
         is_primary: false, // Videos are never primary cover
+        media_type: "video",
+      });
+    }
+
+    for (const upload of directUploads.filter((entry) => entry.kind === "video")) {
+      if (galleryItems.some((item) => item.media_type === "video" || /\.(mp4|webm)$/i.test(item.storage_path))) {
+        throw new Error("Keep one demonstration video per product. Remove the existing video before uploading another.");
+      }
+      galleryItems.push({
+        storage_path: upload.path,
+        alt_text: `${product.name} product demonstration video`,
+        sort_order: galleryItems.length,
+        is_primary: false,
         media_type: "video",
       });
     }
@@ -319,6 +362,19 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
     revalidatePath("/category/[category]/[subcategory]", "page");
     revalidatePath("/");
   } catch (error) {
+    // Direct browser uploads never pass through the hosting proxy. If the
+    // subsequent product save fails before a product has been persisted, remove
+    // their unreferenced objects with the same admin-scoped Storage policy.
+    if (!savedProductId && directUploadPaths.length > 0) {
+      try {
+        const { accessToken } = await requireAdminForAction();
+        const { deleteProductImagesFromStorage } = await import("@/lib/supabase-admin");
+        await deleteProductImagesFromStorage(directUploadPaths, accessToken);
+      } catch {
+        // Preserve the original actionable error. The paths are private and are
+        // not referenced by a product, so a later cleanup remains safe.
+      }
+    }
     return { error: error instanceof Error ? error.message : "The product could not be saved." };
   }
 

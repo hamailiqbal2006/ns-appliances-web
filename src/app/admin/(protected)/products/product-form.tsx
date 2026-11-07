@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useMemo } from "react";
+import { startTransition, useActionState, useState, useMemo, useRef } from "react";
 import type { CategoryRecord } from "@/lib/category-types";
 import type { AdminProduct } from "@/lib/supabase-admin";
 import {
@@ -103,6 +103,9 @@ export function ProductForm({
   });
 
   const [newFilePreviews, setNewFilePreviews] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const uploadSessionId = useRef<string>(product?.id ?? crypto.randomUUID());
   const [imageError, setImageError] = useState<string | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -227,8 +230,71 @@ export function ProductForm({
     setVideoPreview(URL.createObjectURL(file));
   };
 
+  const uploadFileDirectly = async (file: File, kind: "image" | "video") => {
+    const ticket = await fetch("/api/admin/product-media-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uploadId: uploadSessionId.current,
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+        kind,
+      }),
+    });
+    const ticketData = (await ticket.json().catch(() => null)) as { path?: string; uploadUrl?: string; error?: string } | null;
+    if (!ticket.ok || !ticketData?.path || !ticketData.uploadUrl) {
+      throw new Error(ticketData?.error || "Could not prepare the secure media upload.");
+    }
+
+    const transfer = await fetch(ticketData.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+        "x-upsert": "false",
+        "cache-control": "max-age=3600",
+      },
+      body: file,
+    });
+    if (!transfer.ok) {
+      const detail = (await transfer.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(detail?.message || `Supabase Storage rejected the ${kind} (HTTP ${transfer.status}).`);
+    }
+    return { path: ticketData.path, kind };
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending || uploadingMedia) return;
+
+    const formData = new FormData(event.currentTarget);
+    const images = formData.getAll("new_images").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+    const video = formData.get("product_video");
+    if (images.length === 0 && !(video instanceof File && video.size > 0)) {
+      startTransition(() => formAction(formData));
+      return;
+    }
+
+    setUploadingMedia(true);
+    setUploadError(null);
+    try {
+      const uploaded = [] as Array<{ path: string; kind: "image" | "video" }>;
+      for (const file of images) uploaded.push(await uploadFileDirectly(file, "image"));
+      if (video instanceof File && video.size > 0) uploaded.push(await uploadFileDirectly(video, "video"));
+      // Do not send binary media through the Server Action/hosting proxy.
+      formData.delete("new_images");
+      formData.delete("product_video");
+      formData.set("direct_media_uploads", JSON.stringify(uploaded));
+      startTransition(() => formAction(formData));
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "The media upload could not be completed.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   return (
-    <form className={styles.editorForm} action={formAction} noValidate>
+    <form className={styles.editorForm} action={formAction} onSubmit={handleSubmit} noValidate>
       <input type="hidden" name="id" value={product?.id ?? ""} />
       <input type="hidden" name="existing_image_path" value={product?.image_path ?? ""} />
 
@@ -812,9 +878,9 @@ export function ProductForm({
         </div>
       </fieldset>
 
-      {state.error ? (
+      {uploadError || state.error ? (
         <p className={styles.formError} role="alert">
-          {state.error}
+          {uploadError || state.error}
         </p>
       ) : null}
 
@@ -849,8 +915,8 @@ export function ProductForm({
             </span>
           </span>
         </label>
-        <button className={styles.primaryButton} type="submit" disabled={pending}>
-          {pending ? "Saving product…" : product ? "Save changes" : "Save product"}
+        <button className={styles.primaryButton} type="submit" disabled={pending || uploadingMedia}>
+          {uploadingMedia ? "Uploading media…" : pending ? "Saving product…" : product ? "Save changes" : "Save product"}
         </button>
       </div>
     </form>

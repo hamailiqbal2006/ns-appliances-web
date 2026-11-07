@@ -747,8 +747,60 @@ export async function uploadProductImage(file: File, productId: string, accessTo
     headers: { "Content-Type": file.type, "x-upsert": "false" },
     body: file,
   }, accessToken);
-  if (!response.ok) throw new Error("The image could not be uploaded.");
+  if (!response.ok) throw new Error(await storageUploadError(response, "image"));
   return path;
+}
+
+export type DirectProductMediaKind = "image" | "video";
+
+export async function createProductMediaUploadUrl(
+  input: { uploadId: string; fileName: string; contentType: string; size: number; kind: DirectProductMediaKind },
+  accessToken: string,
+) {
+  const config = getSupabaseConfig();
+  if (!config) throw new Error("Admin backend is not configured.");
+
+  if (!/^[0-9a-f-]{36}$/i.test(input.uploadId)) throw new Error("Invalid product media upload session.");
+  const acceptedTypes = input.kind === "image"
+    ? ["image/jpeg", "image/png", "image/webp"]
+    : ["video/mp4", "video/webm"];
+  const limit = input.kind === "image" ? 5 * 1024 * 1024 : 20 * 1024 * 1024;
+  if (!acceptedTypes.includes(input.contentType)) {
+    throw new Error(input.kind === "image" ? "Use a JPEG, PNG, or WebP image." : "Use an MP4 or WebM video.");
+  }
+  if (!Number.isFinite(input.size) || input.size <= 0 || input.size > limit) {
+    throw new Error(input.kind === "image" ? "Images must be 5 MB or smaller." : "Videos must be 20 MB or smaller.");
+  }
+
+  const extension = input.contentType === "image/png" ? "png"
+    : input.contentType === "image/webp" ? "webp"
+    : input.contentType === "video/webm" ? "webm"
+    : input.contentType === "video/mp4" ? "mp4"
+    : "jpg";
+  const path = `${input.uploadId}/${crypto.randomUUID()}.${extension}`;
+  const response = await supabaseFetch(`/storage/v1/object/upload/sign/product-images/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-upsert": "false" },
+  }, accessToken);
+  if (!response.ok) throw new Error(await storageUploadError(response, "product media"));
+
+  const payload = await response.json().catch(() => null) as { url?: string } | null;
+  if (!payload?.url) throw new Error("Supabase Storage did not provide an upload URL. Please retry.");
+  return { path, uploadUrl: new URL(payload.url, config.url).toString() };
+}
+
+async function storageUploadError(response: Response, label: string) {
+  const payload = await response.json().catch(() => null) as { statusCode?: string; code?: string; message?: string } | null;
+  const providerMessage = payload?.message?.trim();
+
+  if (response.status === 401) return "Your administrator session has expired. Sign in again, then retry the upload.";
+  if (response.status === 403) return "Your account is signed in but is not permitted to upload product media. Check the product-images Storage policy for approved admins.";
+  if (response.status === 413) return `${label[0].toUpperCase()}${label.slice(1)} is too large for the upload service. Use a smaller file and try again.`;
+  if (response.status === 415) return `This ${label} format is not accepted by the product-images bucket.`;
+  if (response.status >= 500) return `Supabase Storage is temporarily unavailable (HTTP ${response.status}). Please retry in a moment.`;
+  return providerMessage
+    ? `Supabase Storage rejected this ${label} (HTTP ${response.status}: ${providerMessage}).`
+    : `Supabase Storage rejected this ${label} (HTTP ${response.status}).`;
 }
 
 export async function uploadProductVideo(file: File, productId: string, accessToken: string) {

@@ -231,6 +231,27 @@ export function ProductForm({
   };
 
   const uploadFileDirectly = async (file: File, kind: "image" | "video") => {
+    const allowedTypes = kind === "image"
+      ? ["image/jpeg", "image/png", "image/webp"]
+      : ["video/mp4", "video/webm"];
+    const maximumSize = kind === "image" ? 5 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (!(file instanceof File) || file.size <= 0) {
+      throw new Error(`Choose a non-empty ${kind} file and try again.`);
+    }
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error(kind === "image" ? "Use a JPEG, PNG, or WebP image." : "Use an MP4 or WebM video.");
+    }
+    if (file.size > maximumSize) {
+      throw new Error(kind === "image" ? "Images must be 5 MB or smaller." : "Videos must be 20 MB or smaller.");
+    }
+
+    console.info("[product-media-upload] direct upload starting", {
+      method: "PUT",
+      route: "Supabase signed upload URL",
+      contentType: file.type,
+      bodyBytes: file.size,
+      kind,
+    });
     const ticket = await fetch("/api/admin/product-media-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -255,6 +276,11 @@ export function ProductForm({
         "cache-control": "max-age=3600",
       },
       body: file,
+    });
+    console.info("[product-media-upload] direct upload response", {
+      status: transfer.status,
+      ok: transfer.ok,
+      kind,
     });
     if (!transfer.ok) {
       const detail = (await transfer.json().catch(() => null)) as { message?: string } | null;

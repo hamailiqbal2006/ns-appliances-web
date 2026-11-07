@@ -778,10 +778,28 @@ export async function createProductMediaUploadUrl(
     : input.contentType === "video/mp4" ? "mp4"
     : "jpg";
   const path = `${input.uploadId}/${crypto.randomUUID()}.${extension}`;
+  // Storage requires a JSON payload when its JSON content type is declared.
+  // An empty POST with this header is rejected before a signed upload URL can
+  // be created, so keep the request body explicit and non-empty.
+  const signingBody = JSON.stringify({});
+  console.info("[product-media-upload] signing request", {
+    method: "POST",
+    route: "/storage/v1/object/upload/sign/product-images/:path",
+    contentType: "application/json",
+    bodyBytes: new TextEncoder().encode(signingBody).byteLength,
+    kind: input.kind,
+    fileSize: input.size,
+    fileType: input.contentType,
+  });
   const response = await supabaseFetch(`/storage/v1/object/upload/sign/product-images/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-upsert": "false" },
+    body: signingBody,
   }, accessToken);
+  console.info("[product-media-upload] signing response", {
+    status: response.status,
+    ok: response.ok,
+  });
   if (!response.ok) throw new Error(await storageUploadError(response, "product media"));
 
   const payload = await response.json().catch(() => null) as { url?: string } | null;
@@ -792,6 +810,12 @@ export async function createProductMediaUploadUrl(
 async function storageUploadError(response: Response, label: string) {
   const payload = await response.json().catch(() => null) as { statusCode?: string; code?: string; message?: string } | null;
   const providerMessage = payload?.message?.trim();
+  console.warn("[product-media-upload] storage response", {
+    label,
+    status: response.status,
+    code: payload?.code ?? payload?.statusCode ?? null,
+    hasProviderMessage: Boolean(providerMessage),
+  });
 
   if (response.status === 401) return "Your administrator session has expired. Sign in again, then retry the upload.";
   if (response.status === 403) return "Your account is signed in but is not permitted to upload product media. Check the product-images Storage policy for approved admins.";

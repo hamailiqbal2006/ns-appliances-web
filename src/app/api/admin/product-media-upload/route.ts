@@ -8,6 +8,15 @@ export async function POST(request: Request) {
     if (!kind || typeof body.uploadId !== "string" || typeof body.fileName !== "string" || typeof body.contentType !== "string" || typeof body.size !== "number") {
       return NextResponse.json({ error: "Invalid media upload request." }, { status: 400 });
     }
+    console.info("[product-media-upload] ticket request", {
+      method: request.method,
+      route: "/api/admin/product-media-upload",
+      contentType: request.headers.get("content-type"),
+      bodyBytes: request.headers.get("content-length"),
+      kind,
+      fileSize: body.size,
+      fileType: body.contentType,
+    });
     const { accessToken } = await requireAdminForAction();
     const upload = await createProductMediaUploadUrl({
       uploadId: body.uploadId,

@@ -804,7 +804,11 @@ export async function createProductMediaUploadUrl(
 
   const payload = await response.json().catch(() => null) as { url?: string } | null;
   if (!payload?.url) throw new Error("Supabase Storage did not provide an upload URL. Please retry.");
-  return { path, uploadUrl: new URL(payload.url, config.url).toString() };
+  // Supabase returns a path relative to its Storage API (for example
+  // `/object/upload/sign/...`), not to the project origin. Preserve the
+  // `/storage/v1` prefix when handing the URL to the browser, otherwise the
+  // PUT preflight reaches a non-existent project route and fails as CORS/404.
+  return { path, uploadUrl: new URL(`/storage/v1${payload.url}`, config.url).toString() };
 }
 
 async function storageUploadError(response: Response, label: string) {

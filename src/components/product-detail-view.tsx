@@ -53,9 +53,7 @@ export function ProductDetailView({
   const specsEntries = Object.entries(product.specifications || {}).filter(
     ([key, value]) =>
       Boolean(value) &&
-      key.toLowerCase() !== "brand" &&
-      key.toLowerCase() !== "model" &&
-      key.toLowerCase() !== "model number",
+      !/^(brand|model|model[\s_-]?number|availability|availability[\s_-]?status)$/i.test(key.trim()),
   );
 
   return (

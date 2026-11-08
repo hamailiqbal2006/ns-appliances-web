@@ -22,8 +22,15 @@
 @media (max-width: 640px) {
   .gridItem {
     width: 100%;
-    max-width: 420px;
+    max-width: 380px;
     margin: 0 auto;
+  }
+  .cardCanvasStage,
+  .featuredCanvasStage {
+    aspect-ratio: 9 / 13;
+    min-height: 350px;
+    max-height: 460px;
+    padding: 14px 12px 8px;
   }
 }
 
@@ -87,18 +94,20 @@
   user-select: none;
 }
 
-/* Floating Appliance Image Canvas Stage */
+/* Floating Appliance Image Canvas Stage — Calibrated for 9:16 Portrait Artwork */
 .cardCanvasStage {
   position: relative;
   width: 100%;
-  height: clamp(310px, 27vw, 370px);
+  aspect-ratio: 9 / 13;
+  min-height: 380px;
+  max-height: 480px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 34px 28px 18px;
+  padding: 16px 14px 10px;
   overflow: hidden;
   box-sizing: border-box;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.38) 0%, rgba(237, 235, 231, 0) 72%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.42) 0%, rgba(237, 235, 231, 0) 74%);
 }
 
 .imageInnerWrap {
@@ -232,7 +241,7 @@
   overflow: hidden;
   text-decoration: none;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   margin: 0 auto;
   box-sizing: border-box;
   will-change: transform, box-shadow;
@@ -256,14 +265,16 @@
 .featuredCanvasStage {
   position: relative;
   width: 100%;
-  height: clamp(320px, 30vw, 390px);
+  aspect-ratio: 9 / 13;
+  min-height: 440px;
+  max-height: 560px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 34px 30px 18px;
+  padding: 18px 16px 12px;
   overflow: hidden;
   box-sizing: border-box;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.38) 0%, rgba(237, 235, 231, 0) 72%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.45) 0%, rgba(237, 235, 231, 0) 74%);
 }
 
 .featuredInfoStrip {

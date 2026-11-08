@@ -17,7 +17,7 @@ export default async function HomepageBannersPage() {
     getAdminHomepageSliderSettings(token),
   ]);
 
-  const formKey = `${banners.map((b) => `${b.id}-${b.sortOrder}-${b.title}-${b.imagePath}-${b.mobileImagePath}-${b.isEnabled}`).join(":")}-${sliderSettings.bannerCount}-${sliderSettings.intervalSeconds}`;
+  const formKey = `${banners.map((b) => `${b.id}-${b.sortOrder}-${b.title}-${b.imagePath}-${b.mobileImagePath}-${b.isEnabled}`).join(":")}-${sliderSettings.intervalSeconds}`;
 
   return (
     <BannerEditorForm

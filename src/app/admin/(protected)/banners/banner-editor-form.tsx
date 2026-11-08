@@ -84,11 +84,9 @@ function prepare(banners: HomepageBanner[]): EditorBanner[] {
 
 function computeBaselineSnapshot(
   banners: EditorBanner[],
-  count: number,
   interval: number,
 ): string {
   return JSON.stringify({
-    count,
     interval,
     banners: banners.map((b) => ({
       id: b.id,
@@ -124,7 +122,6 @@ export function BannerEditorForm({
 
   // Baseline items initialized once from server props
   const [items, setItems] = useState<EditorBanner[]>(() => prepare(banners));
-  const [bannerCount, setBannerCount] = useState<number>(sliderSettings.bannerCount);
   const [intervalType, setIntervalType] = useState<string>(() => {
     const common = [3, 5, 7, 10, 15];
     return common.includes(sliderSettings.intervalSeconds)
@@ -134,8 +131,8 @@ export function BannerEditorForm({
   const [customInterval, setCustomInterval] = useState<number>(sliderSettings.intervalSeconds);
 
   const initialSnapshot = useMemo(
-    () => computeBaselineSnapshot(prepare(banners), sliderSettings.bannerCount, sliderSettings.intervalSeconds),
-    [banners, sliderSettings.bannerCount, sliderSettings.intervalSeconds],
+    () => computeBaselineSnapshot(prepare(banners), sliderSettings.intervalSeconds),
+    [banners, sliderSettings.intervalSeconds],
   );
 
   // Drawer & modal state
@@ -148,16 +145,9 @@ export function BannerEditorForm({
   const effectiveInterval = intervalType === "custom" ? customInterval : Number(intervalType);
   const enabledBannerCount = useMemo(() => items.filter((b) => b.isEnabled).length, [items]);
 
-  // Available banner count choices (1 up to total enabled banners, max 10)
-  const maxChoice = Math.max(1, Math.min(10, enabledBannerCount));
-  const countOptions = Array.from({ length: maxChoice }, (_, i) => i + 1);
-
-  // Auto-clamp bannerCount if enabledBannerCount changes
-  const clampedBannerCount = Math.max(1, Math.min(bannerCount, maxChoice));
-
   // Check if current draft differs from baseline
   const isDirty = useMemo(() => {
-    const currentSnapshot = computeBaselineSnapshot(items, clampedBannerCount, effectiveInterval);
+    const currentSnapshot = computeBaselineSnapshot(items, effectiveInterval);
     const hasPendingFiles = items.some(
       (b) =>
         b.desktopFile !== null ||
@@ -166,7 +156,7 @@ export function BannerEditorForm({
         b.removeMobileArtwork,
     );
     return currentSnapshot !== initialSnapshot || hasPendingFiles;
-  }, [items, clampedBannerCount, effectiveInterval, initialSnapshot]);
+  }, [items, effectiveInterval, initialSnapshot]);
 
   // Window beforeunload prompt when unsaved changes exist
   useEffect(() => {
@@ -345,7 +335,7 @@ export function BannerEditorForm({
     setFileError(null);
 
     const formData = new FormData();
-    formData.append("slider_banner_count", String(clampedBannerCount));
+    formData.append("slider_banner_count", String(Math.max(1, Math.min(10, enabledBannerCount))));
     formData.append("slider_interval_seconds", String(effectiveInterval));
 
     const configPayload = items.map((item, sortOrder) => ({
@@ -435,45 +425,19 @@ export function BannerEditorForm({
         </div>
       ) : null}
 
-      {/* SECTION B — DISPLAY SETTINGS CARD (NO SAVE BUTTON) */}
+      {/* SECTION B — ROTATION SETTINGS CARD */}
       <section className={styles.displaySettingsCard} aria-labelledby="display-settings-heading">
         <div className={styles.displaySettingsHeader}>
           <h2 id="display-settings-heading" className={styles.displaySettingsTitle}>
-            Display Settings
+            Rotation Settings
           </h2>
           <p className={styles.displaySettingsSubtitle}>
-            Configure hero rotation quantity and transition timing.
+            Configure slide transition timing for active homepage banners.
           </p>
         </div>
 
         <div className={styles.displaySettingsGrid}>
-          {/* 1. Number of Banners to Display */}
-          <div className={styles.displayField}>
-            <label htmlFor="setting-banner-count" className={styles.displayLabel}>
-              Number of Banners to Display
-            </label>
-            <select
-              id="setting-banner-count"
-              name="banner_count"
-              className={styles.displaySelect}
-              value={clampedBannerCount}
-              onChange={(e) => setBannerCount(Number(e.target.value))}
-              disabled={pending}
-            >
-              {countOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt} {opt === 1 ? "banner" : "banners"} {opt === 1 ? "(Single slide)" : ""}
-                </option>
-              ))}
-            </select>
-            <p className={styles.displayHelper}>
-              {clampedBannerCount === 1
-                ? "Displays only the first active banner statically. Auto-rotation and navigation dots are hidden."
-                : `Rotates between the first ${clampedBannerCount} active banners.`}
-            </p>
-          </div>
-
-          {/* 2. Rotation Interval */}
+          {/* Rotation Interval */}
           <div className={styles.displayField}>
             <label htmlFor="setting-rotation-interval" className={styles.displayLabel}>
               Rotation Interval
@@ -485,7 +449,7 @@ export function BannerEditorForm({
                 className={styles.displaySelect}
                 value={intervalType}
                 onChange={(e) => setIntervalType(e.target.value)}
-                disabled={pending || clampedBannerCount === 1}
+                disabled={pending || enabledBannerCount <= 1}
               >
                 <option value="3">3 seconds</option>
                 <option value="5">5 seconds (Recommended)</option>
@@ -506,7 +470,7 @@ export function BannerEditorForm({
                     className={styles.displaySelect}
                     style={{ width: "80px", paddingRight: "26px" }}
                     aria-label="Custom slide interval in seconds"
-                    disabled={pending || clampedBannerCount === 1}
+                    disabled={pending || enabledBannerCount <= 1}
                   />
                   <span style={{ position: "absolute", right: "8px", fontSize: "12px", color: "var(--admin-text-secondary)", pointerEvents: "none" }}>
                     s
@@ -515,9 +479,9 @@ export function BannerEditorForm({
               )}
             </div>
             <p className={styles.displayHelper}>
-              {clampedBannerCount === 1
-                ? "Rotation timer is inactive while set to 1 banner."
-                : `Slides automatically advance every ${effectiveInterval} seconds.`}
+              {enabledBannerCount <= 1
+                ? "Auto-rotation is paused while only 1 banner is active in the storefront."
+                : `Rotates automatically through all ${enabledBannerCount} active banners every ${effectiveInterval} seconds.`}
             </p>
           </div>
         </div>

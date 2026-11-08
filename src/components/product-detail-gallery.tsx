@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { ProductGalleryImage } from "@/lib/gallery-types";
 import styles from "./product-detail-gallery.module.css";
 
@@ -11,48 +11,71 @@ interface ProductDetailGalleryProps {
 }
 
 export function ProductDetailGallery({ images, productName }: ProductDetailGalleryProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  // Ensure the image marked Primary in the admin portal is always the initial displayed image
+  const primaryIdx = useMemo(() => {
+    const idx = images.findIndex((img) => img.isPrimary);
+    return idx >= 0 ? idx : 0;
+  }, [images]);
 
-  // References for focus restoration, swipe detection, and video control
+  const [prevImages, setPrevImages] = useState(images);
+  const [selectedIndex, setSelectedIndex] = useState<number>(primaryIdx);
+
+  // Synchronize index if images prop changes between renders without cascading effects
+  if (prevImages !== images) {
+    setPrevImages(images);
+    setSelectedIndex(primaryIdx);
+  }
+
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // References for focus restoration, swipe detection, thumbnail scrolling, and video control
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lightboxVideoRef = useRef<HTMLVideoElement>(null);
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
   const activeImage = images[selectedIndex] ?? null;
   const totalImages = images.length;
 
+  // Immediate, race-condition free selection handler
   const handleSelectImage = useCallback(
     (index: number) => {
-      if (index === selectedIndex || index < 0 || index >= totalImages) return;
-      // Pause any actively playing video before transition
-      if (videoRef.current) {
-        videoRef.current.pause();
-      }
-      if (lightboxVideoRef.current) {
-        lightboxVideoRef.current.pause();
-      }
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setSelectedIndex(index);
-        setIsTransitioning(false);
-      }, 120);
+      if (index < 0 || index >= totalImages) return;
+      if (videoRef.current) videoRef.current.pause();
+      if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
+      setSelectedIndex(index);
     },
-    [selectedIndex, totalImages],
+    [totalImages],
   );
 
+  // Reliable wraparound navigation
   const handleNext = useCallback(() => {
     if (totalImages <= 1) return;
-    handleSelectImage((selectedIndex + 1) % totalImages);
-  }, [selectedIndex, totalImages, handleSelectImage]);
+    if (videoRef.current) videoRef.current.pause();
+    if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
+    setSelectedIndex((prev: number) => (prev + 1) % totalImages);
+  }, [totalImages]);
 
   const handlePrev = useCallback(() => {
     if (totalImages <= 1) return;
-    handleSelectImage((selectedIndex - 1 + totalImages) % totalImages);
-  }, [selectedIndex, totalImages, handleSelectImage]);
+    if (videoRef.current) videoRef.current.pause();
+    if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
+    setSelectedIndex((prev: number) => (prev - 1 + totalImages) % totalImages);
+  }, [totalImages]);
+
+  // Auto-scroll active thumbnail into view
+  useEffect(() => {
+    const activeBtn = thumbnailRefs.current[selectedIndex];
+    if (activeBtn) {
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [selectedIndex]);
 
   // Pause videos on page leave or unmount
   useEffect(() => {
@@ -156,8 +179,31 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
     );
   }
 
+  const mediaKey = activeImage.id || activeImage.storagePath || activeImage.url;
+
   return (
     <div className={styles.galleryRoot} aria-label={`${productName} image gallery`}>
+      {/* Hidden preloader for neighboring images to ensure instantaneous navigation without blank frames */}
+      {totalImages > 1 && (
+        <div className="sr-only" aria-hidden="true">
+          {[
+            images[(selectedIndex + 1) % totalImages],
+            images[(selectedIndex - 1 + totalImages) % totalImages],
+          ]
+            .filter((img) => img && img.mediaType !== "video" && img.url)
+            .map((img) => (
+              <Image
+                key={`preload-adj-${img.id || img.url}`}
+                src={img.url}
+                alt=""
+                width={500}
+                height={500}
+                priority
+              />
+            ))}
+        </div>
+      )}
+
       {/* Main Image Showcase Stage */}
       <div
         className={styles.stageContainer}
@@ -181,6 +227,7 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
         {activeImage.mediaType === "video" ? (
           <div className={styles.stageVideoWrap}>
             <video
+              key={`video-${mediaKey}`}
               ref={videoRef}
               controls
               playsInline
@@ -195,23 +242,21 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
           <div className={styles.stageImageWrap}>
             {activeImage.url.startsWith("/") ? (
               <Image
+                key={`stage-${mediaKey}`}
                 src={activeImage.url}
                 alt={activeImage.altText || productName}
                 fill
-                priority={selectedIndex === 0}
+                priority
                 sizes="(max-width: 768px) 92vw, (max-width: 1200px) 46vw, 560px"
-                className={`${styles.stageImage} ${
-                  isTransitioning ? styles.stageImageLoading : styles.stageImageActive
-                }`}
+                className={`${styles.stageImage} ${styles.stageImageActive}`}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
+                key={`stage-img-${mediaKey}`}
                 src={activeImage.url}
                 alt={activeImage.altText || productName}
-                className={`${styles.stageImage} ${
-                  isTransitioning ? styles.stageImageLoading : styles.stageImageActive
-                }`}
+                className={`${styles.stageImage} ${styles.stageImageActive}`}
                 style={{ width: "100%", height: "100%" }}
               />
             )}
@@ -290,6 +335,9 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
             return (
               <button
                 key={img.id || idx}
+                ref={(el) => {
+                  thumbnailRefs.current[idx] = el;
+                }}
                 type="button"
                 role="tab"
                 aria-selected={isSelected}
@@ -385,6 +433,7 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
             <div className={styles.lightboxImageStage}>
               {activeImage.mediaType === "video" ? (
                 <video
+                  key={`lightbox-video-${mediaKey}`}
                   ref={lightboxVideoRef}
                   controls
                   playsInline
@@ -397,15 +446,18 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                 />
               ) : activeImage.url.startsWith("/") ? (
                 <Image
+                  key={`lightbox-${mediaKey}`}
                   src={activeImage.url}
                   alt={activeImage.altText || productName}
                   fill
+                  priority
                   sizes="92vw"
                   className={styles.lightboxImage}
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
+                  key={`lightbox-img-${mediaKey}`}
                   src={activeImage.url}
                   alt={activeImage.altText || productName}
                   className={styles.lightboxImage}

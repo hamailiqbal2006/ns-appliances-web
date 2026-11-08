@@ -992,6 +992,85 @@ export async function saveHomepageSliderSettings(
   throw new Error(errorMessage);
 }
 
+export async function uploadCategoryShowcaseImage(
+  file: File,
+  categorySlug: string,
+  accessToken: string,
+): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Category showcase cutout must be 5 MB or smaller.");
+  }
+  const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const safeSlug = categorySlug.replace(/[^a-z0-9-]/gi, "").toLowerCase() || "cutout";
+  const path = `category-showcase/${safeSlug}-${crypto.randomUUID()}.${extension}`;
+  const response = await supabaseFetch(
+    `/storage/v1/object/product-images/${path}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": file.type, "x-upsert": "true" },
+      body: file,
+    },
+    accessToken,
+  );
+  if (!response.ok) {
+    throw new Error(await storageUploadError(response, "category cutout image"));
+  }
+  return path;
+}
+
+export async function saveCategoryShowcaseSettings(
+  items: Array<{
+    category_slug: string;
+    display_heading: string;
+    sort_order: number;
+    left_bg_type: string;
+    left_bg_color: string;
+    left_gradient_end: string;
+    left_gradient_angle: number;
+    right_bg_type: string;
+    right_bg_color: string;
+    right_gradient_end: string;
+    right_gradient_angle: number;
+    image_path: string | null;
+    image_scale: number;
+    image_x: number;
+    image_y: number;
+  }>,
+  accessToken: string,
+) {
+  const response = await supabaseFetch(
+    "/rest/v1/homepage_category_showcase",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal",
+      },
+      body: JSON.stringify(items),
+    },
+    accessToken,
+  );
+
+  if (response.ok) return;
+
+  const errorText = await response.text();
+  let errorMessage = "Could not save category showcase settings.";
+  try {
+    const parsed = JSON.parse(errorText);
+    if (parsed && typeof parsed.message === "string") {
+      if (parsed.code === "PGRST205" || parsed.message.includes("homepage_category_showcase")) {
+        errorMessage =
+          "Database migration pending: Please run supabase/migrations/20261109_homepage_category_showcase.sql in your Supabase SQL Editor.";
+      } else {
+        errorMessage = parsed.message;
+      }
+    }
+  } catch {
+    if (errorText) errorMessage = errorText;
+  }
+  throw new Error(errorMessage);
+}
+
 export async function saveHomepageBanners(
   slots: Array<{
     slot_key: HomepageBannerSlot;

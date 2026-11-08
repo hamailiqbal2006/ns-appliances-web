@@ -4552,6 +4552,27 @@
   color: var(--admin-text-primary);
 }
 
+/* Category Showcase Table & Drag Styles */
+.trDragging {
+  opacity: 0.45;
+  background-color: var(--admin-surface-muted) !important;
+}
+
+.trDragOver {
+  border-top: 2px solid var(--admin-accent) !important;
+}
+
+.dragHandle {
+  cursor: grab;
+  color: var(--admin-text-secondary);
+  user-select: none;
+  font-family: var(--font-geist, monospace);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 
 /* --------------------------------------------------------------------------
    Responsive mainContainer & topBar overrides

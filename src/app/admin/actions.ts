@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -22,6 +22,8 @@ import {
   uploadHomepageBannerImage,
   uploadProductImage,
   uploadProductVideo,
+  uploadCategoryShowcaseImage,
+  saveCategoryShowcaseSettings,
   deleteAdminCustomerLead,
   deleteAdminCustomerLeadsBulk,
   type CustomerLeadDeletionOutcome,
@@ -953,4 +955,89 @@ export async function bulkDeleteCustomerLeadsAction(leadIds: string[]): Promise<
   }
 
   return outcome;
+}
+
+export async function saveCategoryShowcaseAction(_: FormState, formData: FormData): Promise<FormState> {
+  try {
+    const { accessToken } = await requireAdminForAction();
+    const configRaw = text(formData.get("showcase_configuration"));
+    if (!configRaw) throw new Error("Category showcase configuration is missing.");
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(configRaw);
+    } catch {
+      throw new Error("Invalid showcase payload.");
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error("No category showcase items provided.");
+    }
+
+    const payload: Array<{
+      category_slug: string;
+      display_heading: string;
+      sort_order: number;
+      left_bg_type: string;
+      left_bg_color: string;
+      left_gradient_end: string;
+      left_gradient_angle: number;
+      right_bg_type: string;
+      right_bg_color: string;
+      right_gradient_end: string;
+      right_gradient_angle: number;
+      image_path: string | null;
+      image_scale: number;
+      image_x: number;
+      image_y: number;
+    }> = [];
+
+    for (let i = 0; i < parsed.length; i++) {
+      const item = parsed[i] as Record<string, unknown>;
+      const slug = text(String(item.category_slug || item.categorySlug || ""));
+      if (!["cooling", "laundry", "kitchen-everyday", "home"].includes(slug)) {
+        throw new Error(`Invalid category slug: ${slug}`);
+      }
+
+      let imagePath = (typeof item.imagePath === "string" ? item.imagePath : null);
+      if (item.removeImage) {
+        imagePath = null;
+      }
+
+      // Check if a new file was uploaded for this category
+      const file = formData.get(`image_file_${slug}`);
+      if (file instanceof File && file.size > 0) {
+        imagePath = await uploadCategoryShowcaseImage(file, slug, accessToken);
+      }
+
+      payload.push({
+        category_slug: slug,
+        display_heading: text(String(item.displayHeading || item.categoryName || "")),
+        sort_order: i,
+        left_bg_type: item.leftBgType === "gradient" ? "gradient" : "solid",
+        left_bg_color: String(item.leftBgColor || "#e8ece9"),
+        left_gradient_end: String(item.leftGradientEnd || "#d8dcd9"),
+        left_gradient_angle: Number(item.leftGradientAngle) || 135,
+        right_bg_type: item.rightBgType === "gradient" ? "gradient" : "solid",
+        right_bg_color: String(item.rightBgColor || "#163f45"),
+        right_gradient_end: String(item.rightGradientEnd || "#0d282c"),
+        right_gradient_angle: Number(item.rightGradientAngle) || 135,
+        image_path: imagePath,
+        image_scale: Math.max(0.75, Math.min(1.25, Number(item.imageScale) || 1.0)),
+        image_x: Math.max(-15, Math.min(15, Number(item.imageX) || 0)),
+        image_y: Math.max(-15, Math.min(15, Number(item.imageY) || 0)),
+      });
+    }
+
+    await saveCategoryShowcaseSettings(payload, accessToken);
+    updateTag("category-showcase");
+    revalidatePath("/");
+    revalidatePath("/admin/category-showcase");
+    return { error: null, success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "The category showcase could not be saved.",
+      success: false,
+    };
+  }
 }

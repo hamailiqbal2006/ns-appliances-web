@@ -192,7 +192,7 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
               return (
                 <tr
                   key={product.id}
-                  style={isSelected ? { backgroundColor: "#f0f7f4" } : undefined}
+                  style={isSelected ? { backgroundColor: "var(--admin-primary-light)" } : undefined}
                 >
                   <td style={{ textAlign: "center", width: "44px" }}>
                     <input
@@ -219,12 +219,12 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: "#141c1b" }}>{product.categoryName}</span>
+                    <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>{product.categoryName}</span>
                     {product.subcategoryName ? (
                       <span
                         style={{
                           fontSize: "11px",
-                          color: "#687774",
+                          color: "var(--admin-text-secondary)",
                           display: "block",
                           marginTop: "2px",
                         }}
@@ -235,17 +235,27 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                   </td>
                   <td>
                     {product.priceFormatted ? (
-                      <span style={{ fontWeight: 600, color: "#141c1b" }}>
+                      <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
                         PKR {product.priceFormatted}
                       </span>
                     ) : (
-                      <span style={{ color: "#9ca6a2", fontStyle: "italic" }}>
+                      <span style={{ color: "var(--admin-text-muted)", fontStyle: "italic" }}>
                         Showroom inquiry
                       </span>
                     )}
                   </td>
                   <td>
-                    <span className={styles.status} data-status={product.status}>
+                    <span className={styles.statusDotLabel}>
+                      <span
+                        className={`${styles.statusDot} ${
+                          product.status === "active"
+                            ? styles.statusDotActive
+                            : product.status === "archived"
+                            ? styles.statusDotDraft
+                            : styles.statusDotWarning
+                        }`}
+                        aria-hidden
+                      />
                       {product.status === "active" ? "Active" : product.status === "archived" ? "Archived" : "Draft"}
                     </span>
                   </td>
@@ -259,7 +269,7 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                       {product.stockFormatted}
                     </span>
                   </td>
-                  <td style={{ color: "#687774", fontSize: "12.5px" }}>
+                  <td style={{ color: "var(--admin-text-secondary)", fontSize: "12.5px" }}>
                     {product.updatedFormatted}
                   </td>
                   <td style={{ textAlign: "right" }}>

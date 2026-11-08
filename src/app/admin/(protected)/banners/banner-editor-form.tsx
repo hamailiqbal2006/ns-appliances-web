@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState, useTransition } from "rea
 import { useRouter } from "next/navigation";
 import type { HomepageBanner, HomepageSliderSettings } from "@/lib/homepage-banners";
 import { saveAllBannerChangesAction } from "../../actions";
+import { AdminSwitch } from "../../admin-switch";
 import styles from "../../admin.module.css";
 
 type EditorBanner = {
@@ -207,7 +208,7 @@ export function BannerEditorForm({
   // Add new banner (up to 10)
   const handleAddBanner = () => {
     if (items.length >= 10) return;
-    const newId = `banner-${Date.now().toString(36)}`;
+    const newId = `banner${Date.now().toString(36).replace(/[^a-z]/g, "")}`;
     const newIndex = items.length;
     const ambient = AMBIENT_PALETTES[newIndex % AMBIENT_PALETTES.length];
     const newBanner: EditorBanner = {
@@ -405,31 +406,31 @@ export function BannerEditorForm({
 
       {/* Migration / Schema Warnings */}
       {!isReady ? (
-        <div className={styles.noticePanel} style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}>
+        <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-warning)", background: "var(--admin-surface-muted)" }}>
           <strong>Setup Notice:</strong> Apply <code>supabase/migrations/20261029_homepage_banners.sql</code> in your Supabase SQL Editor to enable custom hero banners.
         </div>
       ) : null}
 
       {!supportsMobileImage ? (
-        <div className={styles.noticePanel} style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}>
+        <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-warning)", background: "var(--admin-surface-muted)" }}>
           <strong>Notice:</strong> Apply <code>supabase/migrations/20261106_dual_responsive_banners.sql</code> to enable independent mobile banner artwork.
         </div>
       ) : null}
 
       {!supportsTitle ? (
-        <div className={styles.noticePanel} style={{ borderLeftColor: "#3b82f6", background: "#eff6ff" }}>
+        <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-primary)", background: "var(--admin-surface-muted)" }}>
           <strong>Feature Notice:</strong> Apply <code>supabase/migrations/20261108_homepage_banner_redesign.sql</code> in your Supabase SQL Editor to persist banner titles and add up to 10 slides.
         </div>
       ) : null}
 
       {!supportsEnabledToggle ? (
-        <div className={styles.noticePanel} style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}>
+        <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-warning)", background: "var(--admin-surface-muted)" }}>
           <strong>Notice:</strong> Apply <code>supabase/migrations/20261106_homepage_slider_settings.sql</code> to support active/inactive toggling.
         </div>
       ) : null}
 
       {!isSettingsReady ? (
-        <div className={styles.noticePanel} style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}>
+        <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-warning)", background: "var(--admin-surface-muted)" }}>
           <strong>Notice:</strong> Apply <code>supabase/migrations/20261106_homepage_slider_settings.sql</code> in your Supabase SQL Editor to persist slider settings.
         </div>
       ) : null}
@@ -507,7 +508,7 @@ export function BannerEditorForm({
                     aria-label="Custom slide interval in seconds"
                     disabled={pending || clampedBannerCount === 1}
                   />
-                  <span style={{ position: "absolute", right: "8px", fontSize: "12px", color: "#61716d", pointerEvents: "none" }}>
+                  <span style={{ position: "absolute", right: "8px", fontSize: "12px", color: "var(--admin-text-secondary)", pointerEvents: "none" }}>
                     s
                   </span>
                 </div>
@@ -529,7 +530,7 @@ export function BannerEditorForm({
             Configured Banners
             <span className={styles.bannerListCountBadge}>{items.length} of 10</span>
           </h2>
-          <span style={{ fontSize: "12px", color: "#61716d" }}>
+          <span style={{ fontSize: "12px", color: "var(--admin-text-secondary)" }}>
             {enabledBannerCount} active in storefront
           </span>
         </div>
@@ -627,21 +628,22 @@ export function BannerEditorForm({
                   </div>
                 </div>
 
-                {/* Active in Rotation Toggle Button */}
-                <button
-                  type="button"
-                  className={`${styles.activeToggleBtn} ${item.isEnabled ? styles.isActive : ""}`}
-                  onClick={() => {
-                    setItems((current) =>
-                      current.map((b) => (b.id === item.id ? { ...b, isEnabled: !b.isEnabled } : b)),
-                    );
-                  }}
-                  disabled={pending}
-                  title="Toggle active status in public rotation"
-                >
-                  <span className={item.isEnabled ? styles.statusDotActive : styles.statusDotInactive} />
-                  {item.isEnabled ? "Active" : "Inactive"}
-                </button>
+                {/* Active in Rotation Accessible Switch */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <AdminSwitch
+                    checked={item.isEnabled}
+                    disabled={pending}
+                    onChange={(checked) => {
+                      setItems((current) =>
+                        current.map((b) => (b.id === item.id ? { ...b, isEnabled: checked } : b)),
+                      );
+                    }}
+                    ariaLabel={`Active rotation for ${item.title || `Banner ${index + 1}`}`}
+                  />
+                  <span className={styles.statusDotLabel} style={{ fontSize: "12px" }}>
+                    {item.isEnabled ? "Active" : "Paused"}
+                  </span>
+                </div>
 
                 {/* Row Actions: Edit & Delete */}
                 <div className={styles.bannerItemActions}>
@@ -718,7 +720,7 @@ export function BannerEditorForm({
 
             <div className={styles.drawerBody}>
               {fileError && (
-                <div className={styles.noticePanel} style={{ borderColor: "#fca5a5", background: "#fef2f2", color: "#b91c1c" }}>
+                <div className={styles.noticePanel} style={{ borderLeftColor: "var(--admin-danger)", background: "var(--admin-danger-bg)", color: "var(--admin-danger)" }}>
                   {fileError}
                 </div>
               )}
@@ -744,26 +746,23 @@ export function BannerEditorForm({
                 />
               </div>
 
-              {/* 2. Active in Rotation Toggle */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#fafbfa", borderRadius: "8px", border: "1px solid #e1e6e3" }}>
+              {/* 2. Active in Rotation Switch */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "var(--admin-surface-muted)", borderRadius: "var(--admin-radius-sm)", border: "1px solid var(--admin-border)" }}>
                 <div>
-                  <span style={{ fontSize: "13.5px", fontWeight: 600, color: "#151e1d", display: "block" }}>Active in Rotation</span>
-                  <span style={{ fontSize: "12px", color: "#61716d" }}>Include this slide in storefront rotation</span>
+                  <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--admin-text-primary)", display: "block" }}>Active in Rotation</span>
+                  <span style={{ fontSize: "12px", color: "var(--admin-text-secondary)" }}>Include this slide in storefront rotation</span>
                 </div>
-                <button
-                  type="button"
-                  className={`${styles.activeToggleBtn} ${activeDrawerBanner.isEnabled ? styles.isActive : ""}`}
-                  onClick={() => {
+                <AdminSwitch
+                  checked={activeDrawerBanner.isEnabled}
+                  onChange={(checked) => {
                     setItems((curr) =>
                       curr.map((b) =>
-                        b.id === activeDrawerBanner.id ? { ...b, isEnabled: !b.isEnabled } : b,
+                        b.id === activeDrawerBanner.id ? { ...b, isEnabled: checked } : b,
                       ),
                     );
                   }}
-                >
-                  <span className={activeDrawerBanner.isEnabled ? styles.statusDotActive : styles.statusDotInactive} />
-                  {activeDrawerBanner.isEnabled ? "Active" : "Inactive"}
-                </button>
+                  ariaLabel="Include this slide in storefront rotation"
+                />
               </div>
 
               {/* 3. Desktop Image Upload */}
@@ -830,13 +829,13 @@ export function BannerEditorForm({
                   </div>
                 ) : (
                   <div className={styles.dropzoneBox}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#687774" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--admin-text-muted)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <rect width="18" height="14" x="3" y="5" rx="2" />
                       <circle cx="8.5" cy="10.5" r="1.5" />
                       <path d="m21 15-5-5L5 21" />
                     </svg>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#172323" }}>Upload Desktop Banner</span>
-                    <span style={{ fontSize: "11.5px", color: "#61716d" }}>JPEG, PNG, or WebP up to 5 MB</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--admin-text-primary)" }}>Upload Desktop Banner</span>
+                    <span style={{ fontSize: "11.5px", color: "var(--admin-text-secondary)" }}>JPEG, PNG, or WebP up to 5 MB</span>
                     <label className={styles.chooseFileLabel} style={{ marginTop: "4px" }}>
                       Choose Desktop File
                       <input
@@ -915,12 +914,12 @@ export function BannerEditorForm({
                   </div>
                 ) : (
                   <div className={styles.dropzoneBox}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#687774" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--admin-text-muted)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <rect width="14" height="20" x="5" y="2" rx="2" />
                       <line x1="12" y1="18" x2="12" y2="18" />
                     </svg>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#172323" }}>Upload Mobile Banner</span>
-                    <span style={{ fontSize: "11.5px", color: "#61716d" }}>Optional. Falls back to desktop image if omitted.</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--admin-text-primary)" }}>Upload Mobile Banner</span>
+                    <span style={{ fontSize: "11.5px", color: "var(--admin-text-secondary)" }}>Optional. Falls back to desktop image if omitted.</span>
                     <label className={styles.chooseFileLabel} style={{ marginTop: "4px" }}>
                       Choose Mobile File
                       <input
@@ -1000,7 +999,7 @@ export function BannerEditorForm({
               </div>
             </div>
 
-            <footer style={{ padding: "16px 24px", borderTop: "1px solid #edf1ef", display: "flex", justifyContent: "flex-end" }}>
+            <footer style={{ padding: "16px 24px", borderTop: "1px solid var(--admin-border)", display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
                 className={styles.drawerDoneBtn}

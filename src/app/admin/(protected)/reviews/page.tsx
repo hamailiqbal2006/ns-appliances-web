@@ -52,7 +52,7 @@ export default async function AdminReviewsPage({
           </p>
         </div>
         <div className={styles.headerActions}>
-          <span style={{ fontSize: "13px", color: "#5d6d69", fontWeight: 500 }}>
+          <span style={{ fontSize: "13px", color: "var(--admin-text-secondary)", fontWeight: 500 }}>
             {reviews.length} {reviews.length === 1 ? "review" : "reviews"}{" "}
             {pendingCount > 0 && `(${pendingCount} pending moderation)`}
           </span>
@@ -131,33 +131,40 @@ export default async function AdminReviewsPage({
                     </td>
                     <td>
                       <div>
-                        <strong style={{ color: "#141c1b", fontSize: "13.5px" }}>{r.customerName}</strong>
+                        <strong style={{ color: "var(--admin-text-primary)", fontSize: "13.5px" }}>{r.customerName}</strong>
                         {r.customerEmail && (
-                          <div style={{ fontSize: "11.5px", color: "#687774", marginTop: "2px" }}>
+                          <div style={{ fontSize: "11.5px", color: "var(--admin-text-muted)", marginTop: "2px" }}>
                             {r.customerEmail}
                           </div>
                         )}
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 700, color: "#176044", fontSize: "13px" }}>
+                      <span style={{ fontWeight: 700, color: "var(--admin-primary)", fontSize: "13px" }}>
                         ★ {r.rating} / 5
                       </span>
                     </td>
                     <td style={{ maxWidth: "340px", whiteSpace: "normal" }}>
-                      <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.45, color: "#2d3a37" }}>
+                      <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.45, color: "var(--admin-text-secondary)" }}>
                         {r.reviewText}
                       </p>
                     </td>
-                    <td style={{ fontSize: "12.5px", color: "#687774" }}>
+                    <td style={{ fontSize: "12.5px", color: "var(--admin-text-muted)" }}>
                       {formatDate(r.createdAt)}
                     </td>
                     <td>
-                      <span
-                        className={styles.status}
-                        data-status={r.status === "approved" ? "active" : r.status === "rejected" ? "archived" : "new"}
-                      >
-                        {r.status}
+                      <span className={styles.statusDotLabel}>
+                        <span
+                          className={`${styles.statusDot} ${
+                            r.status === "approved"
+                              ? styles.statusDotActive
+                              : r.status === "rejected"
+                              ? styles.statusDotDanger
+                              : styles.statusDotWarning
+                          }`}
+                          aria-hidden
+                        />
+                        {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                       </span>
                     </td>
                     <td style={{ textAlign: "right" }}>

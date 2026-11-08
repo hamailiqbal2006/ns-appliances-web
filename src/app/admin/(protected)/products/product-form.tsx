@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useState, useMemo, useRef } from "react";
+import Link from "next/link";
 import type { CategoryRecord } from "@/lib/category-types";
 import type { AdminProduct } from "@/lib/supabase-admin";
 import {
@@ -8,6 +9,7 @@ import {
   resolveAvailabilityStatus,
 } from "@/lib/product-availability";
 import { saveProductAction } from "../../actions";
+import { AdminSwitch } from "../../admin-switch";
 import styles from "../../admin.module.css";
 
 function specificationsToText(specifications: Record<string, string>) {
@@ -328,7 +330,7 @@ export function ProductForm({
         <legend>Product identification</legend>
         <div className={styles.fieldGrid}>
           <label className={styles.fieldWide}>
-            Product name <span style={{ color: "#b6413e" }}>*</span>
+            Product name <span style={{ color: "var(--admin-danger)" }}>*</span>
             <input
               name="name"
               required
@@ -353,7 +355,7 @@ export function ProductForm({
           </label>
 
           <label>
-            Category <span style={{ color: "#b6413e" }}>*</span>
+            Category <span style={{ color: "var(--admin-danger)" }}>*</span>
             <select
               name="category"
               required
@@ -449,10 +451,10 @@ export function ProductForm({
           </label>
 
           <div className={styles.fieldWide}>
-            <span style={{ fontSize: "12px", fontWeight: 650, color: "#33403d", display: "block", marginBottom: "4px" }}>
+            <span style={{ fontSize: "12px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "4px" }}>
               Showroom availability status
             </span>
-            <p style={{ margin: "0 0 10px 0", color: "#687370", fontSize: "12px", lineHeight: 1.45 }}>
+            <p style={{ margin: "0 0 10px 0", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.45 }}>
               Controls catalog availability badges. Inquiries remain open across all states. Defaults to <em>Availability Not Confirmed</em> for new products.
             </p>
             <div className={styles.availabilityOptionGrid}>
@@ -470,13 +472,13 @@ export function ProductForm({
                       value="not_confirmed"
                       checked={availability === "not_confirmed"}
                       onChange={() => setAvailability("not_confirmed")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "#176044" }}
+                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
                     />
                     <span>Not Confirmed</span>
                   </div>
                   <span className={styles.availabilityBadge} data-availability="not_confirmed">Default</span>
                 </div>
-                <span style={{ color: "#687370", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
+                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
                   Product is listed with unverified stock. Customers can inquire to verify showroom availability.
                 </span>
               </label>
@@ -495,13 +497,13 @@ export function ProductForm({
                       value="available"
                       checked={availability === "available"}
                       onChange={() => setAvailability("available")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "#176044" }}
+                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
                     />
                     <span>Available / In Stock</span>
                   </div>
                   <span className={styles.availabilityBadge} data-availability="available">In Stock</span>
                 </div>
-                <span style={{ color: "#687370", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
+                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
                   Product is confirmed in stock. Displays In Stock badge on catalog and product page.
                 </span>
               </label>
@@ -520,13 +522,13 @@ export function ProductForm({
                       value="out_of_stock"
                       checked={availability === "out_of_stock"}
                       onChange={() => setAvailability("out_of_stock")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "#176044" }}
+                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
                     />
                     <span>Out of Stock</span>
                   </div>
                   <span className={styles.availabilityBadge} data-availability="out_of_stock">Unavailable</span>
                 </div>
-                <span style={{ color: "#687370", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
+                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
                   Explicitly unavailable. Displays Out of Stock badge, while still allowing customer restock inquiries.
                 </span>
               </label>
@@ -534,39 +536,37 @@ export function ProductForm({
             <input type="hidden" name="availability_status" value={availability} />
           </div>
 
-          <label className={styles.fieldWide}>
-            <span>Customer website visibility (published vs hidden)</span>
-            <span
+          <div className={styles.fieldWide}>
+            <span style={{ fontSize: "12.5px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "6px" }}>
+              Customer website visibility
+            </span>
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "14px",
                 padding: "12px 14px",
-                marginTop: "6px",
-                border: `1px solid ${isActive ? "#76a998" : "#c8d2cd"}`,
-                borderRadius: "7px",
-                background: isActive ? "#eff8f4" : "#f6f7f5",
+                border: "1px solid var(--admin-border)",
+                borderRadius: "var(--admin-radius-sm)",
+                backgroundColor: "var(--admin-surface-muted)",
               }}
             >
-              <span>
-                <strong style={{ display: "block", color: isActive ? "#176044" : "#485450" }}>
-                  {isActive ? "Active — published on customer website" : "Inactive — hidden from customer website"}
+              <div>
+                <strong style={{ display: "block", color: "var(--admin-text-primary)", fontSize: "13px" }}>
+                  {isActive ? "Active — published on customer website" : "Draft — hidden from customer website"}
                 </strong>
-                <span style={{ display: "block", marginTop: "2px", color: "#687370", fontSize: "12px", lineHeight: 1.4 }}>
-                  Independent of availability. Inactive products disappear completely from public catalog, categories, search, and direct links.
+                <span style={{ display: "block", marginTop: "2px", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4 }}>
+                  When inactive, this appliance is hidden completely from the customer storefront, collections, and search.
                 </span>
-              </span>
-              <input
-                type="checkbox"
+              </div>
+              <AdminSwitch
                 checked={isActive}
-                onChange={(event) => setIsActive(event.target.checked)}
-                role="switch"
-                aria-label="Make this product active on the customer website"
-                style={{ width: "42px", height: "24px", accentColor: "#176044", flex: "none" }}
+                onChange={setIsActive}
+                ariaLabel="Make this product active on the customer website"
               />
-            </span>
-          </label>
+            </div>
+          </div>
         </div>
       </fieldset>
       <input type="hidden" name="status" value={isActive ? "active" : "draft"} />
@@ -604,21 +604,21 @@ export function ProductForm({
         <legend>Product imagery & gallery ({gallery.length} item{gallery.length === 1 ? "" : "s"})</legend>
 
         {/* Aspect Ratio and Video Guidelines Banner */}
-        <div style={{ background: "#edf3f1", border: "1px solid #c7dcda", borderRadius: "8px", padding: "14px 18px", marginTop: "16px", marginBottom: "20px" }}>
+        <div style={{ background: "var(--admin-surface-muted)", border: "1px solid var(--admin-border)", borderRadius: "8px", padding: "14px 18px", marginTop: "16px", marginBottom: "20px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
             <div>
-              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "#193631" }}>
+              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "var(--admin-text-primary)" }}>
                 Recommended image: 1200 × 1200 px (1:1)
               </p>
-              <p style={{ margin: 0, fontSize: "12px", color: "#47615c", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--admin-text-secondary)", lineHeight: 1.5 }}>
                 Keep the complete appliance visible with space around the edges. WebP, JPG or PNG.
               </p>
             </div>
             <div>
-              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "#193631" }}>
+              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "var(--admin-text-primary)" }}>
                 Product video: MP4 recommended
               </p>
-              <p style={{ margin: 0, fontSize: "12px", color: "#47615c", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--admin-text-secondary)", lineHeight: 1.5 }}>
                 Short product demonstration, up to 20 MB (15–30 seconds recommended).
               </p>
             </div>
@@ -648,7 +648,7 @@ export function ProductForm({
         {/* Existing Gallery Media Items */}
         {gallery.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}>
-            <p style={{ margin: 0, fontSize: "13px", color: "#54625f" }}>
+            <p style={{ margin: 0, fontSize: "13px", color: "var(--admin-text-secondary)" }}>
               The <strong>Cover photo</strong> is displayed on the All Appliances catalog card. All images and videos appear in the interactive product detail gallery.
             </p>
 
@@ -661,9 +661,9 @@ export function ProductForm({
                   <div
                     key={item.id || item.storagePath || idx}
                     style={{
-                      border: item.isPrimary ? "2px solid #1f6d61" : "1px solid #d8ddda",
+                      border: item.isPrimary ? "2px solid var(--admin-primary)" : "1px solid var(--admin-border)",
                       borderRadius: "8px",
-                      background: item.isPrimary ? "#f2f8f6" : "#fff",
+                      background: item.isPrimary ? "var(--admin-primary-light)" : "var(--admin-surface)",
                       padding: "12px",
                       display: "flex",
                       flexDirection: "column",
@@ -671,7 +671,7 @@ export function ProductForm({
                       position: "relative",
                     }}
                   >
-                    <div style={{ position: "relative", width: "100%", height: "140px", background: "#eef1ee", borderRadius: "6px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "relative", width: "100%", height: "140px", background: "var(--admin-surface-muted)", borderRadius: "6px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isVideo ? (
                         <video
                           src={item.url}
@@ -692,7 +692,7 @@ export function ProductForm({
                             position: "absolute",
                             top: "6px",
                             left: "6px",
-                            background: "#1f6d61",
+                            background: "var(--admin-primary)",
                             color: "#fff",
                             fontSize: "10px",
                             fontWeight: 700,
@@ -727,7 +727,7 @@ export function ProductForm({
                     </div>
 
                     <div>
-                      <label style={{ fontSize: "11px", fontWeight: 600, color: "#475551", marginBottom: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--admin-text-secondary)", marginBottom: "4px" }}>
                         {isVideo ? "Video description" : "Image alt text"}
                         <input
                           type="text"
@@ -745,7 +745,7 @@ export function ProductForm({
                           type="button"
                           onClick={() => handleMakePrimary(idx)}
                           style={{
-                            background: "#1f6d61",
+                            background: "var(--admin-primary)",
                             color: "#fff",
                             border: "none",
                             borderRadius: "4px",
@@ -764,8 +764,8 @@ export function ProductForm({
                           type="button"
                           onClick={() => handleMoveImage(idx, "up")}
                           style={{
-                            background: "#e6ece8",
-                            border: "1px solid #c8d2cd",
+                            background: "var(--admin-surface-muted)",
+                            border: "1px solid var(--admin-border)",
                             borderRadius: "4px",
                             padding: "5px 8px",
                             fontSize: "11px",
@@ -782,8 +782,8 @@ export function ProductForm({
                           type="button"
                           onClick={() => handleMoveImage(idx, "down")}
                           style={{
-                            background: "#e6ece8",
-                            border: "1px solid #c8d2cd",
+                            background: "var(--admin-surface-muted)",
+                            border: "1px solid var(--admin-border)",
                             borderRadius: "4px",
                             padding: "5px 8px",
                             fontSize: "11px",
@@ -800,9 +800,9 @@ export function ProductForm({
                         onClick={() => handleRemoveImage(idx)}
                         style={{
                           marginLeft: "auto",
-                          background: "#fbedeb",
-                          color: "#9b2c28",
-                          border: "1px solid #d6aaa7",
+                          background: "var(--admin-danger-bg)",
+                          color: "var(--admin-danger)",
+                          border: "1px solid var(--admin-border)",
                           borderRadius: "4px",
                           padding: "5px 8px",
                           fontSize: "11px",
@@ -818,13 +818,13 @@ export function ProductForm({
             </div>
           </div>
         ) : (
-          <div style={{ padding: "16px", background: "#f5f6f3", borderRadius: "6px", color: "#687370", fontSize: "13px", marginTop: "16px", marginBottom: "16px" }}>
+          <div style={{ padding: "16px", background: "var(--admin-surface-muted)", borderRadius: "6px", color: "var(--admin-text-secondary)", fontSize: "13px", marginTop: "16px", marginBottom: "16px" }}>
             No gallery media attached to this product yet.
           </div>
         )}
 
         {/* Upload Multiple Product Photographs */}
-        <div style={{ marginTop: "20px", borderTop: "1px solid #e2e5e2", paddingTop: "20px" }}>
+        <div style={{ marginTop: "20px", borderTop: "1px solid var(--admin-border)", paddingTop: "20px" }}>
           <label style={{ display: "grid", gap: "6px" }}>
             <span style={{ fontSize: "13px", fontWeight: 700 }}>Add new product photographs</span>
             <input
@@ -840,7 +840,7 @@ export function ProductForm({
           </p>
 
           {imageError && (
-            <p style={{ color: "#b6413e", fontSize: "12px", marginTop: "6px" }}>
+            <p style={{ color: "var(--admin-danger)", fontSize: "12px", marginTop: "6px" }}>
               {imageError}
             </p>
           )}
@@ -853,12 +853,12 @@ export function ProductForm({
 
           {newFilePreviews.length > 0 && (
             <div style={{ marginTop: "14px" }}>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "#1f6d61", marginBottom: "8px" }}>
+              <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--admin-primary)", marginBottom: "8px" }}>
                 {newFilePreviews.length} new photograph{newFilePreviews.length === 1 ? "" : "s"} ready to upload on save:
               </p>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 {newFilePreviews.map((preview, i) => (
-                  <div key={i} style={{ width: "70px", height: "70px", borderRadius: "6px", overflow: "hidden", border: "2px dashed #1f6d61", background: "#fff" }}>
+                  <div key={i} style={{ width: "70px", height: "70px", borderRadius: "6px", overflow: "hidden", border: "2px dashed var(--admin-primary)", background: "var(--admin-surface)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={preview} alt={`Upload ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                   </div>
@@ -869,7 +869,7 @@ export function ProductForm({
         </div>
 
         {/* Upload Optional Product Demonstration Video */}
-        <div style={{ marginTop: "20px", borderTop: "1px solid #e2e5e2", paddingTop: "20px" }}>
+        <div style={{ marginTop: "20px", borderTop: "1px solid var(--admin-border)", paddingTop: "20px" }}>
           <label style={{ display: "grid", gap: "6px" }}>
             <span style={{ fontSize: "13px", fontWeight: 700 }}>Upload product demonstration video (optional)</span>
             <input
@@ -884,14 +884,14 @@ export function ProductForm({
           </p>
 
           {videoError && (
-            <p style={{ color: "#b6413e", fontSize: "12px", marginTop: "6px" }}>
+            <p style={{ color: "var(--admin-danger)", fontSize: "12px", marginTop: "6px" }}>
               {videoError}
             </p>
           )}
 
           {videoPreview && (
             <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "#1f6d61", margin: 0 }}>
+              <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--admin-primary)", margin: 0 }}>
                 Video preview (ready to upload on save):
               </p>
               <video
@@ -911,36 +911,9 @@ export function ProductForm({
       ) : null}
 
       <div className={styles.formActions}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginRight: "auto",
-            padding: "9px 12px",
-            border: `1px solid ${isActive ? "#76a998" : "#c8d2cd"}`,
-            borderRadius: "7px",
-            background: isActive ? "#eff8f4" : "#f6f7f5",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isActive}
-            onChange={(event) => setIsActive(event.target.checked)}
-            role="switch"
-            aria-label="Publish this product on the customer website"
-            style={{ width: "42px", height: "24px", accentColor: "#176044", flex: "none" }}
-          />
-          <span style={{ display: "grid", gap: "1px" }}>
-            <strong style={{ color: isActive ? "#176044" : "#485450", fontSize: "13px" }}>
-              {isActive ? "Listed on website" : "Publish on website"}
-            </strong>
-            <span style={{ color: "#687370", fontSize: "11px" }}>
-              {isActive ? "Save changes to keep this product live." : "Switch on, then save to remove this draft status."}
-            </span>
-          </span>
-        </label>
+        <Link href="/admin/products" className={styles.secondaryButton}>
+          Cancel
+        </Link>
         <button className={styles.primaryButton} type="submit" disabled={pending || uploadingMedia}>
           {uploadingMedia ? "Uploading media…" : pending ? "Saving product…" : product ? "Save changes" : "Save product"}
         </button>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { logoutAction } from "./actions";
+import { ThemeSwitch } from "./theme-switch";
 import styles from "./admin.module.css";
 
 interface NavItem {
@@ -101,19 +102,19 @@ const navSections: NavSection[] = [
   {
     title: "Website",
     items: [
-      { href: "/admin/banners", label: "Homepage banners", icon: IconBanners },
-      { href: "/admin/announcement-bar", label: "Announcement bar", icon: IconAnnouncement },
+      { href: "/admin/banners", label: "Homepage Banners", icon: IconBanners },
+      { href: "/admin/announcement-bar", label: "Announcement Bar", icon: IconAnnouncement },
     ],
   },
   {
     title: "Reviews",
     items: [
-      { href: "/admin/reviews", label: "Customer reviews", icon: IconReviews },
+      { href: "/admin/reviews", label: "Customer Reviews", icon: IconReviews },
     ],
   },
   {
     title: "Configuration",
-    items: [{ href: "/admin/settings", label: "Store settings", icon: IconSettings }],
+    items: [{ href: "/admin/settings", label: "Store Settings", icon: IconSettings }],
   },
 ];
 
@@ -131,6 +132,18 @@ export function AdminShell({
   // Extract initial for avatar
   const initial = name ? name.charAt(0).toUpperCase() : "A";
 
+  // Derive active label for top breadcrumb
+  let currentLabel = "Dashboard";
+  for (const sec of navSections) {
+    for (const item of sec.items) {
+      if (item.href === "/admin") {
+        if (pathname === "/admin") currentLabel = item.label;
+      } else if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+        currentLabel = item.label;
+      }
+    }
+  }
+
   return (
     <div className={styles.adminApp}>
       {/* Mobile Top Header */}
@@ -138,20 +151,24 @@ export function AdminShell({
         <Link href="/admin" className={styles.brand} onClick={closeMenu}>
           NS <span className={styles.brandBadge}>Admin</span>
         </Link>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-expanded={menuOpen}
-          aria-controls="admin-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-          Menu
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <ThemeSwitch />
+          <button
+            type="button"
+            className={styles.menuButton}
+            aria-expanded={menuOpen}
+            aria-controls="admin-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="Toggle navigation menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+            Menu
+          </button>
+        </div>
       </header>
 
       {/* Main Sidebar Drawer */}
@@ -160,7 +177,7 @@ export function AdminShell({
         id="admin-navigation"
         aria-label="Admin Navigation"
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className={styles.sidebarHeader}>
           <Link href="/admin" className={styles.brand} onClick={closeMenu}>
             NS <span className={styles.brandBadge}>Admin</span>
           </Link>
@@ -168,8 +185,7 @@ export function AdminShell({
             <button
               type="button"
               onClick={closeMenu}
-              className={styles.menuButton}
-              style={{ padding: "4px 8px", minHeight: "32px" }}
+              className={styles.menuCloseButton}
               aria-label="Close menu"
             >
               ✕
@@ -241,7 +257,38 @@ export function AdminShell({
       ) : null}
 
       {/* Main Content Area */}
-      <main className={styles.content}>{children}</main>
+      <div className={styles.mainContainer}>
+        {/* Top Header Bar on Desktop */}
+        <header className={styles.topBar}>
+          <div className={styles.topBarBreadcrumbs}>
+            <span className={styles.topBarStoreName}>NS Home Appliances</span>
+            <span className={styles.topBarSeparator}>/</span>
+            <span className={styles.topBarCurrentPage}>{currentLabel}</span>
+          </div>
+
+          <div className={styles.topBarActions}>
+            <Link
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.topBarViewStoreLink}
+              title="Preview public storefront in a new tab"
+            >
+              <span>View Store</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </Link>
+
+            <ThemeSwitch />
+          </div>
+        </header>
+
+        {/* Page Content View */}
+        <main className={styles.content}>{children}</main>
+      </div>
     </div>
   );
 }

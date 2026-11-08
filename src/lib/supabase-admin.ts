@@ -935,7 +935,8 @@ export async function uploadHomepageBannerImage(
   if (!validImage.ok) throw new Error(validImage.error);
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const prefix = kind === "mobile" ? "m-" : "";
-  const safeSlot = slot.replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "banner";
+  // Ensure the folder uses strictly lowercase alpha characters to comply with all migration regexes
+  const safeSlot = slot.replace(/[^a-z]/gi, "").toLowerCase() || "banner";
   const path = `${safeSlot}/${prefix}${crypto.randomUUID()}.${extension}`;
   const response = await supabaseFetch(`/storage/v1/object/homepage-banners/${path}`, {
     method: "POST",
@@ -1059,8 +1060,8 @@ export async function saveHomepageBanners(
     try {
       const parsed = JSON.parse(errText);
       if (parsed?.message) {
-        if (parsed.message.includes("three")) {
-          msg = "Your Supabase database requires applying supabase/migrations/20261108_homepage_banner_redesign.sql to support more than 3 banners.";
+        if (parsed.message.includes("three") || parsed.message.includes("Invalid homepage banner configuration")) {
+          msg = "Your database schema currently requires migration 14 to save custom or extended banner slots. Please execute supabase/migrations/20261108_homepage_banner_redesign.sql in your Supabase SQL Editor.";
         } else {
           msg = parsed.message;
         }

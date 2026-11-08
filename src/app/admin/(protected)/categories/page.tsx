@@ -71,10 +71,10 @@ export default async function CategoriesAdminPage() {
               {categories.map((cat) => (
                 <tr key={cat.id}>
                   <td>
-                    <strong style={{ color: "#141c1b", fontSize: "14px" }}>{cat.name}</strong>
+                    <strong style={{ color: "var(--admin-text-primary)", fontSize: "14px" }}>{cat.name}</strong>
                   </td>
                   <td>
-                    <code style={{ fontSize: "12px", background: "#f0f4f2", padding: "2px 6px", borderRadius: "4px" }}>
+                    <code style={{ fontSize: "12px", background: "var(--admin-surface-muted)", color: "var(--admin-text-primary)", padding: "2px 6px", borderRadius: "4px" }}>
                       {cat.slug}
                     </code>
                   </td>
@@ -84,8 +84,8 @@ export default async function CategoriesAdminPage() {
                         fontSize: "11.5px",
                         fontWeight: 600,
                         textTransform: "capitalize",
-                        color: "#3d4b47",
-                        background: "#edf2ee",
+                        color: "var(--admin-text-secondary)",
+                        background: "var(--admin-surface-muted)",
                         padding: "2px 8px",
                         borderRadius: "4px",
                       }}
@@ -94,19 +94,20 @@ export default async function CategoriesAdminPage() {
                     </span>
                   </td>
                   <td>
-                    <span style={{ fontSize: "13px", color: "#475552" }}>
+                    <span style={{ fontSize: "13px", color: "var(--admin-text-secondary)" }}>
                       {cat.subcategories.length}{" "}
                       {cat.subcategories.length === 1 ? "subcategory" : "subcategories"}
                     </span>
                   </td>
-                  <td style={{ color: "#687774" }}>{cat.display_order}</td>
+                  <td style={{ color: "var(--admin-text-muted)" }}>{cat.display_order}</td>
                   <td>
-                    <span className={styles.status} data-status={cat.is_active ? "active" : "inactive"}>
+                    <span className={styles.statusDotLabel}>
+                      <span className={`${styles.statusDot} ${cat.is_active ? styles.statusDotActive : styles.statusDotDraft}`} aria-hidden />
                       {cat.is_active ? "Active" : "Archived"}
                     </span>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: "#141c1b" }}>
+                    <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
                       {cat.product_count}
                     </span>
                   </td>

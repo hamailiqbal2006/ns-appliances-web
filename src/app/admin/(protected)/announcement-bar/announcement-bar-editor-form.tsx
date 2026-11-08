@@ -10,6 +10,7 @@ import type {
 } from "@/lib/announcement-bar";
 import { AnnouncementBarView, SeparatorGlyph } from "@/components/announcement-bar";
 import { saveAnnouncementBarAction } from "../../actions";
+import { AdminSwitch } from "../../admin-switch";
 import styles from "../../admin.module.css";
 
 type EditorMessage = AnnouncementMessage & { clientId: string };
@@ -18,7 +19,20 @@ function prepare(messages: AnnouncementMessage[]): EditorMessage[] {
   return messages.map((message) => ({ ...message, clientId: message.id || crypto.randomUUID() }));
 }
 
-const THEME_OPTIONS: Array<{
+const CURATED_THEME_OPTIONS: Array<{
+  id: AnnouncementTheme;
+  label: string;
+  subtitle: string;
+  swatchClass: string;
+}> = [
+  { id: "charcoal-graphite", label: "Classic Dark", subtitle: "Charcoal → Graphite", swatchClass: styles.swatchCharcoal },
+  { id: "warm-beige-stone", label: "Soft Light", subtitle: "Warm Beige → Stone", swatchClass: styles.swatchBeige },
+  { id: "emerald-green", label: "Brand Green", subtitle: "Emerald → Forest", swatchClass: styles.swatchEmeraldGreen },
+  { id: "deep-navy-teal", label: "Deep Navy", subtitle: "Navy → Teal", swatchClass: styles.swatchNavy },
+  { id: "dark-olive-charcoal", label: "Warm Stone", subtitle: "Dark Olive → Charcoal", swatchClass: styles.swatchOlive },
+];
+
+const LEGACY_THEME_OPTIONS: Array<{
   id: AnnouncementTheme;
   label: string;
   swatchClass: string;
@@ -31,16 +45,13 @@ const THEME_OPTIONS: Array<{
   { id: "royal-purple", label: "Royal Purple", swatchClass: styles.swatchRoyalPurple },
   { id: "electric-blue", label: "Electric Blue", swatchClass: styles.swatchElectricBlue },
   { id: "ocean-cyan", label: "Ocean Cyan", swatchClass: styles.swatchOceanCyan },
-  { id: "emerald-green", label: "Emerald Green", swatchClass: styles.swatchEmeraldGreen },
   { id: "lime-energy", label: "Lime Energy", swatchClass: styles.swatchLimeEnergy },
   { id: "berry-fusion", label: "Berry Fusion", swatchClass: styles.swatchBerryFusion },
   { id: "festival-gradient", label: "Festival Gradient", swatchClass: styles.swatchFestivalGradient },
-  { id: "charcoal-graphite", label: "Charcoal → Graphite", swatchClass: styles.swatchCharcoal },
-  { id: "deep-navy-teal", label: "Deep Navy → Teal", swatchClass: styles.swatchNavy },
-  { id: "soft-black-blue", label: "Soft Black → Muted Blue", swatchClass: styles.swatchObsidian },
-  { id: "dark-olive-charcoal", label: "Dark Olive → Charcoal", swatchClass: styles.swatchOlive },
-  { id: "warm-beige-stone", label: "Warm Beige → Stone", swatchClass: styles.swatchBeige },
+  { id: "soft-black-blue", label: "Soft Black → Blue", swatchClass: styles.swatchObsidian },
 ];
+
+const THEME_OPTIONS = [...CURATED_THEME_OPTIONS, ...LEGACY_THEME_OPTIONS];
 
 const SEPARATOR_OPTIONS: Array<{
   id: AnnouncementSeparator;
@@ -175,20 +186,35 @@ export function AnnouncementBarEditorForm({
               </div>
             )}
 
-            <label className={styles.publishToggle} style={{ marginTop: "16px" }}>
-              <input
-                name="announcement_bar_enabled"
-                type="checkbox"
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "14px",
+                padding: "14px 16px",
+                marginTop: "16px",
+                border: "1px solid var(--admin-border)",
+                borderRadius: "var(--admin-radius-sm)",
+                backgroundColor: "var(--admin-surface-muted)",
+              }}
+            >
+              <input type="hidden" name="announcement_bar_enabled" value={isEnabled ? "true" : "false"} />
+              <div>
+                <strong style={{ display: "block", color: "var(--admin-text-primary)", fontSize: "13.5px" }}>
+                  {isEnabled ? "Announcement Bar Active" : "Announcement Bar Hidden"}
+                </strong>
+                <span style={{ display: "block", marginTop: "3px", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.45 }}>
+                  Turn off to hide the announcement strip from public visitors without losing saved messages.
+                </span>
+              </div>
+              <AdminSwitch
                 checked={isEnabled}
                 disabled={!isReady || pending}
-                onChange={(event) => setIsEnabled(event.target.checked)}
+                onChange={setIsEnabled}
+                ariaLabel="Show announcement bar on storefront"
               />
-              <span>
-                <strong>Show announcement bar</strong>
-                <br />
-                Turn off to hide the announcement strip from public visitors without losing saved messages.
-              </span>
-            </label>
+            </div>
           </fieldset>
 
           {/* Section 2: Messages */}
@@ -264,17 +290,21 @@ export function AnnouncementBarEditorForm({
             </div>
           </fieldset>
 
-          {/* Section 3: Compact Theme Swatch Picker (All 17 Presets) */}
+          {/* Section 3: Curated 5 Color Themes + Expandable Accordion */}
           <fieldset>
             <legend>Color Theme Preset</legend>
 
-            <div className={styles.compactThemeGrid}>
-              {THEME_OPTIONS.map((opt) => {
+            <p style={{ margin: "4px 0 14px", fontSize: "12.5px", color: "var(--admin-text-secondary)" }}>
+              Select a curated presentation theme designed for high contrast and storefront balance.
+            </p>
+
+            <div className={styles.curatedThemeGrid}>
+              {CURATED_THEME_OPTIONS.map((opt) => {
                 const isChecked = selectedTheme === opt.id;
                 return (
                   <label
                     key={opt.id}
-                    className={`${styles.compactThemeCard} ${isChecked ? styles.compactThemeCardChecked : ""}`}
+                    className={`${styles.curatedThemeCard} ${isChecked ? styles.curatedThemeCardChecked : ""}`}
                   >
                     <input
                       type="radio"
@@ -284,12 +314,43 @@ export function AnnouncementBarEditorForm({
                       disabled={!isReady || pending}
                       onChange={() => setSelectedTheme(opt.id)}
                     />
-                    <span className={`${styles.compactThemeMiniSwatch} ${opt.swatchClass}`} />
-                    <span>{opt.label}</span>
+                    <span className={`${styles.curatedThemeSwatch} ${opt.swatchClass}`} />
+                    <div className={styles.curatedThemeText}>
+                      <strong className={styles.curatedThemeName}>{opt.label}</strong>
+                      <span className={styles.curatedThemeDesc}>{opt.subtitle}</span>
+                    </div>
                   </label>
                 );
               })}
             </div>
+
+            <details className={styles.legacyThemesAccordion} style={{ marginTop: "16px" }}>
+              <summary className={styles.legacyThemesSummary}>
+                More color presets (12 additional themes)
+              </summary>
+              <div className={styles.compactThemeGrid} style={{ marginTop: "12px" }}>
+                {LEGACY_THEME_OPTIONS.map((opt) => {
+                  const isChecked = selectedTheme === opt.id;
+                  return (
+                    <label
+                      key={opt.id}
+                      className={`${styles.compactThemeCard} ${isChecked ? styles.compactThemeCardChecked : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="theme_choice"
+                        value={opt.id}
+                        checked={isChecked}
+                        disabled={!isReady || pending}
+                        onChange={() => setSelectedTheme(opt.id)}
+                      />
+                      <span className={`${styles.compactThemeMiniSwatch} ${opt.swatchClass}`} />
+                      <span>{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </details>
           </fieldset>
 
           {/* Section 4: Separator & Motion Speed */}
@@ -297,7 +358,7 @@ export function AnnouncementBarEditorForm({
             <legend>Separator &amp; Motion Speed</legend>
 
             <div style={{ marginTop: "16px" }}>
-              <span style={{ fontSize: "12.5px", fontWeight: 650, color: "#2c3b37", display: "block", marginBottom: "8px" }}>
+              <span style={{ fontSize: "12.5px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "8px" }}>
                 Separator Glyph
               </span>
               <div className={styles.separatorOptionGrid}>
@@ -325,7 +386,7 @@ export function AnnouncementBarEditorForm({
             </div>
 
             <div style={{ marginTop: "20px" }}>
-              <span style={{ fontSize: "12.5px", fontWeight: 650, color: "#2c3b37", display: "block", marginBottom: "8px" }}>
+              <span style={{ fontSize: "12.5px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "8px" }}>
                 Scroll Speed
               </span>
               <div className={styles.speedOptionGrid}>
@@ -347,7 +408,7 @@ export function AnnouncementBarEditorForm({
                       <span>
                         <strong>{spd.label}</strong>
                         <br />
-                        <small style={{ color: "#687370" }}>{spd.detail}</small>
+                        <small style={{ color: "var(--admin-text-secondary)" }}>{spd.detail}</small>
                       </span>
                     </label>
                   );
@@ -381,11 +442,8 @@ export function AnnouncementBarEditorForm({
         <div className={styles.settingsSummaryCard} style={{ padding: "18px 20px" }}>
           <div className={styles.summaryHeader}>
             <h3>Configuration Summary</h3>
-            <span
-              className={styles.status}
-              data-status={isEnabled ? "active" : "archived"}
-              style={{ fontSize: "10.5px" }}
-            >
+            <span className={styles.statusDotLabel}>
+              <span className={`${styles.statusDot} ${isEnabled ? styles.statusDotActive : styles.statusDotDraft}`} aria-hidden />
               {isEnabled ? "Enabled" : "Disabled"}
             </span>
           </div>

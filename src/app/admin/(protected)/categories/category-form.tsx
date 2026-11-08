@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { EDITORIAL_GROUPS, type CategoryRecord } from "@/lib/category-types";
 import { saveCategoryAction } from "../../actions";
+import { AdminSwitch } from "../../admin-switch";
 import styles from "../../admin.module.css";
 
 function subcategoriesToText(subcategories: CategoryRecord["subcategories"]) {
@@ -17,6 +18,7 @@ export function CategoryForm({ category }: { category?: CategoryRecord }) {
   const [slug, setSlug] = useState(category?.slug ?? "");
   const [editorialGroup, setEditorialGroup] = useState(category?.editorial_group ?? "cooling");
   const [autoSlug, setAutoSlug] = useState(!category);
+  const [isActive, setIsActive] = useState(category?.is_active ?? true);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -99,18 +101,33 @@ export function CategoryForm({ category }: { category?: CategoryRecord }) {
           </label>
 
           <div className={styles.fieldWide}>
-            <label className={styles.publishToggle}>
-              <input
-                name="is_active"
-                type="checkbox"
-                defaultChecked={category?.is_active ?? true}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "14px",
+                padding: "14px 16px",
+                border: "1px solid var(--admin-border)",
+                borderRadius: "var(--admin-radius-sm)",
+                backgroundColor: "var(--admin-surface-muted)",
+              }}
+            >
+              <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
+              <div>
+                <strong style={{ display: "block", color: "var(--admin-text-primary)", fontSize: "13.5px" }}>
+                  {isActive ? "Category Active" : "Category Archived"}
+                </strong>
+                <span style={{ display: "block", marginTop: "3px", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.45 }}>
+                  When enabled, this category and its published products appear in catalog navigation and filtering.
+                </span>
+              </div>
+              <AdminSwitch
+                checked={isActive}
+                onChange={setIsActive}
+                ariaLabel="Category active status"
               />
-              <span>
-                <strong>Category active</strong>
-                <br />
-                When enabled, this category and its published products appear in catalog navigation and filtering.
-              </span>
-            </label>
+            </div>
           </div>
 
           <label className={styles.fieldWide}>

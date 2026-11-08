@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -278,13 +278,15 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
     }
 
     for (const upload of directUploads.filter((entry) => entry.kind === "image")) {
-      galleryItems.push({
-        storage_path: upload.path,
-        alt_text: product.name,
-        sort_order: galleryItems.length,
-        is_primary: galleryItems.length === 0,
-        media_type: "image",
-      });
+      if (!galleryItems.some((item) => item.storage_path === upload.path)) {
+        galleryItems.push({
+          storage_path: upload.path,
+          alt_text: product.name,
+          sort_order: galleryItems.length,
+          is_primary: galleryItems.length === 0,
+          media_type: "image",
+        });
+      }
     }
 
     // Process optional product video upload
@@ -303,16 +305,18 @@ export async function saveProductAction(_: FormState, formData: FormData): Promi
     }
 
     for (const upload of directUploads.filter((entry) => entry.kind === "video")) {
-      if (galleryItems.some((item) => item.media_type === "video" || /\.(mp4|webm)$/i.test(item.storage_path))) {
-        throw new Error("Keep one demonstration video per product. Remove the existing video before uploading another.");
+      if (!galleryItems.some((item) => item.storage_path === upload.path)) {
+        if (galleryItems.some((item) => item.media_type === "video" || /\.(mp4|webm)$/i.test(item.storage_path))) {
+          throw new Error("Keep one demonstration video per product. Remove the existing video before uploading another.");
+        }
+        galleryItems.push({
+          storage_path: upload.path,
+          alt_text: `${product.name} product demonstration video`,
+          sort_order: galleryItems.length,
+          is_primary: false,
+          media_type: "video",
+        });
       }
-      galleryItems.push({
-        storage_path: upload.path,
-        alt_text: `${product.name} product demonstration video`,
-        sort_order: galleryItems.length,
-        is_primary: false,
-        media_type: "video",
-      });
     }
 
     // Legacy single image input fallback

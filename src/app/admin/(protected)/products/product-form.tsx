@@ -1,3 +1,4 @@
+﻿/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { startTransition, useActionState, useState, useMemo, useRef } from "react";
@@ -28,6 +29,8 @@ export type AdminGalleryItem = {
   isPrimary: boolean;
   sortOrder: number;
   mediaType?: "image" | "video";
+  file?: File;
+  isNew?: boolean;
 };
 
 export function ProductForm({
@@ -86,9 +89,17 @@ export function ProductForm({
     product?.specifications?.model ||
     "";
 
-  // Gallery items state
+  // Gallery items state (with Drag-and-Drop and Move Earlier / Later support)
   const [gallery, setGallery] = useState<AdminGalleryItem[]>(() => {
-    if (initialGallery && initialGallery.length > 0) return initialGallery;
+    if (initialGallery && initialGallery.length > 0) {
+      // Ensure at least one non-video image is marked primary
+      const hasPrimary = initialGallery.some((g) => g.isPrimary && g.mediaType !== "video");
+      if (!hasPrimary) {
+        const firstImg = initialGallery.find((g) => g.mediaType !== "video");
+        if (firstImg) firstImg.isPrimary = true;
+      }
+      return initialGallery.map((item, idx) => ({ ...item, sortOrder: idx }));
+    }
     if (product?.image_path && imageUrl) {
       return [
         {
@@ -98,13 +109,16 @@ export function ProductForm({
           altText: product.name,
           isPrimary: true,
           sortOrder: 0,
+          mediaType: "image",
         },
       ];
     }
     return [];
   });
 
-  const [newFilePreviews, setNewFilePreviews] = useState<string[]>([]);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const uploadSessionId = useRef<string>(product?.id ?? crypto.randomUUID());
@@ -117,13 +131,32 @@ export function ProductForm({
   const currentCategory = categories.find((c) => c.slug === selectedCategorySlug);
   const availableSubcategories = currentCategory?.subcategories ?? [];
 
+  // Drag and drop reordering
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    setGallery((prev) => {
+      const copy = [...prev];
+      const [moved] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, moved);
+      return copy.map((item, idx) => ({ ...item, sortOrder: idx }));
+    });
+  };
+
+  // Keyboard / Touch earlier and later buttons
+  const handleMoveImage = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex >= 0 && targetIndex < gallery.length) {
+      handleReorder(index, targetIndex);
+    }
+  };
+
+  // Set primary image
   const handleMakePrimary = (index: number) => {
     setGallery((prev) => {
       const target = prev[index];
       const isVideo =
         target.mediaType === "video" ||
         /\.(mp4|webm)$/i.test(target.storagePath || target.url);
-      if (isVideo) return prev; // Video can never be cover
+      if (isVideo) return prev; // Video can never be primary
 
       return prev.map((item, idx) => ({
         ...item,
@@ -132,18 +165,7 @@ export function ProductForm({
     });
   };
 
-  const handleMoveImage = (index: number, direction: "up" | "down") => {
-    setGallery((prev) => {
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-      const copy = [...prev];
-      const temp = copy[index];
-      copy[index] = copy[targetIndex];
-      copy[targetIndex] = temp;
-      return copy.map((item, idx) => ({ ...item, sortOrder: idx }));
-    });
-  };
-
+  // Remove gallery item
   const handleRemoveImage = (index: number) => {
     setGallery((prev) => {
       const removed = prev[index];
@@ -167,47 +189,70 @@ export function ProductForm({
     );
   };
 
+  // Multi-image selection (integrated directly into gallery state with pre-upload reordering)
   const handleMultiImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageError(null);
     setAspectRatioWarning(null);
     const files = e.target.files;
-    if (!files || files.length === 0) {
-      setNewFilePreviews([]);
-      return;
-    }
+    if (!files || files.length === 0) return;
 
-    const previews: string[] = [];
+    const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 5 * 1024 * 1024) {
         setImageError(`File ${file.name} exceeds 5 MB. Please choose smaller images.`);
         e.target.value = "";
-        setNewFilePreviews([]);
         return;
       }
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
         setImageError(`File ${file.name} is not JPEG, PNG, or WebP.`);
         e.target.value = "";
-        setNewFilePreviews([]);
         return;
       }
-      previews.push(URL.createObjectURL(file));
-
-      // Non-blocking aspect ratio inspection
-      const img = new window.Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        if (img.naturalWidth && img.naturalHeight) {
-          const ratio = img.naturalWidth / img.naturalHeight;
-          if (ratio < 0.8 || ratio > 1.25) {
-            setAspectRatioWarning(
-              "Note: One or more selected images have non-square aspect ratios. They will be displayed centered with neutral letterboxing in the catalog canvas without distorting or cropping the appliance.",
-            );
-          }
-        }
-      };
+      validFiles.push(file);
     }
-    setNewFilePreviews(previews);
+
+    setGallery((prev) => {
+      const currentLength = prev.length;
+      const hasPrimary = prev.some((item) => item.isPrimary && item.mediaType !== "video");
+      const newItems: AdminGalleryItem[] = [];
+
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
+        const previewUrl = URL.createObjectURL(file);
+        const isFirst = !hasPrimary && i === 0;
+
+        newItems.push({
+          id: `new-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
+          storagePath: "",
+          url: previewUrl,
+          altText: `${product?.name || "Product"} showroom view`,
+          isPrimary: isFirst,
+          sortOrder: currentLength + i,
+          mediaType: "image",
+          file,
+          isNew: true,
+        });
+
+        // Non-blocking aspect ratio inspection
+        const img = new window.Image();
+        img.src = previewUrl;
+        img.onload = () => {
+          if (img.naturalWidth && img.naturalHeight) {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            if (ratio < 0.8 || ratio > 1.25) {
+              setAspectRatioWarning(
+                "Note: One or more selected images have non-square aspect ratios. They will be displayed centered with neutral letterboxing in the catalog canvas without distorting or cropping the appliance.",
+              );
+            }
+          }
+        };
+      }
+
+      return [...prev, ...newItems].map((item, idx) => ({ ...item, sortOrder: idx }));
+    });
+
+    e.target.value = "";
   };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,13 +292,6 @@ export function ProductForm({
       throw new Error(kind === "image" ? "Images must be 5 MB or smaller." : "Videos must be 20 MB or smaller.");
     }
 
-    console.info("[product-media-upload] direct upload starting", {
-      method: "PUT",
-      route: "Supabase signed upload URL",
-      contentType: file.type,
-      bodyBytes: file.size,
-      kind,
-    });
     const ticket = await fetch("/api/admin/product-media-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -279,11 +317,6 @@ export function ProductForm({
       },
       body: file,
     });
-    console.info("[product-media-upload] direct upload response", {
-      status: transfer.status,
-      ok: transfer.ok,
-      kind,
-    });
     if (!transfer.ok) {
       const detail = (await transfer.json().catch(() => null)) as { message?: string } | null;
       throw new Error(detail?.message || `Supabase Storage rejected the ${kind} (HTTP ${transfer.status}).`);
@@ -295,24 +328,72 @@ export function ProductForm({
     event.preventDefault();
     if (pending || uploadingMedia) return;
 
-    const formData = new FormData(event.currentTarget);
-    const images = formData.getAll("new_images").filter((entry): entry is File => entry instanceof File && entry.size > 0);
-    const video = formData.get("product_video");
-    if (images.length === 0 && !(video instanceof File && video.size > 0)) {
-      startTransition(() => formAction(formData));
-      return;
-    }
-
     setUploadingMedia(true);
     setUploadError(null);
+
     try {
-      const uploaded = [] as Array<{ path: string; kind: "image" | "video" }>;
-      for (const file of images) uploaded.push(await uploadFileDirectly(file, "image"));
-      if (video instanceof File && video.size > 0) uploaded.push(await uploadFileDirectly(video, "video"));
-      // Do not send binary media through the Server Action/hosting proxy.
+      const formEl = event.currentTarget;
+      const currentGallery = [...gallery];
+      const pendingUploads = currentGallery.filter((item) => item.isNew && item.file);
+
+      // Direct upload any newly added images before committing form state
+      for (const item of pendingUploads) {
+        if (item.file) {
+          const uploaded = await uploadFileDirectly(item.file, item.mediaType || "image");
+          item.storagePath = uploaded.path;
+          item.isNew = false;
+        }
+      }
+
+      // Check optional video upload
+      const videoInput = formEl.elements.namedItem("product_video") as HTMLInputElement | null;
+      const videoFile = videoInput?.files?.[0];
+      if (videoFile && videoFile.size > 0) {
+        const uploadedVideo = await uploadFileDirectly(videoFile, "video");
+        currentGallery.push({
+          id: `video-${Date.now()}`,
+          storagePath: uploadedVideo.path,
+          url: "",
+          altText: `${product?.name || "Product"} demonstration video`,
+          isPrimary: false,
+          sortOrder: currentGallery.length,
+          mediaType: "video",
+        });
+      }
+
+      // Ensure exactly one primary image is selected if images exist
+      const imageItems = currentGallery.filter(
+        (item) => item.mediaType !== "video" && !/\.(mp4|webm)$/i.test(item.storagePath || item.url),
+      );
+      if (imageItems.length > 0 && !imageItems.some((item) => item.isPrimary)) {
+        imageItems[0].isPrimary = true;
+      }
+
+      // Update state
+      setGallery(currentGallery);
+
+      // Prepare FormData for the Server Action
+      const formData = new FormData(formEl);
       formData.delete("new_images");
       formData.delete("product_video");
-      formData.set("direct_media_uploads", JSON.stringify(uploaded));
+
+      // Serialize gallery_items with exact sequence & primary indicator
+      const serializedItems = currentGallery
+        .filter((item) => Boolean(item.storagePath))
+        .map((g, idx) => ({
+          storage_path: g.storagePath,
+          alt_text: g.altText || "",
+          is_primary: g.isPrimary,
+          sort_order: idx,
+          media_type: g.mediaType || (/\.(mp4|webm)$/i.test(g.storagePath || g.url) ? "video" : "image"),
+        }));
+
+      formData.set("gallery_items", JSON.stringify(serializedItems));
+      formData.set("has_existing_gallery", serializedItems.length > 0 ? "true" : "false");
+
+      const primaryCover = serializedItems.find((g) => g.is_primary && g.media_type !== "video") || serializedItems[0];
+      formData.set("existing_image_path", primaryCover?.storage_path || product?.image_path || "");
+
       startTransition(() => formAction(formData));
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "The media upload could not be completed.");
@@ -326,8 +407,9 @@ export function ProductForm({
       <input type="hidden" name="id" value={product?.id ?? ""} />
       <input type="hidden" name="existing_image_path" value={product?.image_path ?? ""} />
 
+      {/* 1. Identification & Categorization */}
       <fieldset>
-        <legend>Product identification</legend>
+        <legend>Product Identification</legend>
         <div className={styles.fieldGrid}>
           <label className={styles.fieldWide}>
             Product name <span style={{ color: "var(--admin-danger)" }}>*</span>
@@ -379,22 +461,29 @@ export function ProductForm({
               name="subcategory"
               value={selectedSubcategorySlug}
               onChange={(e) => setSelectedSubcategorySlug(e.target.value)}
+              disabled={availableSubcategories.length === 0}
             >
-              <option value="">General / None</option>
-              {availableSubcategories.map((sub) => (
-                <option key={sub.slug} value={sub.slug}>
-                  {sub.name}
+              <option value="">No subcategory</option>
+              {availableSubcategories.map((subcategory) => (
+                <option key={subcategory.slug} value={subcategory.slug}>
+                  {subcategory.name}
                 </option>
               ))}
             </select>
           </label>
+        </div>
+      </fieldset>
 
+      {/* 2. Brand, Model & Descriptions */}
+      <fieldset>
+        <legend>Brand & Narrative</legend>
+        <div className={styles.fieldGrid}>
           <label>
             Brand
             <input
               name="brand"
               defaultValue={initialBrand}
-              placeholder="e.g. NS, Super Asia, Kenwood, Waves"
+              placeholder="e.g. Super Asia, Haier, Dawlance, Boss"
             />
           </label>
 
@@ -403,184 +492,17 @@ export function ProductForm({
             <input
               name="model_number"
               defaultValue={initialModel}
-              placeholder="e.g. NS-5000, RC-80"
-            />
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Price & availability</legend>
-        <div className={styles.fieldGrid}>
-          <label>
-            Price (PKR)
-            <input
-              name="price_pkr"
-              type="number"
-              min="0"
-              step="1"
-              inputMode="numeric"
-              defaultValue={product?.price_pkr ?? ""}
-              placeholder="Optional — leave blank if not confirmed"
+              placeholder="e.g. ECM-5000-PLUS"
             />
           </label>
 
-          <label>
-            <span>Tracked stock quantity (optional)</span>
-            <input
-              name="stock_quantity"
-              type="number"
-              min="0"
-              step="1"
-              inputMode="numeric"
-              value={stockQuantity}
-              onChange={(e) => {
-                const val = e.target.value;
-                setStockQuantity(val);
-                if (val !== "" && Number(val) > 0 && availability === "not_confirmed") {
-                  setAvailability("available");
-                } else if (val === "0" && availability !== "available") {
-                  setAvailability("out_of_stock");
-                }
-              }}
-              placeholder="Leave empty for untracked / showroom display"
-            />
-            <span className={styles.fieldHelp}>
-              Optional warehouse inventory count. Leave blank if untracked. Setting 0 marks out of stock.
-            </span>
-          </label>
-
-          <div className={styles.fieldWide}>
-            <span style={{ fontSize: "12px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "4px" }}>
-              Showroom availability status
-            </span>
-            <p style={{ margin: "0 0 10px 0", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.45 }}>
-              Controls catalog availability badges. Inquiries remain open across all states. Defaults to <em>Availability Not Confirmed</em> for new products.
-            </p>
-            <div className={styles.availabilityOptionGrid}>
-              {/* Option 1: Not Confirmed */}
-              <label
-                className={`${styles.availabilityCard} ${
-                  availability === "not_confirmed" ? styles.availabilityCardChecked : ""
-                }`}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 650 }}>
-                    <input
-                      type="radio"
-                      name="_availability_radio"
-                      value="not_confirmed"
-                      checked={availability === "not_confirmed"}
-                      onChange={() => setAvailability("not_confirmed")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
-                    />
-                    <span>Not Confirmed</span>
-                  </div>
-                  <span className={styles.availabilityBadge} data-availability="not_confirmed">Default</span>
-                </div>
-                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
-                  Product is listed with unverified stock. Customers can inquire to verify showroom availability.
-                </span>
-              </label>
-
-              {/* Option 2: Available */}
-              <label
-                className={`${styles.availabilityCard} ${
-                  availability === "available" ? styles.availabilityCardChecked : ""
-                }`}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 650 }}>
-                    <input
-                      type="radio"
-                      name="_availability_radio"
-                      value="available"
-                      checked={availability === "available"}
-                      onChange={() => setAvailability("available")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
-                    />
-                    <span>Available / In Stock</span>
-                  </div>
-                  <span className={styles.availabilityBadge} data-availability="available">In Stock</span>
-                </div>
-                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
-                  Product is confirmed in stock. Displays In Stock badge on catalog and product page.
-                </span>
-              </label>
-
-              {/* Option 3: Out of Stock */}
-              <label
-                className={`${styles.availabilityCard} ${
-                  availability === "out_of_stock" ? styles.availabilityCardChecked : ""
-                }`}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 650 }}>
-                    <input
-                      type="radio"
-                      name="_availability_radio"
-                      value="out_of_stock"
-                      checked={availability === "out_of_stock"}
-                      onChange={() => setAvailability("out_of_stock")}
-                      style={{ width: "16px", height: "16px", margin: 0, accentColor: "var(--admin-primary)" }}
-                    />
-                    <span>Out of Stock</span>
-                  </div>
-                  <span className={styles.availabilityBadge} data-availability="out_of_stock">Unavailable</span>
-                </div>
-                <span style={{ color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4, marginTop: "4px" }}>
-                  Explicitly unavailable. Displays Out of Stock badge, while still allowing customer restock inquiries.
-                </span>
-              </label>
-            </div>
-            <input type="hidden" name="availability_status" value={availability} />
-          </div>
-
-          <div className={styles.fieldWide}>
-            <span style={{ fontSize: "12.5px", fontWeight: 650, color: "var(--admin-text-primary)", display: "block", marginBottom: "6px" }}>
-              Customer website visibility
-            </span>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "14px",
-                padding: "12px 14px",
-                border: "1px solid var(--admin-border)",
-                borderRadius: "var(--admin-radius-sm)",
-                backgroundColor: "var(--admin-surface-muted)",
-              }}
-            >
-              <div>
-                <strong style={{ display: "block", color: "var(--admin-text-primary)", fontSize: "13px" }}>
-                  {isActive ? "Active — published on customer website" : "Draft — hidden from customer website"}
-                </strong>
-                <span style={{ display: "block", marginTop: "2px", color: "var(--admin-text-secondary)", fontSize: "12px", lineHeight: 1.4 }}>
-                  When inactive, this appliance is hidden completely from the customer storefront, collections, and search.
-                </span>
-              </div>
-              <AdminSwitch
-                checked={isActive}
-                onChange={setIsActive}
-                ariaLabel="Make this product active on the customer website"
-              />
-            </div>
-          </div>
-        </div>
-      </fieldset>
-      <input type="hidden" name="status" value={isActive ? "active" : "draft"} />
-
-      <fieldset>
-        <legend>Product details & specifications</legend>
-        <div className={styles.fieldGrid}>
           <label className={styles.fieldWide}>
-            Description
+            Product description
             <textarea
               name="description"
               rows={4}
               defaultValue={product?.description ?? ""}
-              placeholder="Official product description, capacity, power, features..."
+              placeholder="Comprehensive appliance summary for the storefront details page."
             />
           </label>
 
@@ -589,228 +511,253 @@ export function ProductForm({
             <textarea
               name="specifications"
               rows={5}
-              defaultValue={product ? specificationsToText(product.specifications) : ""}
-              aria-describedby="specifications-help"
-              placeholder="Motor: 100% Pure Copper&#10;Body: High-Grade Anti-Shock Plastic&#10;Water Tank: 60 Litres&#10;Speed Levels: 3 Speed Settings"
+              defaultValue={product?.specifications ? specificationsToText(product.specifications) : ""}
+              placeholder="One specification per line (e.g. Cooling Capacity: 50 Litres)"
+              aria-describedby="specs-help"
             />
-            <span id="specifications-help" className={styles.fieldHelp}>
-              One specification per line in “Label: value” format.
+            <span id="specs-help" className={styles.fieldHelp}>
+              Format: &quot;Key: Value&quot; on each line. Brand and Model Number are managed above.
             </span>
           </label>
         </div>
       </fieldset>
 
+      {/* 3. Pricing, Inventory & Availability */}
       <fieldset>
-        <legend>Product imagery & gallery ({gallery.length} item{gallery.length === 1 ? "" : "s"})</legend>
+        <legend>Pricing & Inventory Status</legend>
+        <div className={styles.fieldGrid}>
+          <label>
+            Price (PKR)
+            <input
+              name="price_pkr"
+              type="number"
+              min="0"
+              step="500"
+              defaultValue={product?.price_pkr ?? ""}
+              placeholder="e.g. 35000"
+              aria-describedby="price-help"
+            />
+            <span id="price-help" className={styles.fieldHelp}>
+              Leave blank to display &quot;Price on inquiry&quot;.
+            </span>
+          </label>
 
-        {/* Aspect Ratio and Video Guidelines Banner */}
-        <div style={{ background: "var(--admin-surface-muted)", border: "1px solid var(--admin-border)", borderRadius: "8px", padding: "14px 18px", marginTop: "16px", marginBottom: "20px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
-            <div>
-              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "var(--admin-text-primary)" }}>
-                Recommended image: 1200 × 1200 px (1:1)
-              </p>
-              <p style={{ margin: 0, fontSize: "12px", color: "var(--admin-text-secondary)", lineHeight: 1.5 }}>
-                Keep the complete appliance visible with space around the edges. WebP, JPG or PNG.
-              </p>
-            </div>
-            <div>
-              <p style={{ margin: "0 0 4px 0", fontWeight: 700, fontSize: "13px", color: "var(--admin-text-primary)" }}>
-                Product video: MP4 recommended
-              </p>
-              <p style={{ margin: 0, fontSize: "12px", color: "var(--admin-text-secondary)", lineHeight: 1.5 }}>
-                Short product demonstration, up to 20 MB (15–30 seconds recommended).
-              </p>
-            </div>
-          </div>
+          <label>
+            Stock quantity (Units)
+            <input
+              name="stock_quantity"
+              type="number"
+              min="0"
+              step="1"
+              value={stockQuantity}
+              onChange={(e) => {
+                const val = e.target.value;
+                setStockQuantity(val);
+                if (val !== "" && Number(val) > 0) {
+                  setAvailability("available");
+                } else if (val === "0") {
+                  setAvailability("out_of_stock");
+                }
+              }}
+              placeholder="e.g. 5"
+              aria-describedby="stock-help"
+            />
+            <span id="stock-help" className={styles.fieldHelp}>
+              Numeric count of physical appliances in showroom.
+            </span>
+          </label>
+
+          <label className={styles.fieldWide}>
+            Commercial availability status
+            <select
+              name="availability_status"
+              value={availability}
+              onChange={(e) => {
+                const newStatus = e.target.value as ProductAvailability;
+                setAvailability(newStatus);
+                if (newStatus === "out_of_stock" && stockQuantity !== "0") {
+                  setStockQuantity("0");
+                } else if (newStatus === "available" && (!stockQuantity || stockQuantity === "0")) {
+                  setStockQuantity("1");
+                }
+              }}
+            >
+              <option value="available">Available in Showroom (Confirmed stock)</option>
+              <option value="not_confirmed">Availability Not Confirmed (Untracked)</option>
+              <option value="out_of_stock">Out of Stock (Currently unavailable)</option>
+            </select>
+          </label>
         </div>
+      </fieldset>
 
-        <input
-          type="hidden"
-          name="gallery_items"
-          value={JSON.stringify(
-            gallery.map((g, idx) => ({
-              storage_path: g.storagePath,
-              alt_text: g.altText || "",
-              is_primary: g.isPrimary,
-              sort_order: idx,
-              media_type: g.mediaType || (/\.(mp4|webm)$/i.test(g.storagePath || g.url) ? "video" : "image"),
-            })),
-          )}
-        />
-        <input type="hidden" name="has_existing_gallery" value={initialGallery.length > 0 ? "true" : "false"} />
-        <input
-          type="hidden"
-          name="existing_image_path"
-          value={gallery.find((g) => g.isPrimary && g.mediaType !== "video")?.storagePath || product?.image_path || ""}
-        />
+      {/* 4. Product Media Gallery & Persistent Image Ordering */}
+      <fieldset>
+        <legend>Product Media Gallery</legend>
+        <p className={styles.fieldHelp} style={{ marginBottom: "16px" }}>
+          Reorder gallery photographs using drag-and-drop or the <strong>Earlier / Later</strong> buttons. Click <strong>Set as Primary</strong> to designate which photograph appears as the showroom cover across all catalog cards and category previews.
+        </p>
 
-        {/* Existing Gallery Media Items */}
         {gallery.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}>
-            <p style={{ margin: 0, fontSize: "13px", color: "var(--admin-text-secondary)" }}>
-              The <strong>Cover photo</strong> is displayed on the All Appliances catalog card. All images and videos appear in the interactive product detail gallery.
-            </p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+          <div className={styles.galleryManager}>
+            <div className={styles.galleryGrid}>
               {gallery.map((item, idx) => {
                 const isVideo =
                   item.mediaType === "video" ||
                   /\.(mp4|webm)$/i.test(item.storagePath || item.url);
+
                 return (
                   <div
-                    key={item.id || item.storagePath || idx}
-                    style={{
-                      border: item.isPrimary ? "2px solid var(--admin-primary)" : "1px solid var(--admin-border)",
-                      borderRadius: "8px",
-                      background: item.isPrimary ? "var(--admin-primary-light)" : "var(--admin-surface)",
-                      padding: "12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "10px",
-                      position: "relative",
+                    key={item.id || item.storagePath || item.url || idx}
+                    className={`${styles.galleryCard} ${
+                      item.isPrimary ? styles.galleryCardPrimary : ""
+                    } ${draggedIdx === idx ? styles.galleryCardDragging : ""} ${
+                      dragOverIdx === idx ? styles.galleryCardDragOver : ""
+                    }`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(idx));
+                      setDraggedIdx(idx);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverIdx !== idx) setDragOverIdx(idx);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverIdx === idx) setDragOverIdx(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedIdx !== null && draggedIdx !== idx) {
+                        handleReorder(draggedIdx, idx);
+                      }
+                      setDraggedIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedIdx(null);
+                      setDragOverIdx(null);
                     }}
                   >
-                    <div style={{ position: "relative", width: "100%", height: "140px", background: "var(--admin-surface-muted)", borderRadius: "6px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {isVideo ? (
-                        <video
-                          src={item.url}
-                          style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
-                          controls
-                        />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.url}
-                          alt={item.altText || `Product image ${idx + 1}`}
-                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                        />
-                      )}
+                    <div className={styles.galleryMediaPreview}>
+                      <span className={styles.galleryOrderBadge}>
+                        #{idx + 1}
+                      </span>
+
                       {item.isPrimary && !isVideo && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: "6px",
-                            left: "6px",
-                            background: "var(--admin-primary)",
-                            color: "#fff",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                            padding: "3px 8px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          Cover photo
+                        <span className={styles.galleryPrimaryBadge}>
+                          ★ Primary
                         </span>
                       )}
+
                       {isVideo && (
                         <span
+                          className={styles.galleryPrimaryBadge}
                           style={{
-                            position: "absolute",
-                            top: "6px",
-                            left: "6px",
-                            background: "#312e81",
-                            color: "#fff",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                            padding: "3px 8px",
-                            borderRadius: "4px",
+                            backgroundColor: "#26323B",
+                            color: "#E8DCC8",
                           }}
                         >
                           Video
                         </span>
                       )}
-                    </div>
 
-                    <div>
-                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--admin-text-secondary)", marginBottom: "4px" }}>
-                        {isVideo ? "Video description" : "Image alt text"}
-                        <input
-                          type="text"
-                          value={item.altText}
-                          onChange={(e) => handleAltTextChange(idx, e.target.value)}
-                          placeholder={isVideo ? "e.g. Demonstration video" : "e.g. Front view, Control panel"}
-                          style={{ fontSize: "12px", padding: "6px 8px", marginTop: "2px" }}
-                        />
-                      </label>
-                    </div>
+                      {item.isNew && (
+                        <span className={styles.galleryPendingBadge}>
+                          Ready to upload
+                        </span>
+                      )}
 
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "auto" }}>
-                      {!item.isPrimary && !isVideo && (
-                        <button
-                          type="button"
-                          onClick={() => handleMakePrimary(idx)}
+                      {isVideo ? (
+                        <video
+                          src={item.url}
                           style={{
-                            background: "var(--admin-primary)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "4px",
-                            padding: "5px 9px",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                            background: "#000",
+                          }}
+                          controls
+                        />
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.altText || `Appliance photo ${idx + 1}`}
+                          className={styles.galleryMediaImage}
+                        />
+                      )}
+                    </div>
+
+                    <div className={styles.galleryCardBody}>
+                      <label style={{ display: "grid", gap: "4px" }}>
+                        <span
+                          style={{
                             fontSize: "11px",
                             fontWeight: 600,
-                            cursor: "pointer",
+                            color: "var(--admin-text-secondary)",
                           }}
                         >
-                          Set as cover
-                        </button>
-                      )}
+                          {isVideo ? "Video description" : "Image alt text"}
+                        </span>
+                        <input
+                          type="text"
+                          className={styles.galleryAltInput}
+                          value={item.altText}
+                          onChange={(e) =>
+                            handleAltTextChange(idx, e.target.value)
+                          }
+                          placeholder={
+                            isVideo
+                              ? "Demonstration video"
+                              : "e.g. Front view, Control panel"
+                          }
+                        />
+                      </label>
 
-                      {idx > 0 && (
+                      <div className={styles.galleryCardActions}>
+                        {!item.isPrimary && !isVideo && (
+                          <button
+                            type="button"
+                            className={`${styles.galleryActionButton} ${styles.galleryPrimaryButton}`}
+                            onClick={() => handleMakePrimary(idx)}
+                          >
+                            Set as Primary
+                          </button>
+                        )}
+
                         <button
                           type="button"
+                          className={styles.galleryActionButton}
                           onClick={() => handleMoveImage(idx, "up")}
-                          style={{
-                            background: "var(--admin-surface-muted)",
-                            border: "1px solid var(--admin-border)",
-                            borderRadius: "4px",
-                            padding: "5px 8px",
-                            fontSize: "11px",
-                            cursor: "pointer",
-                          }}
-                          title="Move left/up"
+                          disabled={idx === 0}
+                          title="Move earlier in sequence"
+                          aria-label={`Move image ${idx + 1} earlier`}
                         >
-                          &larr;
+                          &larr; Earlier
                         </button>
-                      )}
 
-                      {idx < gallery.length - 1 && (
                         <button
                           type="button"
+                          className={styles.galleryActionButton}
                           onClick={() => handleMoveImage(idx, "down")}
-                          style={{
-                            background: "var(--admin-surface-muted)",
-                            border: "1px solid var(--admin-border)",
-                            borderRadius: "4px",
-                            padding: "5px 8px",
-                            fontSize: "11px",
-                            cursor: "pointer",
-                          }}
-                          title="Move right/down"
+                          disabled={idx === gallery.length - 1}
+                          title="Move later in sequence"
+                          aria-label={`Move image ${idx + 1} later`}
                         >
-                          &rarr;
+                          Later &rarr;
                         </button>
-                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        style={{
-                          marginLeft: "auto",
-                          background: "var(--admin-danger-bg)",
-                          color: "var(--admin-danger)",
-                          border: "1px solid var(--admin-border)",
-                          borderRadius: "4px",
-                          padding: "5px 8px",
-                          fontSize: "11px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Remove
-                      </button>
+                        <button
+                          type="button"
+                          className={`${styles.galleryActionButton} ${styles.galleryRemoveButton}`}
+                          onClick={() => handleRemoveImage(idx)}
+                          title="Remove from gallery"
+                          aria-label={`Remove image ${idx + 1}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -818,15 +765,34 @@ export function ProductForm({
             </div>
           </div>
         ) : (
-          <div style={{ padding: "16px", background: "var(--admin-surface-muted)", borderRadius: "6px", color: "var(--admin-text-secondary)", fontSize: "13px", marginTop: "16px", marginBottom: "16px" }}>
-            No gallery media attached to this product yet.
+          <div
+            style={{
+              padding: "20px",
+              background: "var(--admin-surface-muted)",
+              borderRadius: "8px",
+              border: "1px solid var(--admin-border)",
+              color: "var(--admin-text-secondary)",
+              fontSize: "13.5px",
+              textAlign: "center",
+              margin: "16px 0",
+            }}
+          >
+            No photographs or media attached to this product yet. Add product photographs below.
           </div>
         )}
 
         {/* Upload Multiple Product Photographs */}
-        <div style={{ marginTop: "20px", borderTop: "1px solid var(--admin-border)", paddingTop: "20px" }}>
+        <div
+          style={{
+            marginTop: "20px",
+            borderTop: "1px solid var(--admin-border)",
+            paddingTop: "20px",
+          }}
+        >
           <label style={{ display: "grid", gap: "6px" }}>
-            <span style={{ fontSize: "13px", fontWeight: 700 }}>Add new product photographs</span>
+            <span style={{ fontSize: "13px", fontWeight: 700 }}>
+              Add new product photographs
+            </span>
             <input
               name="new_images"
               type="file"
@@ -840,38 +806,46 @@ export function ProductForm({
           </p>
 
           {imageError && (
-            <p style={{ color: "var(--admin-danger)", fontSize: "12px", marginTop: "6px" }}>
+            <p
+              style={{
+                color: "var(--admin-danger)",
+                fontSize: "12px",
+                marginTop: "6px",
+              }}
+            >
               {imageError}
             </p>
           )}
 
           {aspectRatioWarning && (
-            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e", padding: "8px 12px", borderRadius: "6px", fontSize: "12px", marginTop: "8px" }}>
+            <div
+              style={{
+                background: "var(--admin-warning-bg)",
+                border: "1px solid var(--admin-warning-border)",
+                color: "var(--admin-text-primary)",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                marginTop: "8px",
+              }}
+            >
               {aspectRatioWarning}
-            </div>
-          )}
-
-          {newFilePreviews.length > 0 && (
-            <div style={{ marginTop: "14px" }}>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--admin-primary)", marginBottom: "8px" }}>
-                {newFilePreviews.length} new photograph{newFilePreviews.length === 1 ? "" : "s"} ready to upload on save:
-              </p>
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                {newFilePreviews.map((preview, i) => (
-                  <div key={i} style={{ width: "70px", height: "70px", borderRadius: "6px", overflow: "hidden", border: "2px dashed var(--admin-primary)", background: "var(--admin-surface)" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={preview} alt={`Upload ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
 
         {/* Upload Optional Product Demonstration Video */}
-        <div style={{ marginTop: "20px", borderTop: "1px solid var(--admin-border)", paddingTop: "20px" }}>
+        <div
+          style={{
+            marginTop: "20px",
+            borderTop: "1px solid var(--admin-border)",
+            paddingTop: "20px",
+          }}
+        >
           <label style={{ display: "grid", gap: "6px" }}>
-            <span style={{ fontSize: "13px", fontWeight: 700 }}>Upload product demonstration video (optional)</span>
+            <span style={{ fontSize: "13px", fontWeight: 700 }}>
+              Upload product demonstration video (optional)
+            </span>
             <input
               name="product_video"
               type="file"
@@ -884,23 +858,72 @@ export function ProductForm({
           </p>
 
           {videoError && (
-            <p style={{ color: "var(--admin-danger)", fontSize: "12px", marginTop: "6px" }}>
+            <p
+              style={{
+                color: "var(--admin-danger)",
+                fontSize: "12px",
+                marginTop: "6px",
+              }}
+            >
               {videoError}
             </p>
           )}
 
           {videoPreview && (
-            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--admin-primary)", margin: 0 }}>
-                Video preview (ready to upload on save):
+            <div
+              style={{
+                marginTop: "14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "var(--admin-text-primary)",
+                  margin: 0,
+                }}
+              >
+                Video preview:
               </p>
               <video
                 src={videoPreview}
                 controls
-                style={{ width: "100%", maxWidth: "320px", maxHeight: "180px", borderRadius: "6px", background: "#000" }}
+                style={{
+                  width: "100%",
+                  maxWidth: "320px",
+                  maxHeight: "180px",
+                  borderRadius: "6px",
+                  background: "#000",
+                }}
               />
             </div>
           )}
+        </div>
+      </fieldset>
+
+      {/* 5. Visibility & Publishing */}
+      <fieldset>
+        <legend>Storefront Visibility</legend>
+        <input type="hidden" name="status" value={isActive ? "active" : "draft"} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "8px" }}>
+          <div>
+            <strong style={{ display: "block", fontSize: "13.5px", color: "var(--admin-text-primary)" }}>
+              Publish on public website
+            </strong>
+            <span style={{ fontSize: "12.5px", color: "var(--admin-text-secondary)" }}>
+              {isActive
+                ? "This appliance is currently visible to customers in the catalog."
+                : "This appliance is currently a hidden draft and will not appear in the catalog."}
+            </span>
+          </div>
+          <AdminSwitch
+            checked={isActive}
+            onChange={(checked) => setIsActive(checked)}
+            ariaLabel="Toggle storefront visibility"
+          />
         </div>
       </fieldset>
 
@@ -910,6 +933,7 @@ export function ProductForm({
         </p>
       ) : null}
 
+      {/* Exactly one primary Save Changes button with secondary Cancel link */}
       <div className={styles.formActions}>
         <Link href="/admin/products" className={styles.secondaryButton}>
           Cancel

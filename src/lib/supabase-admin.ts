@@ -935,13 +935,14 @@ export async function uploadHomepageBannerImage(
   if (!validImage.ok) throw new Error(validImage.error);
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const prefix = kind === "mobile" ? "m-" : "";
-  const path = `${slot}/${prefix}${crypto.randomUUID()}.${extension}`;
+  const safeSlot = slot.replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "banner";
+  const path = `${safeSlot}/${prefix}${crypto.randomUUID()}.${extension}`;
   const response = await supabaseFetch(`/storage/v1/object/homepage-banners/${path}`, {
     method: "POST",
     headers: { "Content-Type": file.type, "x-upsert": "false" },
     body: file,
   }, accessToken);
-  if (!response.ok) throw new Error(`The ${kind} banner image could not be uploaded.`);
+  if (!response.ok) throw new Error(await storageUploadError(response, `${kind} banner image`));
   return path;
 }
 
@@ -996,6 +997,8 @@ export async function saveHomepageBanners(
     sort_order: number;
     image_path: string | null;
     mobile_image_path?: string | null;
+    is_enabled?: boolean;
+    title?: string | null;
   }>,
   accessToken: string,
 ) {
@@ -1005,9 +1008,40 @@ export async function saveHomepageBanners(
     body: JSON.stringify({ p_slots: slots }),
   }, accessToken);
 
-  // Resilient fallback if the database has not yet been upgraded with the mobile_image_path migration
+  // Resilient fallback 1: If database RPC does not yet take 'title', retry without title
   if (!response.ok) {
-    const fallbackSlots = slots.map(({ slot_key, sort_order, image_path }) => ({
+    const fallbackSlotsNoTitle = slots.map(({ slot_key, sort_order, image_path, mobile_image_path, is_enabled }) => ({
+      slot_key,
+      sort_order,
+      image_path,
+      mobile_image_path,
+      is_enabled: is_enabled ?? true,
+    }));
+    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slots: fallbackSlotsNoTitle }),
+    }, accessToken);
+  }
+
+  // Resilient fallback 2: If database has not yet been upgraded with is_enabled
+  if (!response.ok) {
+    const fallbackSlotsNoEnabled = slots.map(({ slot_key, sort_order, image_path, mobile_image_path }) => ({
+      slot_key,
+      sort_order,
+      image_path,
+      mobile_image_path,
+    }));
+    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slots: fallbackSlotsNoEnabled }),
+    }, accessToken);
+  }
+
+  // Resilient fallback 3: If database has not yet been upgraded with mobile_image_path
+  if (!response.ok) {
+    const fallbackSlotsMinimal = slots.map(({ slot_key, sort_order, image_path }) => ({
       slot_key,
       sort_order,
       image_path,
@@ -1015,11 +1049,27 @@ export async function saveHomepageBanners(
     response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ p_slots: fallbackSlots }),
+      body: JSON.stringify({ p_slots: fallbackSlotsMinimal }),
     }, accessToken);
   }
 
-  if (!response.ok) throw new Error("Could not save the homepage banner configuration.");
+  if (!response.ok) {
+    const errText = await response.text();
+    let msg = "Could not save the homepage banner configuration.";
+    try {
+      const parsed = JSON.parse(errText);
+      if (parsed?.message) {
+        if (parsed.message.includes("three")) {
+          msg = "Your Supabase database requires applying supabase/migrations/20261108_homepage_banner_redesign.sql to support more than 3 banners.";
+        } else {
+          msg = parsed.message;
+        }
+      }
+    } catch {
+      if (errText) msg = errText;
+    }
+    throw new Error(msg);
+  }
 }
 
 export async function deleteHomepageBannerImage(path: string, accessToken: string) {

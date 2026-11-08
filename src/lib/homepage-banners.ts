@@ -15,6 +15,7 @@ export const DEFAULT_SLIDER_SETTINGS: HomepageSliderSettings = {
 
 export type HomepageBanner = {
   id: string;
+  title: string;
   className: string;
   palette: {
     primary: string;
@@ -35,6 +36,7 @@ type HomepageBannerRow = {
   image_path: string | null;
   mobile_image_path?: string | null;
   is_enabled?: boolean | null;
+  title?: string | null;
 };
 
 /**
@@ -44,7 +46,7 @@ type HomepageBannerRow = {
  */
 const approvedSlots: Omit<
   HomepageBanner,
-  "imagePath" | "imageUrl" | "mobileImagePath" | "mobileImageUrl" | "sortOrder" | "isEnabled"
+  "imagePath" | "imageUrl" | "mobileImagePath" | "mobileImageUrl" | "sortOrder" | "isEnabled" | "title"
 >[] = [
   {
     id: "brand",
@@ -80,9 +82,17 @@ function mediaUrl(path: string | null) {
   return `/api/banner-media/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
+export function defaultBannerTitle(slotKey: string, index: number = 0): string {
+  if (slotKey === "brand") return "Brand Ambience";
+  if (slotKey === "climate") return "Climate Care";
+  if (slotKey === "utility") return "Laundry Made Simple";
+  return `Banner ${index + 1}`;
+}
+
 export function defaultHomepageBanners(): HomepageBanner[] {
   return approvedSlots.map((slot, sortOrder) => ({
     ...slot,
+    title: defaultBannerTitle(slot.id, sortOrder),
     imagePath: null,
     imageUrl: null,
     mobileImagePath: null,
@@ -124,8 +134,10 @@ function hydrate(rows: HomepageBannerRow[]): HomepageBanner[] {
         },
       };
       const mobilePath = row.mobile_image_path ?? null;
+      const title = row.title?.trim() || defaultBannerTitle(row.slot_key, idx);
       return {
         ...slot,
+        title,
         imagePath: row.image_path,
         imageUrl: mediaUrl(row.image_path),
         mobileImagePath: mobilePath,
@@ -208,12 +220,22 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
 
   try {
     let query = new URLSearchParams({
-      select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled",
+      select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled,title",
       order: "sort_order.asc",
     });
     let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key },
     });
+    // Fallback if title column is not yet applied
+    if (!response.ok && response.status === 400) {
+      query = new URLSearchParams({
+        select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled",
+        order: "sort_order.asc",
+      });
+      response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+        headers: { apikey: config.key },
+      });
+    }
     // Resilient fallback if is_enabled column is not yet applied
     if (!response.ok && response.status === 400) {
       query = new URLSearchParams({
@@ -247,23 +269,36 @@ export async function getAdminHomepageBanners(accessToken: string | null): Promi
   isReady: boolean;
   supportsMobileImage: boolean;
   supportsEnabledToggle: boolean;
+  supportsTitle: boolean;
 }> {
   const config = getSupabaseConfig();
   if (!config || !accessToken) {
-    return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false };
+    return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false, supportsTitle: false };
   }
 
   try {
     let supportsMobileImage = true;
     let supportsEnabledToggle = true;
+    let supportsTitle = true;
     let query = new URLSearchParams({
-      select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled",
+      select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled,title",
       order: "sort_order.asc",
     });
     let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key, Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
+    if (!response.ok && response.status === 400) {
+      supportsTitle = false;
+      query = new URLSearchParams({
+        select: "slot_key,sort_order,image_path,mobile_image_path,is_enabled",
+        order: "sort_order.asc",
+      });
+      response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
+        headers: { apikey: config.key, Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+    }
     if (!response.ok && response.status === 400) {
       supportsEnabledToggle = false;
       query = new URLSearchParams({
@@ -287,7 +322,7 @@ export async function getAdminHomepageBanners(accessToken: string | null): Promi
       });
     }
     if (!response.ok) {
-      return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false };
+      return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false, supportsTitle: false };
     }
     const rows = (await response.json()) as HomepageBannerRow[];
     return {
@@ -295,8 +330,9 @@ export async function getAdminHomepageBanners(accessToken: string | null): Promi
       isReady: isCompleteConfiguration(rows),
       supportsMobileImage,
       supportsEnabledToggle,
+      supportsTitle,
     };
   } catch {
-    return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false };
+    return { banners: defaultHomepageBanners(), isReady: false, supportsMobileImage: false, supportsEnabledToggle: false, supportsTitle: false };
   }
 }

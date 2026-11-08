@@ -600,43 +600,57 @@ export async function saveSettingsAction(_: FormState, formData: FormData): Prom
   }
 }
 
-type BannerConfiguration = {
-  slot_key: "brand" | "climate" | "utility";
+type BannerManagementItem = {
+  slot_key: string;
+  title: string;
   sort_order: number;
-  remove_artwork?: boolean;
+  is_enabled: boolean;
   remove_desktop_artwork?: boolean;
   remove_mobile_artwork?: boolean;
 };
 
-function parseBannerConfiguration(value: string): BannerConfiguration[] {
+function parseBannerManagementConfiguration(value: string): BannerManagementItem[] {
   let parsed: unknown;
-  try { parsed = JSON.parse(value); } catch { throw new Error("The homepage banner configuration is invalid."); }
-  if (!Array.isArray(parsed) || parsed.length !== 3) throw new Error("Exactly three homepage banner slots are required.");
-  const slots = new Set(["brand", "climate", "utility"]);
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("The homepage banner configuration is invalid.");
+  }
+  if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > 10) {
+    throw new Error("You must configure between 1 and 10 homepage banners.");
+  }
+  const keys = new Set<string>();
   const orders = new Set<number>();
   for (const item of parsed) {
     if (
       !item ||
-      !slots.has(item.slot_key) ||
+      typeof item.slot_key !== "string" ||
+      !/^[a-z0-9_-]{2,60}$/i.test(item.slot_key) ||
       !Number.isInteger(item.sort_order) ||
       item.sort_order < 0 ||
-      item.sort_order > 2
+      item.sort_order > 19
     ) {
-      throw new Error("The homepage banner configuration is invalid.");
+      throw new Error("One or more homepage banners have invalid identifiers or positions.");
     }
-    if (orders.has(item.sort_order)) throw new Error("Each homepage banner must have a different rotation position.");
+    const normalizedKey = item.slot_key.toLowerCase();
+    if (keys.has(normalizedKey)) {
+      throw new Error("Each homepage banner must have a unique slot identifier.");
+    }
+    keys.add(normalizedKey);
+
+    if (orders.has(item.sort_order)) {
+      throw new Error("Each homepage banner must have a different rotation position.");
+    }
     orders.add(item.sort_order);
   }
-  if (new Set(parsed.map((item) => item.slot_key)).size !== 3) throw new Error("Each homepage banner slot must appear once.");
-  return parsed as BannerConfiguration[];
+  return parsed as BannerManagementItem[];
 }
-
 
 export async function saveBannerSliderSettingsAction(_: FormState, formData: FormData): Promise<FormState> {
   try {
     const { accessToken } = await requireAdminForAction();
-    const bannerCount = Number(formData.get("banner_count"));
-    const intervalSeconds = Number(formData.get("interval_seconds"));
+    const bannerCount = Number(formData.get("banner_count") || formData.get("slider_banner_count"));
+    const intervalSeconds = Number(formData.get("interval_seconds") || formData.get("slider_interval_seconds"));
 
     if (!Number.isInteger(bannerCount) || bannerCount < 1 || bannerCount > 10) {
       throw new Error("Number of banners to display must be between 1 and 10.");
@@ -659,75 +673,134 @@ export async function saveBannerSliderSettingsAction(_: FormState, formData: For
   }
 }
 
-export async function saveHomepageBannersAction(_: FormState, formData: FormData): Promise<FormState> {
+/**
+ * Unified single primary save action for the entire Homepage Banners management page.
+ * Persists slider settings, new/deleted banners, reordering, titles, active states, and image uploads atomically.
+ */
+export async function saveAllBannerChangesAction(_: FormState, formData: FormData): Promise<FormState> {
   const uploadedPaths: string[] = [];
   try {
     const { accessToken } = await requireAdminForAction();
     await assertHomepageBannersReady(accessToken);
+
+    // 1. Parse and validate slider settings
+    const bannerCount = Number(formData.get("slider_banner_count") || formData.get("banner_count"));
+    const intervalSeconds = Number(formData.get("slider_interval_seconds") || formData.get("interval_seconds"));
+
+    if (!Number.isInteger(bannerCount) || bannerCount < 1 || bannerCount > 10) {
+      throw new Error("Number of banners to display must be between 1 and 10.");
+    }
+    if (!Number.isInteger(intervalSeconds) || intervalSeconds < 2 || intervalSeconds > 30) {
+      throw new Error("Slide interval must be between 2 and 30 seconds.");
+    }
+
+    // 2. Parse and validate banners list
+    const configRaw = text(formData.get("banner_configuration") || formData.get("banners_configuration"));
+    const changes = parseBannerManagementConfiguration(configRaw);
+
+    // Ensure requested banner display count does not exceed active/enabled banners
+    const enabledCount = changes.filter((b) => b.is_enabled !== false).length;
+    const clampedBannerCount = Math.max(1, Math.min(bannerCount, Math.max(1, enabledCount)));
+
+    // Current banners in database
     const current = await getAdminHomepageBanners(accessToken);
-    if (!current.isReady) throw new Error("Homepage banner setup is incomplete. Apply the banner migration, then reload this page.");
-    const changes = parseBannerConfiguration(text(formData.get("banner_configuration")));
     const existing = new Map(current.banners.map((banner) => [banner.id, banner]));
-    const next = [] as Array<{
-      slot_key: "brand" | "climate" | "utility";
+
+    const nextSlots: Array<{
+      slot_key: string;
       sort_order: number;
       image_path: string | null;
       mobile_image_path: string | null;
-    }>;
+      is_enabled: boolean;
+      title: string;
+    }> = [];
+
     const pathsToRemove: string[] = [];
 
     for (const change of changes) {
-      const previous = existing.get(change.slot_key);
-      if (!previous) throw new Error("The homepage banner configuration is incomplete.");
+      const prev = existing.get(change.slot_key);
 
-      // 1. Desktop Image
-      const removeDesktop = change.remove_desktop_artwork ?? change.remove_artwork ?? false;
-      const desktopFile = formData.get(`banner_desktop_${change.slot_key}`) || formData.get(`banner_${change.slot_key}`);
-      let imagePath = removeDesktop ? null : previous.imagePath;
+      // Desktop Image
+      const removeDesktop = change.remove_desktop_artwork ?? false;
+      const desktopFile = formData.get(`banner_desktop_${change.slot_key}`);
+      let imagePath = removeDesktop ? null : (prev?.imagePath ?? null);
+
       if (!removeDesktop && desktopFile instanceof File && desktopFile.size > 0) {
         imagePath = await uploadHomepageBannerImage(desktopFile, change.slot_key, accessToken, "desktop");
         uploadedPaths.push(imagePath);
       }
-      if (previous.imagePath && previous.imagePath !== imagePath) {
-        pathsToRemove.push(previous.imagePath);
+      if (prev?.imagePath && prev.imagePath !== imagePath) {
+        pathsToRemove.push(prev.imagePath);
       }
 
-      // 2. Mobile Image
+      // Mobile Image
       const removeMobile = change.remove_mobile_artwork ?? false;
       const mobileFile = formData.get(`banner_mobile_${change.slot_key}`);
-      let mobileImagePath = removeMobile ? null : previous.mobileImagePath;
+      let mobileImagePath = removeMobile ? null : (prev?.mobileImagePath ?? null);
+
       if (!removeMobile && mobileFile instanceof File && mobileFile.size > 0) {
         mobileImagePath = await uploadHomepageBannerImage(mobileFile, change.slot_key, accessToken, "mobile");
         uploadedPaths.push(mobileImagePath);
       }
-      if (previous.mobileImagePath && previous.mobileImagePath !== mobileImagePath) {
-        pathsToRemove.push(previous.mobileImagePath);
+      if (prev?.mobileImagePath && prev.mobileImagePath !== mobileImagePath) {
+        pathsToRemove.push(prev.mobileImagePath);
       }
 
-      next.push({
+      const cleanTitle = change.title?.trim() || `Banner ${change.sort_order + 1}`;
+
+      nextSlots.push({
         slot_key: change.slot_key,
         sort_order: change.sort_order,
         image_path: imagePath,
         mobile_image_path: mobileImagePath,
+        is_enabled: change.is_enabled !== false,
+        title: cleanTitle,
       });
     }
 
-    await saveHomepageBanners(next, accessToken);
-    // The database now points at the new artwork (or fallback); old objects are
-    // cleaned up afterwards so a storage cleanup issue cannot break the hero.
-    await Promise.all(pathsToRemove.map((path) => deleteHomepageBannerImage(path, accessToken).catch(() => undefined)));
+    // Identify deleted banners (present in DB before, but removed in draft state)
+    const nextKeys = new Set(nextSlots.map((s) => s.slot_key));
+    for (const [key, banner] of existing.entries()) {
+      if (!nextKeys.has(key)) {
+        if (banner.imagePath) pathsToRemove.push(banner.imagePath);
+        if (banner.mobileImagePath) pathsToRemove.push(banner.mobileImagePath);
+      }
+    }
+
+    // 3. Persist slider settings
+    await saveHomepageSliderSettings(clampedBannerCount, intervalSeconds, accessToken);
+
+    // 4. Persist all banner slots atomically
+    await saveHomepageBanners(nextSlots, accessToken);
+
+    // 5. Cleanup replaced or deleted media only after database success
+    if (pathsToRemove.length > 0) {
+      await Promise.all(pathsToRemove.map((path) => deleteHomepageBannerImage(path, accessToken).catch(() => undefined)));
+    }
+
+    // 6. Invalidate caches and revalidate
+    updateTag("homepage-banner-settings");
     updateTag("homepage-banners");
     revalidatePath("/");
     revalidatePath("/admin/banners");
+
     return { error: null, success: true };
   } catch (error) {
+    // If saving failed, clean up any newly uploaded files to prevent orphaned storage objects
     const accessToken = await (async () => {
       try { return (await requireAdminForAction()).accessToken; } catch { return null; }
     })();
-    if (accessToken) await Promise.all(uploadedPaths.map((path) => deleteHomepageBannerImage(path, accessToken).catch(() => undefined)));
-    return { error: error instanceof Error ? error.message : "The homepage banners could not be saved." };
+    if (accessToken && uploadedPaths.length > 0) {
+      await Promise.all(uploadedPaths.map((p) => deleteHomepageBannerImage(p, accessToken).catch(() => undefined)));
+    }
+    return {
+      error: error instanceof Error ? error.message : "The homepage banners could not be saved.",
+      success: false,
+    };
   }
 }
+
+export const saveHomepageBannersAction = saveAllBannerChangesAction;
 
 type AnnouncementConfiguration = {
   id: string | null;

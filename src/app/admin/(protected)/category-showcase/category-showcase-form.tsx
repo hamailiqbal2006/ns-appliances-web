@@ -8,6 +8,7 @@ import {
   resolveCssBackground,
   getRecommendedTextColor,
 } from "@/lib/category-showcase";
+import { ColorWheelPicker } from "@/components/color-wheel-picker";
 import { saveCategoryShowcaseAction } from "../../actions";
 import styles from "../../admin.module.css";
 
@@ -597,66 +598,69 @@ export function CategoryShowcaseForm({
                   </div>
 
                   {activeItem.leftBgType === "solid" ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <input
-                        type="color"
+                    <div style={{ marginTop: "12px" }}>
+                      <ColorWheelPicker
                         value={activeItem.leftBgColor}
-                        onChange={(e) => updateActiveItem({ leftBgColor: e.target.value })}
-                        style={{ width: "38px", height: "36px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                      />
-                      <input
-                        type="text"
-                        className={styles.drawerInput}
-                        value={activeItem.leftBgColor}
-                        onChange={(e) => updateActiveItem({ leftBgColor: e.target.value })}
-                        style={{ width: "110px", fontFamily: "monospace" }}
+                        onChange={(hex) => updateActiveItem({ leftBgColor: hex })}
+                        label="Background Color"
                       />
                     </div>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "11px", width: "40px", color: "var(--admin-text-muted)" }}>Start</span>
-                        <input
-                          type="color"
-                          value={activeItem.leftBgColor}
-                          onChange={(e) => updateActiveItem({ leftBgColor: e.target.value })}
-                          style={{ width: "32px", height: "30px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                        />
-                        <input
-                          type="text"
-                          className={styles.drawerInput}
-                          value={activeItem.leftBgColor}
-                          onChange={(e) => updateActiveItem({ leftBgColor: e.target.value })}
-                          style={{ width: "95px", fontFamily: "monospace", fontSize: "12px" }}
-                        />
-                        <span style={{ fontSize: "11px", width: "30px", color: "var(--admin-text-muted)" }}>End</span>
-                        <input
-                          type="color"
-                          value={activeItem.leftGradientEnd}
-                          onChange={(e) => updateActiveItem({ leftGradientEnd: e.target.value })}
-                          style={{ width: "32px", height: "30px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                        />
-                        <input
-                          type="text"
-                          className={styles.drawerInput}
-                          value={activeItem.leftGradientEnd}
-                          onChange={(e) => updateActiveItem({ leftGradientEnd: e.target.value })}
-                          style={{ width: "95px", fontFamily: "monospace", fontSize: "12px" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "11px", width: "40px", color: "var(--admin-text-muted)" }}>Angle</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "12px" }}>
+                      <div
+                        style={{
+                          height: "26px",
+                          borderRadius: "6px",
+                          background: `linear-gradient(${activeItem.leftGradientAngle}deg, ${activeItem.leftBgColor}, ${activeItem.leftGradientEnd})`,
+                          border: "1px solid var(--admin-border)",
+                          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
+                        }}
+                        title={`Gradient Preview: linear-gradient(${activeItem.leftGradientAngle}deg, ${activeItem.leftBgColor}, ${activeItem.leftGradientEnd})`}
+                      />
+
+                      <ColorWheelPicker
+                        value={activeItem.leftBgColor}
+                        onChange={(hex) => updateActiveItem({ leftBgColor: hex })}
+                        label="Color 1 (Start)"
+                      />
+
+                      <ColorWheelPicker
+                        value={activeItem.leftGradientEnd}
+                        onChange={(hex) => updateActiveItem({ leftGradientEnd: hex })}
+                        label="Color 2 (End)"
+                      />
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                          <span style={{ fontWeight: 600, color: "var(--admin-text)" }}>Gradient Direction</span>
+                          <span style={{ fontFamily: "monospace" }}>{activeItem.leftGradientAngle}°</span>
+                        </div>
                         <input
                           type="range"
                           min={0}
                           max={360}
                           value={activeItem.leftGradientAngle}
                           onChange={(e) => updateActiveItem({ leftGradientAngle: Number(e.target.value) })}
-                          style={{ flex: 1 }}
+                          className={styles.adminSlider}
                         />
-                        <span style={{ fontSize: "12px", width: "45px", fontFamily: "monospace" }}>
-                          {activeItem.leftGradientAngle}°
-                        </span>
+                        <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                          {[0, 45, 90, 135, 180, 270].map((angle) => (
+                            <button
+                              key={angle}
+                              type="button"
+                              className={styles.secondaryButton}
+                              style={{
+                                fontSize: "10.5px",
+                                padding: "2px 6px",
+                                backgroundColor: activeItem.leftGradientAngle === angle ? "var(--admin-primary)" : undefined,
+                                color: activeItem.leftGradientAngle === angle ? "var(--admin-primary-text)" : undefined,
+                              }}
+                              onClick={() => updateActiveItem({ leftGradientAngle: angle })}
+                            >
+                              {angle}°
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -665,11 +669,11 @@ export function CategoryShowcaseForm({
                   {(() => {
                     const rec = getRecommendedTextColor(activeItem.leftBgColor);
                     return (
-                      <div style={{ marginTop: "8px", fontSize: "11.5px", color: rec.meetsWCAG ? "var(--admin-text-muted)" : "var(--admin-danger)" }}>
+                      <div style={{ marginTop: "10px", fontSize: "11.5px", color: rec.meetsWCAG ? "var(--admin-text-muted)" : "var(--admin-danger)" }}>
                         {rec.meetsWCAG ? (
-                          <span>✓ Contrast ratio: {rec.ratio}:1 (Readable text: {rec.color === "#FFFFFF" ? "Light" : "Dark"})</span>
+                          <span>✓ Contrast ratio: {rec.ratio}:1 (Readable headline text: {rec.color === "#FFFFFF" ? "Light" : "Dark"})</span>
                         ) : (
-                          <span>⚠ Warning: Low contrast ({rec.ratio}:1). Headline text may be difficult to read.</span>
+                          <span>⚠ Warning: Low contrast ({rec.ratio}:1). Headline text may be difficult to read. Suggest {rec.color === "#FFFFFF" ? "lighter" : "darker"} background.</span>
                         )}
                       </div>
                     );
@@ -720,66 +724,69 @@ export function CategoryShowcaseForm({
                   </div>
 
                   {activeItem.rightBgType === "solid" ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <input
-                        type="color"
+                    <div style={{ marginTop: "12px" }}>
+                      <ColorWheelPicker
                         value={activeItem.rightBgColor}
-                        onChange={(e) => updateActiveItem({ rightBgColor: e.target.value })}
-                        style={{ width: "38px", height: "36px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                      />
-                      <input
-                        type="text"
-                        className={styles.drawerInput}
-                        value={activeItem.rightBgColor}
-                        onChange={(e) => updateActiveItem({ rightBgColor: e.target.value })}
-                        style={{ width: "110px", fontFamily: "monospace" }}
+                        onChange={(hex) => updateActiveItem({ rightBgColor: hex })}
+                        label="Background Color"
                       />
                     </div>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "11px", width: "40px", color: "var(--admin-text-muted)" }}>Start</span>
-                        <input
-                          type="color"
-                          value={activeItem.rightBgColor}
-                          onChange={(e) => updateActiveItem({ rightBgColor: e.target.value })}
-                          style={{ width: "32px", height: "30px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                        />
-                        <input
-                          type="text"
-                          className={styles.drawerInput}
-                          value={activeItem.rightBgColor}
-                          onChange={(e) => updateActiveItem({ rightBgColor: e.target.value })}
-                          style={{ width: "95px", fontFamily: "monospace", fontSize: "12px" }}
-                        />
-                        <span style={{ fontSize: "11px", width: "30px", color: "var(--admin-text-muted)" }}>End</span>
-                        <input
-                          type="color"
-                          value={activeItem.rightGradientEnd}
-                          onChange={(e) => updateActiveItem({ rightGradientEnd: e.target.value })}
-                          style={{ width: "32px", height: "30px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }}
-                        />
-                        <input
-                          type="text"
-                          className={styles.drawerInput}
-                          value={activeItem.rightGradientEnd}
-                          onChange={(e) => updateActiveItem({ rightGradientEnd: e.target.value })}
-                          style={{ width: "95px", fontFamily: "monospace", fontSize: "12px" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "11px", width: "40px", color: "var(--admin-text-muted)" }}>Angle</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "12px" }}>
+                      <div
+                        style={{
+                          height: "26px",
+                          borderRadius: "6px",
+                          background: `linear-gradient(${activeItem.rightGradientAngle}deg, ${activeItem.rightBgColor}, ${activeItem.rightGradientEnd})`,
+                          border: "1px solid var(--admin-border)",
+                          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
+                        }}
+                        title={`Gradient Preview: linear-gradient(${activeItem.rightGradientAngle}deg, ${activeItem.rightBgColor}, ${activeItem.rightGradientEnd})`}
+                      />
+
+                      <ColorWheelPicker
+                        value={activeItem.rightBgColor}
+                        onChange={(hex) => updateActiveItem({ rightBgColor: hex })}
+                        label="Color 1 (Start)"
+                      />
+
+                      <ColorWheelPicker
+                        value={activeItem.rightGradientEnd}
+                        onChange={(hex) => updateActiveItem({ rightGradientEnd: hex })}
+                        label="Color 2 (End)"
+                      />
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                          <span style={{ fontWeight: 600, color: "var(--admin-text)" }}>Gradient Direction</span>
+                          <span style={{ fontFamily: "monospace" }}>{activeItem.rightGradientAngle}°</span>
+                        </div>
                         <input
                           type="range"
                           min={0}
                           max={360}
                           value={activeItem.rightGradientAngle}
                           onChange={(e) => updateActiveItem({ rightGradientAngle: Number(e.target.value) })}
-                          style={{ flex: 1 }}
+                          className={styles.adminSlider}
                         />
-                        <span style={{ fontSize: "12px", width: "45px", fontFamily: "monospace" }}>
-                          {activeItem.rightGradientAngle}°
-                        </span>
+                        <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                          {[0, 45, 90, 135, 180, 270].map((angle) => (
+                            <button
+                              key={angle}
+                              type="button"
+                              className={styles.secondaryButton}
+                              style={{
+                                fontSize: "10.5px",
+                                padding: "2px 6px",
+                                backgroundColor: activeItem.rightGradientAngle === angle ? "var(--admin-primary)" : undefined,
+                                color: activeItem.rightGradientAngle === angle ? "var(--admin-primary-text)" : undefined,
+                              }}
+                              onClick={() => updateActiveItem({ rightGradientAngle: angle })}
+                            >
+                              {angle}°
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -788,11 +795,11 @@ export function CategoryShowcaseForm({
                   {(() => {
                     const rec = getRecommendedTextColor(activeItem.rightBgColor);
                     return (
-                      <div style={{ marginTop: "8px", fontSize: "11.5px", color: rec.meetsWCAG ? "var(--admin-text-muted)" : "var(--admin-danger)" }}>
+                      <div style={{ marginTop: "10px", fontSize: "11.5px", color: rec.meetsWCAG ? "var(--admin-text-muted)" : "var(--admin-danger)" }}>
                         {rec.meetsWCAG ? (
-                          <span>✓ Contrast ratio: {rec.ratio}:1 (Readable text: {rec.color === "#FFFFFF" ? "Light" : "Dark"})</span>
+                          <span>✓ Contrast ratio: {rec.ratio}:1 (Readable subcategory links: {rec.color === "#FFFFFF" ? "Light" : "Dark"})</span>
                         ) : (
-                          <span>⚠ Warning: Low contrast ({rec.ratio}:1). Subcategory links may be difficult to read.</span>
+                          <span>⚠ Warning: Low contrast ({rec.ratio}:1). Subcategory links may be difficult to read. Suggest {rec.color === "#FFFFFF" ? "lighter" : "darker"} background.</span>
                         )}
                       </div>
                     );
@@ -895,7 +902,7 @@ export function CategoryShowcaseForm({
                       step={0.01}
                       value={activeItem.imageScale}
                       onChange={(e) => updateActiveItem({ imageScale: Number(e.target.value) })}
-                      style={{ width: "100%" }}
+                      className={styles.adminSlider}
                     />
                   </div>
 
@@ -915,7 +922,7 @@ export function CategoryShowcaseForm({
                       step={1}
                       value={activeItem.imageX}
                       onChange={(e) => updateActiveItem({ imageX: Number(e.target.value) })}
-                      style={{ width: "100%" }}
+                      className={styles.adminSlider}
                     />
                   </div>
 
@@ -935,7 +942,7 @@ export function CategoryShowcaseForm({
                       step={1}
                       value={activeItem.imageY}
                       onChange={(e) => updateActiveItem({ imageY: Number(e.target.value) })}
-                      style={{ width: "100%" }}
+                      className={styles.adminSlider}
                     />
                   </div>
                 </div>

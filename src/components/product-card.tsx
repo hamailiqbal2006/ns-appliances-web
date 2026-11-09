@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import type { StorefrontProduct } from "@/lib/public-catalog";
 import styles from "./product-card.module.css";
@@ -18,7 +19,7 @@ export interface ProductCardProps {
  * Composition:
  *  - Warm neutral canvas (#EDEBE7)
  *  - Top-left category badge (#D9D6D0 capsule)
- *  - Centered floating appliance image with containment and subtle hover zoom
+ *  - Centered floating appliance image with containment, prominent sizing & hover crossfade
  *  - Inset compact white information strip (#FAF9F7) with readable typography & circular arrow
  */
 export function ProductCard({
@@ -34,6 +35,15 @@ export function ProductCard({
     product.pricePkr !== null
       ? `PKR ${new Intl.NumberFormat("en-PK").format(product.pricePkr)}`
       : "Inquire for Price";
+
+  // Resolve secondary distinct gallery image for desktop hover crossfade
+  const secondaryImage = useMemo(() => {
+    if (!product.galleryImages || product.galleryImages.length <= 1) return null;
+    const secondary = product.galleryImages.find(
+      (img) => img.mediaType !== "video" && img.url && img.url !== product.image,
+    );
+    return secondary?.url ?? null;
+  }, [product.galleryImages, product.image]);
 
   if (isFeatured) {
     return (
@@ -56,8 +66,20 @@ export function ProductCard({
           <div className={styles.featuredCanvasStage}>
             <span className={styles.categoryBadge}>{categoryLabel}</span>
 
+            {secondaryImage && (
+              <div
+                className={styles.galleryIndicator}
+                aria-hidden="true"
+                title="Multiple views available"
+              >
+                <span className={styles.indicatorDot} />
+                <span className={styles.indicatorDot} />
+              </div>
+            )}
+
             <ProductImageCanvas
               image={product.image}
+              secondaryImage={secondaryImage}
               name={product.name}
               className={styles.cardImage}
               priority={priority}
@@ -115,8 +137,20 @@ export function ProductCard({
         <div className={styles.cardCanvasStage}>
           <span className={styles.categoryBadge}>{categoryLabel}</span>
 
+          {secondaryImage && (
+            <div
+              className={styles.galleryIndicator}
+              aria-hidden="true"
+              title="Multiple views available"
+            >
+              <span className={styles.indicatorDot} />
+              <span className={styles.indicatorDot} />
+            </div>
+          )}
+
           <ProductImageCanvas
             image={product.image}
+            secondaryImage={secondaryImage}
             name={product.name}
             className={styles.cardImage}
             priority={priority}
@@ -163,46 +197,69 @@ export function FeaturedProductCard({ product }: { product: StorefrontProduct })
 /**
  * Product Image Canvas
  * Displays verified product cutouts with proper containment.
- * When no image exists, renders a discreet, neutral icon without text.
+ * Supports desktop hover crossfade to secondary gallery image without layout shifts.
  */
 export function ProductImageCanvas({
   image,
+  secondaryImage,
   name,
   className,
   priority = false,
 }: {
   image: string | null;
+  secondaryImage?: string | null;
   name: string;
   className?: string;
   priority?: boolean;
 }) {
   if (image) {
-    if (image.startsWith("/")) {
-      return (
-        <div className={styles.imageInnerWrap}>
+    const hasSecondary = Boolean(secondaryImage);
+
+    return (
+      <div className={styles.imageInnerWrap}>
+        {image.startsWith("/") ? (
           <Image
             src={image}
             alt={name}
             fill
             priority={priority}
             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 400px"
-            className={className}
+            className={`${className || ""} ${styles.cardImage} ${styles.cardImagePrimary} ${hasSecondary ? styles.hasSecondary : ""}`}
             style={{ objectFit: "contain" }}
           />
-        </div>
-      );
-    }
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={name}
+            className={`${className || ""} ${styles.cardImage} ${styles.cardImagePrimary} ${hasSecondary ? styles.hasSecondary : ""}`}
+            loading={priority ? "eager" : "lazy"}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
+        )}
 
-    return (
-      <div className={styles.imageInnerWrap}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={name}
-          className={className}
-          loading={priority ? "eager" : "lazy"}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
+        {secondaryImage && (
+          secondaryImage.startsWith("/") ? (
+            <Image
+              src={secondaryImage}
+              alt={`${name} — alternate showcase view`}
+              fill
+              loading="lazy"
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 400px"
+              className={`${className || ""} ${styles.cardImage} ${styles.cardImageSecondary}`}
+              style={{ objectFit: "contain" }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={secondaryImage}
+              alt={`${name} — alternate showcase view`}
+              className={`${className || ""} ${styles.cardImage} ${styles.cardImageSecondary}`}
+              loading="lazy"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          )
+        )}
       </div>
     );
   }

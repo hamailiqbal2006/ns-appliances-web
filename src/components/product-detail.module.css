@@ -48,10 +48,10 @@
   color: #191D1F;
 }
 
-/* Top 2-Column Hero Grid */
+/* Top 2-Column Hero Grid: 57% Gallery / 43% Info Balance */
 .productHeroGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.33fr) minmax(0, 1fr);
   gap: clamp(28px, 4vw, 56px);
   align-items: start;
   margin-bottom: 56px;
@@ -68,61 +68,87 @@
 .infoColumn {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
-.metaRow {
+/* Category Kicker */
+.categoryRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
-.categoryBadge {
+.categoryKicker {
   font-family: var(--font-sora, sans-serif);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   background-color: #D9D6D0;
   color: #191D1F;
-  padding: 6px 14px;
-  border-radius: 100px;
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-}
-
-.availabilityBadge {
-  font-family: var(--font-sora, sans-serif);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   padding: 5px 12px;
-  border-radius: 100px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
+  text-decoration: none;
+  transition: background-color 0.16s ease, color 0.16s ease;
   width: fit-content;
 }
 
-.availabilityBadge.available {
-  background-color: #DCEFE3;
-  color: #15623B;
-  border: 1px solid rgba(21, 98, 59, 0.16);
+.categoryKicker:hover {
+  background-color: #CFCBC4;
 }
 
-.availabilityBadge.outOfStock {
-  background-color: #FBE5E5;
-  color: #A32020;
-  border: 1px solid rgba(163, 32, 32, 0.16);
+/* Compact Integrated Availability Status Row */
+.availabilityRow {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(25, 29, 31, 0.035);
+  border: 1px solid rgba(25, 29, 31, 0.08);
+  border-radius: 8px;
+  width: fit-content;
 }
 
-.availabilityBadge.notConfirmed {
-  background-color: #EAE8E3;
-  color: #646A6C;
-  border: 1px solid rgba(100, 106, 108, 0.16);
+.availabilityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot_available {
+  background-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+}
+
+.dot_out_of_stock {
+  background-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.dot_not_confirmed {
+  background-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+}
+
+.availabilityLabelText {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #191D1F;
+}
+
+.availabilitySeparator {
+  color: #8C9291;
+  font-size: 12px;
+}
+
+.availabilitySubtext {
+  font-family: var(--font-sora, sans-serif);
+  font-size: 12px;
+  color: #686D6C;
 }
 
 .productTitle {
@@ -139,10 +165,14 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   font-family: var(--font-sora, sans-serif);
   font-size: 13.5px;
   color: #686D6C;
+}
+
+.dotSeparator {
+  opacity: 0.5;
 }
 
 .brandBadge {

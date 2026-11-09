@@ -5,13 +5,13 @@
   width: 100%;
 }
 
-/* Main Showcase Stage — Calibrated for 9:16 Portrait Artwork */
+/* Main Showcase Stage — Prominent Portrait & Square Appliance Artwork */
 .stageContainer {
   position: relative;
   width: 100%;
   aspect-ratio: 9 / 11;
-  min-height: 440px;
-  max-height: 580px;
+  min-height: 480px;
+  max-height: 600px;
   background-color: #EDEBE7;
   border: 1px solid rgba(25, 29, 31, 0.08);
   border-radius: 14px;
@@ -31,8 +31,8 @@
 
 .stageImageWrap {
   position: relative;
-  width: 92%;
-  height: 92%;
+  width: 95%;
+  height: 95%;
   display: flex;
   align-items: center;
   justify-content: center;

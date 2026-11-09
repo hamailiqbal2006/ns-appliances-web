@@ -56,7 +56,6 @@ export function HomeExperience({
     [categoryShowcase],
   );
   const [activeCategory, setActiveCategory] = useState(0);
-  const category = showcaseList[activeCategory] ?? showcaseList[0]!;
   const visitTrack = useRef<HTMLElement>(null);
   const visitForeground = useRef<HTMLDivElement>(null);
   const visitHeading = useRef<HTMLHeadingElement>(null);
@@ -592,109 +591,106 @@ export function HomeExperience({
           aria-label="Shop by category"
           style={{ height: `${showcaseList.length * 105}svh` }}
         >
-          {/* Preload all category images to ensure instantaneous decoding and zero layout flash */}
-          <div className="sr-only" aria-hidden="true">
-            {showcaseList.map((cat) => (
-              <Image
-                key={`preload-${cat.categorySlug}`}
-                src={cat.imageUrl}
-                alt=""
-                width={600}
-                height={600}
-                priority
-              />
-            ))}
+          <div className="category-sticky-stage" style={{ position: "sticky", top: 0, height: "100svh", width: "100%", overflow: "hidden" }}>
+            {showcaseList.map((cat, idx) => {
+              const isActive = idx === activeCategory;
+              const leftBg = resolveCssBackground(cat.leftBgType, cat.leftBgColor, cat.leftGradientEnd, cat.leftGradientAngle);
+              const rightBg = resolveCssBackground(cat.rightBgType, cat.rightBgColor, cat.rightGradientEnd, cat.rightGradientAngle);
+              const leftInk = getRecommendedTextColor(cat.leftBgColor).color;
+              const rightInk = getRecommendedTextColor(cat.rightBgColor).color;
+              const computedScale = (cat.defaultScale || 1.0) * (cat.imageScale || 1.0);
+              const computedMobileScale = ((cat.defaultMobileScale ?? cat.defaultScale) || 1.0) * (cat.imageScale || 1.0);
+              const computedX = (cat.defaultX || 0) + (cat.imageX || 0);
+              const computedY = (cat.defaultY || 0) + (cat.imageY || 0);
+              const computedMobileY = ((cat.defaultMobileY ?? cat.defaultY) || 0) + (cat.imageY || 0);
+
+              return (
+                <div
+                  key={cat.categorySlug}
+                  className={`category-scene ${isActive ? "active-scene" : "inactive-scene"}`}
+                  style={css({
+                    position: "absolute",
+                    inset: 0,
+                    opacity: isActive ? 1 : 0,
+                    pointerEvents: isActive ? "auto" : "none",
+                    transition: "opacity 420ms cubic-bezier(0.2, 0.7, 0, 1), transform 420ms cubic-bezier(0.2, 0.7, 0, 1)",
+                    transform: isActive ? "scale(1)" : "scale(0.985)",
+                    zIndex: isActive ? 2 : 1,
+                    "--scene-base": leftBg,
+                    "--scene-panel": rightBg,
+                    "--scene-ink": rightInk,
+                    "--scene-left-bg": leftBg,
+                    "--scene-right-bg": rightBg,
+                    "--scene-left-ink": leftInk,
+                    "--scene-right-ink": rightInk,
+                  })}
+                >
+                  <div className="category-left" style={{ background: leftBg }}>
+                    <div>
+                      <h2 style={{ color: leftInk }}>{cat.displayHeading || cat.categoryName}</h2>
+                    </div>
+                  </div>
+                  <div className="category-cutout">
+                    <div className="category-cutout-stage">
+                      <Image
+                        src={cat.imageUrl}
+                        alt={`${cat.displayHeading || cat.categoryName} appliances`}
+                        fill
+                        sizes="(max-width: 760px) 78vw, (max-width: 1024px) 38vw, 34vw"
+                        priority
+                        style={css({
+                          objectFit: "contain",
+                          "--cat-scale": computedScale,
+                          "--cat-x": `${computedX}%`,
+                          "--cat-y": `${computedY}%`,
+                          "--cat-rot": "0deg",
+                          "--cat-mobile-scale": computedMobileScale,
+                          "--cat-mobile-y": `${computedMobileY}%`,
+                        })}
+                        className="cat-product-img"
+                      />
+                    </div>
+                  </div>
+                  <div className="category-right" style={{ background: rightBg }}>
+                    <div>
+                      <ul>
+                        {cat.subcategories.map((sub) => (
+                          <li key={sub.slug} style={{ borderColor: rightInk === "#FFFFFF" ? "rgba(255,255,255,0.32)" : "rgba(23,35,35,0.2)" }}>
+                            <Link href={`/category/${cat.categorySlug}/${sub.slug}`} style={{ color: rightInk }}>
+                              <span>{sub.name}</span>
+                              <b>↗</b>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Pagination dots */}
+            <div className="scene-dots" aria-label="Category navigation">
+              {showcaseList.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  className={dotIdx === activeCategory ? "active" : ""}
+                  type="button"
+                  aria-current={dotIdx === activeCategory ? "true" : undefined}
+                  aria-label={`Category ${dotIdx + 1}`}
+                  onClick={() => {
+                    const track = categoryTrack.current;
+                    if (!track) return;
+                    const categoryStride = track.offsetHeight / showcaseList.length;
+                    window.scrollTo({
+                      top: track.offsetTop + categoryStride * dotIdx,
+                      behavior: "smooth",
+                    });
+                  }}
+                />
+              ))}
+            </div>
           </div>
-
-          {(() => {
-            const leftBg = resolveCssBackground(category.leftBgType, category.leftBgColor, category.leftGradientEnd, category.leftGradientAngle);
-            const rightBg = resolveCssBackground(category.rightBgType, category.rightBgColor, category.rightGradientEnd, category.rightGradientAngle);
-            const leftInk = getRecommendedTextColor(category.leftBgColor).color;
-            const rightInk = getRecommendedTextColor(category.rightBgColor).color;
-            const computedScale = (category.defaultScale || 1.0) * (category.imageScale || 1.0);
-            const computedMobileScale = ((category.defaultMobileScale ?? category.defaultScale) || 1.0) * (category.imageScale || 1.0);
-            const computedX = (category.defaultX || 0) + (category.imageX || 0);
-            const computedY = (category.defaultY || 0) + (category.imageY || 0);
-            const computedMobileY = ((category.defaultMobileY ?? category.defaultY) || 0) + (category.imageY || 0);
-
-            return (
-              <div
-                className="category-scene"
-                style={css({
-                  "--scene-base": leftBg,
-                  "--scene-panel": rightBg,
-                  "--scene-ink": rightInk,
-                  "--scene-left-bg": leftBg,
-                  "--scene-right-bg": rightBg,
-                  "--scene-left-ink": leftInk,
-                  "--scene-right-ink": rightInk,
-                })}
-              >
-                <div className="category-left" style={{ background: leftBg }}>
-                  <div key={`cat-left-${category.categorySlug}`} className="category-state-enter">
-                    <h2 style={{ color: leftInk }}>{category.displayHeading || category.categoryName}</h2>
-                  </div>
-                </div>
-                <div className="category-cutout">
-                  <div key={`cat-cutout-${category.categorySlug}`} className="category-cutout-stage category-state-enter">
-                    <Image
-                      src={category.imageUrl}
-                      alt={`${category.displayHeading || category.categoryName} appliances`}
-                      fill
-                      sizes="(max-width: 760px) 78vw, (max-width: 1024px) 38vw, 34vw"
-                      priority
-                      style={css({
-                        objectFit: "contain",
-                        "--cat-scale": computedScale,
-                        "--cat-x": `${computedX}%`,
-                        "--cat-y": `${computedY}%`,
-                        "--cat-rot": "0deg",
-                        "--cat-mobile-scale": computedMobileScale,
-                        "--cat-mobile-y": `${computedMobileY}%`,
-                      })}
-                      className="cat-product-img"
-                    />
-                  </div>
-                </div>
-                <div className="category-right" style={{ background: rightBg }}>
-                  <div key={`cat-right-${category.categorySlug}`} className="category-state-enter">
-                    <ul>
-                      {category.subcategories.map((sub) => (
-                        <li key={sub.slug} style={{ borderColor: rightInk === "#FFFFFF" ? "rgba(255,255,255,0.32)" : "rgba(23,35,35,0.2)" }}>
-                          <Link href={`/category/${category.categorySlug}/${sub.slug}`} style={{ color: rightInk }}>
-                            <span>{sub.name}</span>
-                            <b>↗</b>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Pagination dots */}
-                <div className="scene-dots" aria-label="Category navigation">
-                  {showcaseList.map((_, dotIdx) => (
-                    <button
-                      key={dotIdx}
-                      className={dotIdx === activeCategory ? "active" : ""}
-                      type="button"
-                      aria-current={dotIdx === activeCategory ? "true" : undefined}
-                      aria-label={`Category ${dotIdx + 1}`}
-                      onClick={() => {
-                        const track = categoryTrack.current;
-                        if (!track) return;
-                        const categoryStride = track.offsetHeight / showcaseList.length;
-                        window.scrollTo({
-                          top: track.offsetTop + categoryStride * dotIdx,
-                          behavior: "smooth",
-                        });
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
         </section>
 
         {/* LAYER 4: VISIT OUR STORE CINEMATIC STAGE */}

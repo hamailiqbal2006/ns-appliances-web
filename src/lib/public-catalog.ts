@@ -431,6 +431,58 @@ async function getManagedProductGallery(productId: string): Promise<ProductGalle
   }
 }
 
+async function getManagedProductGalleries(
+  productIds: string[],
+): Promise<Record<string, ProductGalleryImage[]>> {
+  if (productIds.length === 0) return {};
+  const config = getSupabaseConfig();
+  if (!config) return {};
+  try {
+    const query = new URLSearchParams({
+      select: "id,product_id,storage_path,alt_text,sort_order,is_primary,media_type",
+      product_id: `in.(${productIds.join(",")})`,
+      order: "sort_order.asc",
+    });
+    const res = await fetch(`${config.url}/rest/v1/product_images?${query}`, {
+      headers: { apikey: config.key },
+      next: { revalidate: 60, tags: ["product-images-all"] },
+    });
+    if (!res.ok) return {};
+    const rows = (await res.json()) as Array<{
+      id: string;
+      product_id: string;
+      storage_path: string;
+      alt_text: string | null;
+      sort_order: number;
+      is_primary: boolean;
+      media_type?: string | null;
+    }>;
+    const map: Record<string, ProductGalleryImage[]> = {};
+    for (const r of rows) {
+      const isVideo =
+        r.media_type === "video" || /\.(mp4|webm)$/i.test(r.storage_path);
+      const img: ProductGalleryImage = {
+        id: r.id,
+        url: productImageUrl(r.storage_path) || "",
+        storagePath: r.storage_path,
+        altText:
+          r.alt_text ||
+          (isVideo ? "Product demonstration video" : "Product showroom photo"),
+        isPrimary: isVideo ? false : r.is_primary,
+        sortOrder: r.sort_order,
+        mediaType: isVideo ? ("video" as const) : ("image" as const),
+      };
+      if (img.url) {
+        if (!map[r.product_id]) map[r.product_id] = [];
+        map[r.product_id].push(img);
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Public records are deliberately additive. A verified active record with the
  * same slug replaces its placeholder presentation, avoiding duplicate routes.
@@ -443,7 +495,11 @@ export async function getStorefrontProducts(): Promise<StorefrontProduct[]> {
   // never fall back to a local fixture for an inactive or deleted live record.
   // Fixtures remain useful only for an unconfigured local preview.
   if (isSupabaseConfigured()) {
-    return managed.map((product) => fromManaged(product, categories));
+    const productIds = managed.map((p) => p.id).filter(Boolean);
+    const galleryMap = await getManagedProductGalleries(productIds);
+    return managed.map((product) =>
+      fromManaged(product, categories, galleryMap[product.id]),
+    );
   }
 
   return products.map(fromStatic);

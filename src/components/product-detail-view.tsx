@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import type { StorefrontProduct } from "@/lib/public-catalog";
 import type { PublicProductReview } from "@/lib/gallery-types";
-import { getAvailabilityPresentation } from "@/lib/product-availability";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductDetailGallery } from "@/components/product-detail-gallery";
@@ -48,12 +48,35 @@ export function ProductDetailView({
   whatsAppUrl,
 }: ProductDetailViewProps) {
   const availability = product.availabilityStatus || "not_confirmed";
-  const presentation = getAvailabilityPresentation(availability);
 
+  const { availabilityLabel, availabilitySubtext } = useMemo(() => {
+    switch (availability) {
+      case "available":
+        return {
+          availabilityLabel: "Available in Showroom",
+          availabilitySubtext: "Verified stock ready for viewing & purchase",
+        };
+      case "out_of_stock":
+        return {
+          availabilityLabel: "Currently Unavailable",
+          availabilitySubtext: "Contact showroom for restock schedule",
+        };
+      case "not_confirmed":
+      default:
+        return {
+          availabilityLabel: "Availability to be Confirmed",
+          availabilitySubtext: "Inquire via WhatsApp to verify live stock",
+        };
+    }
+  }, [availability]);
+
+  // Clean technical specifications table: exclude internal database keys
   const specsEntries = Object.entries(product.specifications || {}).filter(
     ([key, value]) =>
       Boolean(value) &&
-      !/^(brand|model|model[\s_-]?number|availability|availability[\s_-]?status)$/i.test(key.trim()),
+      !/^(brand|model|model[\s_-]?number|availability|availability[\s_-]?status|is_primary|sort_order|storage_path|explicit_zero_stock|out_of_stock|id|created_at|updated_at)$/i.test(
+        key.trim(),
+      ),
   );
 
   return (
@@ -84,7 +107,7 @@ export function ProductDetailView({
           </span>
         </nav>
 
-        {/* Top 2-Column Hero Grid: Left Gallery + Right Information & Inquire Action */}
+        {/* Top 2-Column Hero Grid: 57% Gallery + 43% Info & WhatsApp Action */}
         <section className={styles.productHeroGrid}>
           {/* Left Column: Interactive Multi-Image and Video Gallery */}
           <div className={styles.galleryColumn}>
@@ -96,29 +119,30 @@ export function ProductDetailView({
 
           {/* Right Column: Clean Essential Product Information */}
           <div className={styles.infoColumn}>
-            {/* Header: Category Badge + Genuine Availability Status Badge */}
-            <div className={styles.metaRow}>
+            {/* Hierarchy Level 1: Category Capsule Kicker */}
+            <div className={styles.categoryRow}>
               <Link
                 href={`/products?category=${product.categorySlug}`}
-                className={styles.categoryBadge}
+                className={styles.categoryKicker}
               >
                 {product.category}
               </Link>
-              <span
-                className={`${styles.availabilityBadge} ${styles[presentation.badgeClassName]}`}
-              >
-                {presentation.badgeLabel}
-              </span>
             </div>
 
+            {/* Hierarchy Level 2: Product Name */}
             <h1 className={styles.productTitle}>{product.name}</h1>
 
+            {/* Hierarchy Level 3: Brand & Model secondary row */}
             {(product.brand || product.modelNumber) && (
               <div className={styles.brandModelRow}>
                 {product.brand && (
                   <span className={styles.brandBadge}>{product.brand}</span>
                 )}
-                {product.brand && product.modelNumber && <span>·</span>}
+                {product.brand && product.modelNumber && (
+                  <span className={styles.dotSeparator} aria-hidden="true">
+                    ·
+                  </span>
+                )}
                 {product.modelNumber && (
                   <span className={styles.modelNumber}>
                     Model: {product.modelNumber}
@@ -126,6 +150,27 @@ export function ProductDetailView({
                 )}
               </div>
             )}
+
+            {/* Hierarchy Level 4: Compact Integrated Availability Status Row */}
+            <div
+              className={`${styles.availabilityRow} ${styles[`avail_${availability}`]}`}
+              role="status"
+              aria-label={`Showroom availability: ${availabilityLabel}. ${availabilitySubtext}`}
+            >
+              <span
+                className={`${styles.availabilityDot} ${styles[`dot_${availability}`]}`}
+                aria-hidden="true"
+              />
+              <span className={styles.availabilityLabelText}>
+                {availabilityLabel}
+              </span>
+              <span className={styles.availabilitySeparator} aria-hidden="true">
+                ·
+              </span>
+              <span className={styles.availabilitySubtext}>
+                {availabilitySubtext}
+              </span>
+            </div>
 
             {/* Editorial Price Presentation */}
             <div className={styles.priceSection}>
@@ -136,7 +181,7 @@ export function ProductDetailView({
                 </div>
               ) : (
                 <div className={styles.inquiryText}>
-                  Price confirmed upon showroom visit
+                  Price on Inquiry
                 </div>
               )}
             </div>

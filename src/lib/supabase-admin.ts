@@ -1259,6 +1259,18 @@ export async function deleteHomepageBannerImage(path: string, accessToken: strin
   if (!response.ok) throw new Error("The previous banner file could not be removed from storage.");
 }
 
+export async function deleteHomepageBanner(slotKey: string, accessToken: string) {
+  const response = await supabaseFetch(
+    `/rest/v1/homepage_banners?slot_key=eq.${encodeURIComponent(slotKey)}`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    },
+    accessToken,
+  );
+  if (!response.ok) throw new Error("The banner could not be removed.");
+}
+
 export function productImageUrl(path: string | null) {
   if (!getSupabaseConfig() || !path) return null;
   // Media is served through the app so Storage RLS can protect inactive product

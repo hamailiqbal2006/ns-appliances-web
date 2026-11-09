@@ -15,6 +15,7 @@ import {
   assertProductGalleryReady,
   assertHomepageBannersReady,
   assertAnnouncementBarReady,
+  deleteHomepageBanner,
   deleteHomepageBannerImage,
   saveHomepageBanners,
   saveHomepageSliderSettings,
@@ -775,6 +776,7 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
     }> = [];
 
     const pathsToRemove: string[] = [];
+    const deletedBannerKeys: string[] = [];
 
     for (const change of changes) {
       const prev = existing.get(change.slot_key);
@@ -821,6 +823,7 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
     const nextKeys = new Set(nextSlots.map((s) => s.slot_key));
     for (const [key, banner] of existing.entries()) {
       if (!nextKeys.has(key)) {
+        deletedBannerKeys.push(key);
         if (banner.imagePath) pathsToRemove.push(banner.imagePath);
         if (banner.mobileImagePath) pathsToRemove.push(banner.mobileImagePath);
       }
@@ -832,12 +835,18 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
     // 4. Persist all banner slots atomically
     await saveHomepageBanners(nextSlots, accessToken);
 
-    // 5. Cleanup replaced or deleted media only after database success
+    // 5. Explicitly remove only banners the administrator removed from the draft.
+    // The bulk upsert deliberately retains omitted rows to prevent accidental deletion.
+    if (deletedBannerKeys.length > 0) {
+      await Promise.all(deletedBannerKeys.map((slotKey) => deleteHomepageBanner(slotKey, accessToken)));
+    }
+
+    // 6. Cleanup replaced or deleted media only after database success
     if (pathsToRemove.length > 0) {
       await Promise.all(pathsToRemove.map((path) => deleteHomepageBannerImage(path, accessToken).catch(() => undefined)));
     }
 
-    // 6. Invalidate caches and revalidate
+    // 7. Invalidate caches and revalidate
     updateTag("homepage-banner-settings");
     updateTag("homepage-banners");
     revalidatePath("/");

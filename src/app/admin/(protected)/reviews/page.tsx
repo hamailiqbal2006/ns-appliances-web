@@ -34,7 +34,7 @@ export default async function AdminReviewsPage({
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("ns-admin-access")?.value || "";
 
-  const activeStatus = ["pending", "approved", "rejected"].includes(status ?? "")
+  const activeStatus = ["pending", "approved"].includes(status ?? "")
     ? (status as ReviewStatus)
     : undefined;
 
@@ -78,12 +78,6 @@ export default async function AdminReviewsPage({
           className={activeStatus === "approved" ? styles.filterActive : styles.filterLink}
         >
           Approved &amp; Live
-        </Link>
-        <Link
-          href="/admin/reviews?status=rejected"
-          className={activeStatus === "rejected" ? styles.filterActive : styles.filterLink}
-        >
-          Rejected
         </Link>
       </div>
 
@@ -194,29 +188,12 @@ export default async function AdminReviewsPage({
                           </form>
                         )}
 
-                        {r.status !== "rejected" && (
-                          <form action={moderateReviewAction}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <input type="hidden" name="status" value="rejected" />
-                            <button
-                              type="submit"
-                              className={styles.secondaryButton}
-                              style={{
-                                minHeight: "30px",
-                                padding: "4px 10px",
-                                fontSize: "12px",
-                              }}
-                            >
-                              Reject
-                            </button>
-                          </form>
-                        )}
-
                         <ConfirmedDeleteForm
                           action={deleteReviewAction}
                           id={r.id}
-                          confirmationMessage="Are you sure you want to delete this customer review?"
-                          title="Delete permanently"
+                          label="Reject"
+                          title="Reject and permanently delete review"
+                          confirmationMessage="Reject and permanently delete this customer review? This action cannot be undone."
                         />
                       </div>
                     </td>

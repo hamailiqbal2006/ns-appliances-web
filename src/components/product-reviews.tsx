@@ -44,14 +44,12 @@ function formatDate(dateStr: string) {
 export function ProductReviews({
   productId,
   productSlug,
-  productName,
   initialReviews,
   authorPendingReviews = [],
 }: ProductReviewsProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [dismissedNotice, setDismissedNotice] = useState(false);
 
   const [formState, formAction, isPending] = useActionState<ReviewFormState, FormData>(
     submitReviewAction,
@@ -82,7 +80,28 @@ export function ProductReviews({
     return list.filter((r) => !initialReviews.some((approved) => approved.id === r.id));
   }, [formState, authorPendingReviews, initialReviews]);
 
-  const showSubmitNotice = Boolean(formState.success && formState.pendingReview && !dismissedNotice);
+  // Combined list for display: newly submitted author reviews first, followed by public approved reviews
+  const allDisplayedReviews = useMemo(() => {
+    const list: PublicProductReview[] = [];
+    const seen = new Set<string>();
+
+    for (const r of combinedAuthorPending) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        list.push(r);
+      }
+    }
+
+    for (const r of initialReviews) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        list.push(r);
+      }
+    }
+
+    return list;
+  }, [combinedAuthorPending, initialReviews]);
+
   const isFormVisible = isFormOpen && !formState.success;
 
   // CRITICAL: Public totals and ratings strictly count APPROVED reviews only
@@ -91,7 +110,7 @@ export function ProductReviews({
     ? Math.round((initialReviews.reduce((sum, r) => sum + r.rating, 0) / totalApprovedReviews) * 10) / 10
     : null;
 
-  const hasAnyReviewsToDisplay = combinedAuthorPending.length > 0 || initialReviews.length > 0;
+  const hasAnyReviewsToDisplay = allDisplayedReviews.length > 0;
 
   return (
     <section className={styles.reviewsSection} aria-labelledby="reviews-heading">
@@ -102,11 +121,9 @@ export function ProductReviews({
             Customer Reviews
           </h2>
           {totalApprovedReviews === 0 ? (
-            <p className={styles.emptyMessage}>
-              {combinedAuthorPending.length > 0
-                ? "Your review is awaiting approval."
-                : "No reviews yet."}
-            </p>
+            !hasAnyReviewsToDisplay ? (
+              <p className={styles.emptyMessage}>No reviews yet.</p>
+            ) : null
           ) : averageRating !== null ? (
             <div className={styles.ratingSummaryRow}>
               <div
@@ -130,7 +147,6 @@ export function ProductReviews({
           className={styles.writeReviewTrigger}
           onClick={() => {
             setIsFormOpen((prev) => !prev);
-            setDismissedNotice(true);
           }}
           aria-expanded={isFormVisible}
         >
@@ -142,58 +158,10 @@ export function ProductReviews({
         </button>
       </div>
 
-      {/* Gentle submission notice */}
-      {showSubmitNotice && (
-        <div className={styles.submissionToast} role="status">
-          <span>
-            Thank you! Your review for <strong>{productName}</strong> has been submitted. It is displayed below with an &ldquo;Awaiting Showroom Approval&rdquo; badge.
-          </span>
-          <button
-            type="button"
-            className={styles.writeReviewTrigger}
-            style={{ padding: "4px 10px", fontSize: "11.5px" }}
-            onClick={() => setDismissedNotice(true)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Reviews List */}
       {hasAnyReviewsToDisplay && (
         <div className={styles.reviewsList}>
-          {/* 1. Author's Pending Reviews (Visible ONLY to the author) */}
-          {combinedAuthorPending.map((rev) => (
-            <article key={rev.id} className={`${styles.reviewCard} ${styles.authorPendingCard}`}>
-              <div className={styles.reviewCardHeader}>
-                <div className={styles.reviewerInfo}>
-                  <div className={styles.reviewerNameRow}>
-                    <span className={styles.reviewerName}>{rev.customerName}</span>
-                    <span className={styles.authorBadge}>You</span>
-                    <span className={styles.pendingBadge}>
-                      <span className={styles.pendingDot} aria-hidden />
-                      Awaiting Showroom Approval
-                    </span>
-                  </div>
-                  <div className={styles.starsRow} aria-label={`Rating: ${rev.rating} of 5`}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <StarIcon key={s} filled={s <= rev.rating} size={13} />
-                    ))}
-                  </div>
-                </div>
-                <time className={styles.reviewDate} dateTime={rev.createdAt}>
-                  {formatDate(rev.createdAt)}
-                </time>
-              </div>
-              <p className={styles.reviewBody}>{rev.reviewText}</p>
-              <p className={styles.authorPendingNote}>
-                This review is currently visible only to you until approved by showroom moderation.
-              </p>
-            </article>
-          ))}
-
-          {/* 2. Public Approved Reviews */}
-          {initialReviews.map((rev) => (
+          {allDisplayedReviews.map((rev) => (
             <article key={rev.id} className={styles.reviewCard}>
               <div className={styles.reviewCardHeader}>
                 <div className={styles.reviewerInfo}>
@@ -219,7 +187,7 @@ export function ProductReviews({
         <div className={styles.formCard}>
           <h3 className={styles.formTitle}>Write a Review</h3>
           <p className={styles.formSubtitle}>
-            Reviews are submitted for showroom staff moderation before public display.
+            Share your feedback and showroom experience.
           </p>
 
           <form action={formAction} className={styles.form} noValidate>

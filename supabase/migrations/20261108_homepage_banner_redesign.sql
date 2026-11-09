@@ -7,7 +7,9 @@
 --   * Relaxes slot_key constraints to support dynamic/user-created banner IDs (e.g. 'banner-1', 'promo-dry-iron').
 --   * Relaxes image_path and mobile_image_path constraints to allow alphanumeric slot prefixes.
 --   * Grants full CRUD (INSERT, UPDATE, DELETE) on homepage_banners to authenticated admins.
---   * Upgrades public.update_homepage_banners RPC to atomically synchronize slots (upserting provided slots and removing deleted ones).
+--   * Upgrades public.update_homepage_banners RPC to atomically upsert provided slots.
+--     Rows are not implicitly deleted by a bulk save; an administrator must use the
+--     explicit DELETE policy for that action.
 --
 -- Run this in your Supabase SQL Editor.
 
@@ -39,26 +41,17 @@ begin
   if exists (select 1 from pg_constraint where conname = 'homepage_banners_slot_key_check') then
     alter table public.homepage_banners drop constraint homepage_banners_slot_key_check;
   end if;
-  if exists (select 1 from pg_constraint where conname = 'homepage_banners_sort_order_check') then
-    alter table public.homepage_banners drop constraint homepage_banners_sort_order_check;
-  end if;
   if exists (select 1 from pg_constraint where conname = 'homepage_banners_image_path_check') then
     alter table public.homepage_banners drop constraint homepage_banners_image_path_check;
   end if;
   if exists (select 1 from pg_constraint where conname = 'homepage_banners_mobile_image_path_check') then
     alter table public.homepage_banners drop constraint homepage_banners_mobile_image_path_check;
   end if;
-  if exists (select 1 from pg_constraint where conname = 'homepage_banners_sort_order_key') then
-    alter table public.homepage_banners drop constraint homepage_banners_sort_order_key;
-  end if;
 end;
 $$;
 
 alter table public.homepage_banners
   add constraint homepage_banners_slot_key_check check (slot_key ~ '^[a-z0-9_-]{2,60}$');
-
-alter table public.homepage_banners
-  add constraint homepage_banners_sort_order_check check (sort_order between 0 and 19);
 
 alter table public.homepage_banners
   add constraint homepage_banners_image_path_check check (image_path is null or image_path ~ '^[a-z0-9_-]+/[A-Za-z0-9][A-Za-z0-9._-]*$');
@@ -141,12 +134,6 @@ begin
     title = excluded.title,
     updated_at = now();
 
-  -- Delete any banners that are no longer present in the incoming payload
-  delete from public.homepage_banners
-  where slot_key not in (
-    select s.slot_key
-    from jsonb_to_recordset(p_slots) as s(slot_key text)
-  );
 end;
 $$;
 

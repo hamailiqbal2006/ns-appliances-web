@@ -8,7 +8,7 @@ import { getStorefrontCategories } from "@/lib/categories";
 import styles from "@/components/category-catalog.module.css";
 
 export const metadata: Metadata = {
-  title: "All Appliances | NS Home Appliances",
+  title: "NS Home Appliances",
   description:
     "Explore appliances available from NS Home Appliances — room coolers, washing machines, dryers, fans, kitchen appliances, and water heaters.",
 };

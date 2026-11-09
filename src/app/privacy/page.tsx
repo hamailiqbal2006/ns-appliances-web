@@ -5,7 +5,7 @@ import { PrivacyExperience } from "./privacy-experience";
 import styles from "./privacy.module.css";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | NS Home Appliances",
+  title: "NS Home Appliances",
   description:
     "Learn how NS Home Appliances collects, uses, and safeguards customer information. Transparent, respectful, and secure data handling.",
 };

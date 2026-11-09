@@ -5,7 +5,7 @@ import { FaqAccordion } from "@/components/faq-accordion";
 import styles from "./faq.module.css";
 
 export const metadata: Metadata = {
-  title: "Frequently Asked Questions | NS Home Appliances",
+  title: "NS Home Appliances",
   description:
     "Answers to common questions about booking, pricing, showroom visits, and appliance purchases at NS Home Appliances.",
 };

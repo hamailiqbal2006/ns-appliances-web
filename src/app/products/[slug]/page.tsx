@@ -18,21 +18,21 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = await getStorefrontProductBySlug(slug);
   if (!product) {
-    return { title: "Product Not Found | NS Home Appliances" };
+    return { title: "NS Home Appliances" };
   }
 
   const canonicalUrl = getCanonicalProductUrl(product.slug);
-  const title = `${product.name} | NS Home Appliances`;
+  const socialTitle = `${product.name} | NS Home Appliances`;
   const description =
     product.description ||
     `Explore ${product.name} at NS Home Appliances showroom. Quality household appliances in Gujranwala. Contact our showroom for pricing and availability.`;
 
   return {
-    title,
+    title: "NS Home Appliances",
     description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title,
+      title: socialTitle,
       description,
       url: canonicalUrl,
       siteName: "NS Home Appliances",
@@ -40,7 +40,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: socialTitle,
       description,
     },
   };

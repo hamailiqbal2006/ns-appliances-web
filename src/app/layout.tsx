@@ -47,7 +47,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getStorefrontOrigin()),
-  title: "NS Home Appliances — Digital Showroom",
+  title: "NS Home Appliances",
   description: "A product-led digital showroom for NS Home Appliances.",
 };
 

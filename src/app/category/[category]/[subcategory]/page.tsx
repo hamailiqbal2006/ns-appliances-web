@@ -29,7 +29,7 @@ export async function generateMetadata({
   const cat = resolveCategoryForProduct(categorySlug, subcategorySlug, allCategories);
 
   return {
-    title: `${cat.name} | NS Home Appliances`,
+    title: "NS Home Appliances",
     description:
       cat.description ||
       `Browse verified ${cat.name} appliances in our showroom collection. Inspect technical specifications and contact our showroom.`,

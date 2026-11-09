@@ -10,7 +10,7 @@ import styles from "./contact.module.css";
 // Read live store settings when published by admin; otherwise fallback to approved contact details
 export const instant = false;
 export const metadata: Metadata = {
-  title: "Contact & Product Inquiries | NS Home Appliances",
+  title: "NS Home Appliances",
   description:
     "Have a question about an appliance or showroom availability? Give us a call at 0300 6791460 or send us an inquiry.",
 };

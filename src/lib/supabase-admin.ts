@@ -1137,7 +1137,7 @@ export async function saveCategoryShowcaseSettings(
   accessToken: string,
 ) {
   const response = await supabaseFetch(
-    "/rest/v1/homepage_category_showcase",
+    "/rest/v1/homepage_category_showcase?on_conflict=category_slug",
     {
       method: "POST",
       headers: {

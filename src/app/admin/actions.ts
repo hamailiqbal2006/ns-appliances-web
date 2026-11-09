@@ -1084,6 +1084,8 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
       throw new Error("No category showcase items provided.");
     }
 
+    const canonicalCategorySlugs = ["cooling", "laundry", "kitchen-everyday", "home"] as const;
+    const seenCategorySlugs = new Set<string>();
     const payload: Array<{
       category_slug: string;
       display_heading: string;
@@ -1105,9 +1107,13 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
     for (let i = 0; i < parsed.length; i++) {
       const item = parsed[i] as Record<string, unknown>;
       const slug = text(String(item.category_slug || item.categorySlug || ""));
-      if (!["cooling", "laundry", "kitchen-everyday", "home"].includes(slug)) {
+      if (!canonicalCategorySlugs.includes(slug as (typeof canonicalCategorySlugs)[number])) {
         throw new Error(`Invalid category slug: ${slug}`);
       }
+      if (seenCategorySlugs.has(slug)) {
+        throw new Error(`Duplicate category slug in showcase configuration: ${slug}`);
+      }
+      seenCategorySlugs.add(slug);
 
       let imagePath = (typeof item.imagePath === "string" ? item.imagePath : null);
       if (item.removeImage) {
@@ -1137,6 +1143,10 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
         image_x: Math.max(-15, Math.min(15, Number(item.imageX) || 0)),
         image_y: Math.max(-15, Math.min(15, Number(item.imageY) || 0)),
       });
+    }
+
+    if (seenCategorySlugs.size !== canonicalCategorySlugs.length) {
+      throw new Error("The showcase configuration must include each category exactly once.");
     }
 
     await saveCategoryShowcaseSettings(payload, accessToken);

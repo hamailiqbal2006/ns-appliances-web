@@ -5,7 +5,7 @@ import { AboutExperience } from "./about-experience";
 import styles from "./about.module.css";
 
 export const metadata: Metadata = {
-  title: "About Us | NS Home Appliances",
+  title: "NS Home Appliances",
   description:
     "For over three decades, NS Home Appliances has helped Pakistani homes find everyday comfort with care and quality.",
 };

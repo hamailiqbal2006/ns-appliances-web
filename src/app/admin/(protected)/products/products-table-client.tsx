@@ -385,7 +385,7 @@ export function ProductsTableClient({
           <table>
             <thead>
               <tr>
-                <th scope="col" style={{ width: "44px", textAlign: "center" }}>
+                <th scope="col" className={styles.colCheckbox}>
                   <input
                     type="checkbox"
                     aria-label="Select all on this page"
@@ -397,21 +397,31 @@ export function ProductsTableClient({
                     className={styles.rowCheckbox}
                   />
                 </th>
-                {isReorderMode && (
-                  <th scope="col" style={{ width: "80px", textAlign: "center" }}>
-                    Order
-                  </th>
-                )}
-                <th scope="col" style={{ width: isReorderMode ? "28%" : "30%" }}>
+                <th scope="col" className={styles.colOrder}>
+                  Order
+                </th>
+                <th scope="col" className={styles.colProduct}>
                   Product
                 </th>
-                <th scope="col">Category</th>
-                <th scope="col">Price</th>
-                <th scope="col">Visibility</th>
-                <th scope="col">Availability</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Updated</th>
-                <th scope="col" style={{ textAlign: "right" }}>
+                <th scope="col" className={styles.colCategory}>
+                  Category
+                </th>
+                <th scope="col" className={styles.colPrice}>
+                  Price
+                </th>
+                <th scope="col" className={styles.colVisibility}>
+                  Visibility
+                </th>
+                <th scope="col" className={styles.colAvailability}>
+                  Availability
+                </th>
+                <th scope="col" className={styles.colStock}>
+                  Stock
+                </th>
+                <th scope="col" className={styles.colUpdated}>
+                  Updated
+                </th>
+                <th scope="col" className={styles.colActions}>
                   Action
                 </th>
               </tr>
@@ -442,14 +452,15 @@ export function ProductsTableClient({
                     onDrop={(e) => {
                       if (!isReorderMode || searchActive) return;
                       e.preventDefault();
-                      setDragOverIdx(null);
+                      if (dragOverIdx !== idx) setDragOverIdx(null);
                       if (draggedIdx !== null && draggedIdx !== idx) {
                         handleReorder(draggedIdx, idx);
                       }
                       setDraggedIdx(null);
                     }}
                   >
-                    <td style={{ textAlign: "center", width: "44px" }}>
+                    {/* 1. Selection checkbox */}
+                    <td className={styles.colCheckbox}>
                       <input
                         type="checkbox"
                         aria-label={`Select ${product.name}`}
@@ -459,10 +470,10 @@ export function ProductsTableClient({
                       />
                     </td>
 
-                    {/* Order column with rank, drag handle, and Move Earlier / Move Later */}
-                    {isReorderMode && (
-                      <td style={{ textAlign: "center", width: "80px" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    {/* 2. Product order */}
+                    <td className={styles.colOrder}>
+                      {isReorderMode ? (
+                        <div className={styles.orderControlGroup}>
                           <span
                             className={styles.dragHandle}
                             draggable={!searchActive}
@@ -475,7 +486,8 @@ export function ProductsTableClient({
                               setDraggedIdx(null);
                               setDragOverIdx(null);
                             }}
-                            title="Drag to reorder"
+                            title="Drag row to reorder"
+                            aria-label={`Drag to reorder ${product.name}`}
                             style={{ cursor: searchActive ? "not-allowed" : "grab" }}
                           >
                             ⠿
@@ -490,7 +502,9 @@ export function ProductsTableClient({
                               title="Move earlier"
                               aria-label={`Move ${product.name} earlier`}
                             >
-                              ↑
+                              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M8 3.293l5.354 5.353a.5.5 0 01-.708.708L8 4.707 3.354 9.354a.5.5 0 11-.708-.708L8 3.293z" clipRule="evenodd"/>
+                              </svg>
                             </button>
                             <button
                               type="button"
@@ -500,17 +514,24 @@ export function ProductsTableClient({
                               title="Move later"
                               aria-label={`Move ${product.name} later`}
                             >
-                              ↓
+                              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M8 12.707l-5.354-5.353a.5.5 0 01.708-.708L8 11.293l4.646-4.646a.5.5 0 01.708.708L8 12.707z" clipRule="evenodd"/>
+                              </svg>
                             </button>
                           </div>
                         </div>
-                      </td>
-                    )}
+                      ) : (
+                        <div className={styles.orderMutedCell} title="Filter by category to adjust display order">
+                          <span className={styles.orderRankMuted}>—</span>
+                        </div>
+                      )}
+                    </td>
 
-                    <td>
+                    {/* 3. Product image and name */}
+                    <td className={styles.colProduct}>
                       <div className={styles.productCell}>
                         {product.imageUrl ? (
-                          <img src={product.imageUrl} alt="" />
+                          <img src={product.imageUrl} alt="" className={styles.productCellImg} />
                         ) : (
                           <span className={styles.imageDot} aria-hidden />
                         )}
@@ -522,35 +543,36 @@ export function ProductsTableClient({
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
-                        {product.categoryName}
-                      </span>
-                      {product.subcategoryName ? (
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--admin-text-secondary)",
-                            display: "block",
-                            marginTop: "2px",
-                          }}
-                        >
-                          {product.subcategoryName}
+
+                    {/* 4. Category / subcategory */}
+                    <td className={styles.colCategory}>
+                      <div className={styles.categoryCell}>
+                        <span className={styles.categoryCellName}>
+                          {product.categoryName}
                         </span>
-                      ) : null}
+                        {product.subcategoryName ? (
+                          <span className={styles.subcategoryCellName}>
+                            {product.subcategoryName}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
-                    <td>
+
+                    {/* 5. Price */}
+                    <td className={styles.colPrice}>
                       {product.priceFormatted ? (
-                        <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
+                        <span className={styles.priceCellText}>
                           PKR {product.priceFormatted}
                         </span>
                       ) : (
-                        <span style={{ color: "var(--admin-text-muted)", fontStyle: "italic" }}>
+                        <span className={styles.inquiryCellText}>
                           Showroom inquiry
                         </span>
                       )}
                     </td>
-                    <td>
+
+                    {/* 6. Visibility */}
+                    <td className={styles.colVisibility}>
                       <span className={styles.statusDotLabel}>
                         <span
                           className={`${styles.statusDot} ${
@@ -569,7 +591,9 @@ export function ProductsTableClient({
                           : "Draft"}
                       </span>
                     </td>
-                    <td>
+
+                    {/* 7. Availability */}
+                    <td className={styles.colAvailability}>
                       <span
                         className={styles.availabilityBadge}
                         data-availability={product.availabilityStatus}
@@ -577,15 +601,23 @@ export function ProductsTableClient({
                         {product.availabilityBadgeLabel}
                       </span>
                     </td>
-                    <td>
-                      <span style={{ fontWeight: 500, fontSize: "12.5px" }}>
+
+                    {/* 8. Stock */}
+                    <td className={styles.colStock}>
+                      <span className={styles.stockCellText}>
                         {product.stockFormatted}
                       </span>
                     </td>
-                    <td style={{ color: "var(--admin-text-secondary)", fontSize: "12.5px" }}>
-                      {product.updatedFormatted}
+
+                    {/* 9. Last updated */}
+                    <td className={styles.colUpdated}>
+                      <span className={styles.updatedCellText}>
+                        {product.updatedFormatted}
+                      </span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+
+                    {/* 10. Actions */}
+                    <td className={styles.colActions}>
                       <Link
                         href={`/admin/products/${product.id}`}
                         className={styles.secondaryButton}

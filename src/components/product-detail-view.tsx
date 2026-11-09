@@ -8,6 +8,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductDetailGallery } from "@/components/product-detail-gallery";
 import { ProductReviews } from "@/components/product-reviews";
+import { ProductCategoryBreadcrumb, ProductMetadata } from "@/components/product-metadata";
 import styles from "./product-detail.module.css";
 
 interface ProductDetailViewProps {
@@ -73,26 +74,6 @@ export function ProductDetailView({
     }
   }, [availability]);
 
-  // Task 7: Full approved name NS Home Appliances for NS-branded products
-  const displayBrand = useMemo(() => {
-    const b = product.brand?.trim();
-    if (!b || /^ns(\s*home|\s*appliances|\s*home\s*appliances)?$/i.test(b)) {
-      return "NS Home Appliances";
-    }
-    return b;
-  }, [product.brand]);
-
-  // Task 7: Subcategory validation (hide if duplicate, undefined, null or empty)
-  const hasDistinctSubcategory = useMemo(() => {
-    const sub = product.subcategory?.trim();
-    if (!sub) return false;
-    const lower = sub.toLowerCase();
-    if (lower === "undefined" || lower === "null" || lower === product.category.toLowerCase()) {
-      return false;
-    }
-    return true;
-  }, [product.subcategory, product.category]);
-
   // Clean technical specifications table: exclude internal database keys and ensure juicer/washer attributes display
   const specsEntries = useMemo(() => {
     const raw: Record<string, string> = { ...(product.specifications || {}) };
@@ -155,68 +136,30 @@ export function ProductDetailView({
 
           {/* Right Column: Clean Essential Product Information */}
           <div className={styles.infoColumn}>
-            {/* Header Block: Category & Subcategory, Title, Brand & Model */}
+            {/* Header Block: Category & Subcategory, Title, Brand & Model & Attributes */}
             <div className={styles.productHeader}>
-              {/* Hierarchy Level 1: Category & Subcategory Capsule Kicker */}
-              <div className={styles.categoryRow}>
-                <span className={styles.categoryLabel}>Category:</span>
-                <Link
-                  href={`/products?category=${product.categorySlug}`}
-                  className={styles.categoryKicker}
-                >
-                  {product.category}
-                </Link>
-                {hasDistinctSubcategory && (
-                  <>
-                    <span className={styles.dotSeparator} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className={styles.subcategoryLabel}>Subcategory:</span>
-                    <span className={styles.subcategoryKicker}>{product.subcategory}</span>
-                  </>
-                )}
-              </div>
+              {/* Hierarchy Level 1: Category & Subcategory Breadcrumb */}
+              <ProductCategoryBreadcrumb
+                category={product.category}
+                categorySlug={product.categorySlug}
+                subcategory={product.subcategory}
+                subcategorySlug={product.subcategorySlug}
+              />
 
-              {/* Hierarchy Level 2: Product Name */}
+              {/* Hierarchy Level 2: Product Name Heading */}
               <h1 className={styles.productTitle}>{product.name}</h1>
 
-              {/* Hierarchy Level 3: Brand & Model secondary row with Key Attributes */}
-              <div className={styles.brandModelRow}>
-                <span className={styles.brandBadge}>{displayBrand}</span>
-                {product.modelNumber ? (
-                  <>
-                    <span className={styles.dotSeparator} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className={styles.modelNumber}>
-                      Model: {product.modelNumber}
-                    </span>
-                  </>
-                ) : null}
-                {product.juicerConfiguration ? (
-                  <>
-                    <span className={styles.dotSeparator} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className={styles.attributeBadge}>
-                      Configuration: {product.juicerConfiguration}
-                    </span>
-                  </>
-                ) : null}
-                {product.washingCapacity ? (
-                  <>
-                    <span className={styles.dotSeparator} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className={styles.attributeBadge}>
-                      Capacity: {product.washingCapacity}
-                    </span>
-                  </>
-                ) : null}
-              </div>
+              {/* Hierarchy Level 3 & 4: Structured Brand, Model & Key Attributes */}
+              <ProductMetadata
+                brand={product.brand}
+                modelNumber={product.modelNumber}
+                washingCapacity={product.washingCapacity}
+                juicerConfiguration={product.juicerConfiguration}
+                specifications={product.specifications}
+              />
             </div>
 
-            {/* Hierarchy Level 4: Compact Integrated Availability Status Row */}
+            {/* Hierarchy Level 5: Compact Integrated Availability Status Row */}
             <div
               className={styles.availabilityRow}
               role="status"

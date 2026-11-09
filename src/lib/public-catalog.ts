@@ -261,6 +261,18 @@ function fromStatic(product: Product): StorefrontProduct {
     kind: cat.name,
     brand: staticDetails?.brand ?? null,
     modelNumber: staticDetails?.modelNumber ?? null,
+    juicerConfiguration:
+      product.slug === "kitchen-blender"
+        ? "3-in-1"
+        : staticDetails?.specifications?.["Juicer Configuration"] ??
+          staticDetails?.specifications?.["Configuration"] ??
+          null,
+    washingCapacity:
+      product.slug === "front-load-washer"
+        ? "10 kg"
+        : staticDetails?.specifications?.["Washing Capacity"] ??
+          staticDetails?.specifications?.["Wash Capacity"] ??
+          null,
     image: product.image,
     galleryImages: gallery,
     art: product.art,

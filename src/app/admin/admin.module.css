@@ -725,16 +725,22 @@
 .tableWrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  box-shadow: var(--admin-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
 }
 
 .tableWrap table {
   width: 100%;
+  min-width: 1260px;
   border-collapse: collapse;
   text-align: left;
+  table-layout: auto;
 }
 
 .tableWrap th {
-  padding: 12px 18px;
+  padding: 12px 14px;
   background-color: var(--admin-surface-muted);
   border-bottom: 1px solid var(--admin-border);
   color: var(--admin-text-secondary);
@@ -743,12 +749,13 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .tableWrap td {
-  padding: 14px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--admin-border-subtle);
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--admin-text-primary);
   vertical-align: middle;
 }
@@ -761,15 +768,86 @@
   background-color: var(--admin-surface-muted);
 }
 
+/* Explicit Table Column Sizing & Alignments */
+.colCheckbox {
+  width: 48px;
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.colOrder {
+  width: 124px;
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.colProduct {
+  min-width: 270px;
+  max-width: 360px;
+  text-align: left !important;
+  vertical-align: middle;
+}
+
+.colCategory {
+  min-width: 180px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.colPrice {
+  min-width: 130px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.colVisibility {
+  min-width: 110px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.colAvailability {
+  min-width: 140px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.colStock {
+  min-width: 100px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.colUpdated {
+  min-width: 115px;
+  text-align: left !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.colActions {
+  width: 90px;
+  text-align: right !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .productCell {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 220px;
-  max-width: 360px;
+  min-width: 0;
 }
 
 .productCell img,
+.productCellImg,
 .imageDot {
   width: 38px;
   height: 38px;
@@ -796,7 +874,9 @@
   font-weight: 600;
   color: var(--admin-text-primary);
   line-height: 1.35;
-  overflow-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .productCellSlug {
@@ -806,9 +886,52 @@
 
 .productCellSlug code {
   font-family: inherit;
-  background-color: #f0f4f2;
+  background-color: var(--admin-surface-muted, #f0f4f2);
   padding: 1px 5px;
   border-radius: 4px;
+}
+
+.categoryCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.categoryCellName {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.subcategoryCellName {
+  font-size: 11.5px;
+  color: var(--admin-text-secondary);
+  white-space: nowrap;
+}
+
+.priceCellText {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  font-size: 13px;
+}
+
+.inquiryCellText {
+  color: var(--admin-text-muted);
+  font-style: italic;
+  font-size: 12.5px;
+}
+
+.stockCellText {
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--admin-text-primary);
+}
+
+.updatedCellText {
+  font-size: 12.5px;
+  color: var(--admin-text-secondary);
 }
 
 /* Status & Availability Badges */
@@ -859,30 +982,53 @@
 .availabilityBadge {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 4px;
+  font-family: var(--font-sora, sans-serif);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.3;
   white-space: nowrap;
 }
 
 .availabilityBadge[data-availability="available"] {
-  background-color: #e6f4ea;
-  color: #137333;
-  border: 1px solid #ceead6;
+  background-color: rgba(22, 163, 74, 0.08);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.22);
 }
 
 .availabilityBadge[data-availability="not_confirmed"] {
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background-color: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.22);
 }
 
 .availabilityBadge[data-availability="out_of_stock"] {
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background-color: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+}
+
+:global([data-theme="dark"]) .availabilityBadge[data-availability="available"],
+.adminApp[data-theme="dark"] .availabilityBadge[data-availability="available"] {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+:global([data-theme="dark"]) .availabilityBadge[data-availability="not_confirmed"],
+.adminApp[data-theme="dark"] .availabilityBadge[data-availability="not_confirmed"] {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+:global([data-theme="dark"]) .availabilityBadge[data-availability="out_of_stock"],
+.adminApp[data-theme="dark"] .availabilityBadge[data-availability="out_of_stock"] {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .tableLink {
@@ -4744,43 +4890,95 @@
   font-size: 13px;
 }
 
-.reorderButtons {
+.orderControlGroup {
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.orderMoveBtn {
-  background: var(--admin-surface, #ffffff);
-  border: 1px solid var(--admin-border, #ccd5d1);
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--admin-text-muted, #7c8884);
+  cursor: grab;
+  user-select: none;
   border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 11px;
-  color: var(--admin-text-primary, #1e2926);
-  cursor: pointer;
-  line-height: 1.2;
+  font-size: 15px;
+  line-height: 1;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.orderMoveBtn:hover:not(:disabled) {
-  background: var(--admin-surface-hover, #eef2ee);
-  border-color: var(--admin-primary);
+.dragHandle:hover {
+  color: var(--admin-text-primary);
+  background-color: var(--admin-surface-muted);
 }
 
-.orderMoveBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .orderRankBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--admin-surface-accent, #eef2ee);
-  font-size: 11px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background-color: var(--admin-surface-muted, #f0eee9);
+  border: 1px solid var(--admin-border-subtle, #d8deda);
+  font-size: 11.5px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--admin-text-secondary, #4a5c56);
+}
+
+.orderRankMuted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--admin-text-muted, #9da7a3);
+  font-size: 14px;
+}
+
+.reorderButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.orderMoveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--admin-surface, #ffffff);
+  border: 1px solid var(--admin-border, #ccd5d1);
+  border-radius: 5px;
+  color: var(--admin-text-primary, #1e2926);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.orderMoveBtn:hover:not(:disabled) {
+  background: var(--admin-surface-hover, #eef2ee);
+  border-color: var(--admin-text-secondary);
+  color: var(--admin-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.orderMoveBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 

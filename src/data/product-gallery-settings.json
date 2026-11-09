@@ -32,11 +32,11 @@
     "intervalSeconds": 5
   },
   "fedcbdfd-802d-4e19-a814-aba700a194ab": {
-    "autoplay": false,
+    "autoplay": true,
     "intervalSeconds": 5
   },
   "washing-machine-13": {
-    "autoplay": false,
+    "autoplay": true,
     "intervalSeconds": 5
   },
   "b75b3c0e-6b10-4858-8759-b6d2e398b00f": {

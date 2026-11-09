@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { ProductDetailView } from "@/components/product-detail-view";
 import { getStorefrontProductBySlug } from "@/lib/public-catalog";
-import { getApprovedReviews } from "@/lib/reviews";
+import { getApprovedReviews, getAuthorPendingReviews } from "@/lib/reviews";
 import { getPublicStoreSettings } from "@/lib/supabase-admin";
 import { hasRecognizedCustomerCookie } from "@/lib/customer-recognition";
 import { getCanonicalProductUrl, getProductInquiryWhatsAppUrl } from "@/lib/product-inquiry.server";
@@ -51,6 +52,28 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const cookieStore = await cookies();
+  const rawAuthorReviews = cookieStore.get("ns_author_reviews")?.value;
+  let authorReceipts: Array<{
+    reviewId: string;
+    productId: string;
+    customerName: string;
+    rating: number;
+    reviewText: string;
+    createdAt: string;
+  }> = [];
+
+  if (rawAuthorReviews) {
+    try {
+      const parsed = JSON.parse(rawAuthorReviews);
+      if (Array.isArray(parsed)) {
+        authorReceipts = parsed;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const [product, settings, isRecognizedCustomer] = await Promise.all([
     getStorefrontProductBySlug(slug),
     getPublicStoreSettings(),
@@ -59,7 +82,11 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const reviews = await getApprovedReviews(product.id);
+  const [reviews, authorPendingReviews] = await Promise.all([
+    getApprovedReviews(product.id),
+    getAuthorPendingReviews(product.id, authorReceipts),
+  ]);
+
   const productUrl = getCanonicalProductUrl(product.slug);
   const whatsAppUrl = getProductInquiryWhatsAppUrl({
     productName: product.name,
@@ -72,6 +99,7 @@ export default async function ProductPage({
     <ProductDetailView
       product={product}
       reviews={reviews}
+      authorPendingReviews={authorPendingReviews}
       whatsAppUrl={whatsAppUrl}
       whatsappNumber={settings?.whatsapp ?? null}
       phoneNumber={settings?.phone ?? null}

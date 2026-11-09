@@ -46,6 +46,9 @@ export type AdminProduct = {
   updated_at: string;
   brand?: string | null;
   model_number?: string | null;
+  sort_order?: number | null;
+  washing_capacity?: number | null;
+  juicer_configuration?: string | null;
   gallery_autoplay?: boolean | null;
   gallery_interval_seconds?: number | null;
 };
@@ -465,17 +468,26 @@ export async function saveAdminProduct(
     availability_status?: ProductAvailability | null;
     gallery_autoplay?: boolean | null;
     gallery_interval_seconds?: number | null;
+    sort_order?: number | null;
+    washing_capacity?: number | null;
+    juicer_configuration?: string | null;
   },
   accessToken: string,
   id?: string,
 ) {
   const chosenAvailability = product.availability_status || "not_confirmed";
 
-  // Ensure specifications always mirrors availability_status and out_of_stock intent for zero-downtime resilience
+  // Ensure specifications always mirrors availability_status, juicer configuration, and washing capacity
   const enhancedSpecifications: Record<string, string> = {
     ...(product.specifications || {}),
     availability_status: chosenAvailability,
   };
+  if (product.juicer_configuration) {
+    enhancedSpecifications["Juicer Configuration"] = product.juicer_configuration;
+  }
+  if (product.washing_capacity !== null && product.washing_capacity !== undefined) {
+    enhancedSpecifications["Washing Capacity"] = `${product.washing_capacity} kg`;
+  }
   if (chosenAvailability === "out_of_stock") {
     enhancedSpecifications.out_of_stock = "true";
   } else {
@@ -509,6 +521,9 @@ export async function saveAdminProduct(
       errorText.includes("availability_status") ||
       errorText.includes("gallery_autoplay") ||
       errorText.includes("gallery_interval_seconds") ||
+      errorText.includes("sort_order") ||
+      errorText.includes("washing_capacity") ||
+      errorText.includes("juicer_configuration") ||
       errorText.includes("column") ||
       errorText.includes("not-null")
     ) {
@@ -518,6 +533,9 @@ export async function saveAdminProduct(
       delete (corePayload as Record<string, unknown>).availability_status;
       delete (corePayload as Record<string, unknown>).gallery_autoplay;
       delete (corePayload as Record<string, unknown>).gallery_interval_seconds;
+      delete (corePayload as Record<string, unknown>).sort_order;
+      delete (corePayload as Record<string, unknown>).washing_capacity;
+      delete (corePayload as Record<string, unknown>).juicer_configuration;
 
       // If database still requires an integer stock_quantity (not null):
       if (corePayload.stock_quantity === null || corePayload.stock_quantity === undefined) {

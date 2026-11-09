@@ -21,6 +21,7 @@ import {
   getAvailabilityPresentation,
 } from "./product-availability";
 import { resolveProductGallerySettings } from "./product-gallery-settings";
+import { getAllCategoryProductOrders } from "./category-order";
 
 export type { ProductAvailability };
 export { resolveAvailabilityStatus, getAvailabilityPresentation };
@@ -37,6 +38,8 @@ export type StorefrontProduct = {
   kind: string;
   brand: string | null;
   modelNumber: string | null;
+  juicerConfiguration?: string | null;
+  washingCapacity?: string | null;
   image: string | null;
   galleryImages: ProductGalleryImage[];
   art: ArtDirection;
@@ -296,6 +299,18 @@ function fromManaged(
     product.specifications?.model ||
     null;
 
+  const juicerConfiguration =
+    (product as { juicer_configuration?: string | null }).juicer_configuration ||
+    product.specifications?.["Juicer Configuration"] ||
+    null;
+
+  const rawWashingCapacity =
+    (product as { washing_capacity?: number | null }).washing_capacity !== undefined &&
+    (product as { washing_capacity?: number | null }).washing_capacity !== null
+      ? `${(product as { washing_capacity?: number | null }).washing_capacity} kg`
+      : product.specifications?.["Washing Capacity"] ||
+        (product.specifications?.["washing_capacity_kg"] ? `${product.specifications["washing_capacity_kg"]} kg` : null);
+
   const primaryUrl = productImageUrl(product.image_path);
 
   // Construct gallery images: Use database gallery if present, else synthesize from image_path
@@ -334,7 +349,6 @@ function fromManaged(
     product.id || product.slug,
     product.gallery_autoplay,
     product.gallery_interval_seconds,
-    product.slug,
   );
 
   return {
@@ -349,6 +363,8 @@ function fromManaged(
     kind: cat.name,
     brand,
     modelNumber,
+    juicerConfiguration,
+    washingCapacity: rawWashingCapacity,
     image: coverImage,
     galleryImages: gallery,
     art,
@@ -521,6 +537,49 @@ async function getManagedProductGalleries(
   }
 }
 
+function applyCategoryOrdering(
+  productsList: StorefrontProduct[],
+  orders: Record<string, string[]>,
+): StorefrontProduct[] {
+  if (!orders || Object.keys(orders).length === 0) return productsList;
+
+  // Group products by categorySlug
+  const byCategory = new Map<string, StorefrontProduct[]>();
+  for (const p of productsList) {
+    const list = byCategory.get(p.categorySlug) || [];
+    list.push(p);
+    byCategory.set(p.categorySlug, list);
+  }
+
+  // Sort within each category that has a custom order defined
+  for (const [catSlug, catProducts] of byCategory.entries()) {
+    const orderList = orders[catSlug];
+    if (orderList && orderList.length > 0) {
+      const orderMap = new Map<string, number>();
+      orderList.forEach((id, idx) => orderMap.set(id, idx));
+
+      catProducts.sort((a, b) => {
+        const posA = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+        const posB = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+        if (posA !== posB) return posA - posB;
+        return 0;
+      });
+    }
+  }
+
+  const result: StorefrontProduct[] = [];
+  const processedCats = new Set<string>();
+
+  for (const p of productsList) {
+    if (!processedCats.has(p.categorySlug)) {
+      processedCats.add(p.categorySlug);
+      const sortedCat = byCategory.get(p.categorySlug) || [];
+      result.push(...sortedCat);
+    }
+  }
+  return result;
+}
+
 /**
  * Public records are deliberately additive. A verified active record with the
  * same slug replaces its placeholder presentation, avoiding duplicate routes.
@@ -528,19 +587,21 @@ async function getManagedProductGalleries(
 export async function getStorefrontProducts(): Promise<StorefrontProduct[]> {
   const categories = await getStorefrontCategories();
   const managed = await getManagedProducts();
+  const categoryOrders = getAllCategoryProductOrders();
 
-  // Once Supabase is configured, it owns public availability. In particular,
-  // never fall back to a local fixture for an inactive or deleted live record.
-  // Fixtures remain useful only for an unconfigured local preview.
+  let storefrontList: StorefrontProduct[] = [];
+
   if (isSupabaseConfigured()) {
     const productIds = managed.map((p) => p.id).filter(Boolean);
     const galleryMap = await getManagedProductGalleries(productIds);
-    return managed.map((product) =>
+    storefrontList = managed.map((product) =>
       fromManaged(product, categories, galleryMap[product.id]),
     );
+  } else {
+    storefrontList = products.map(fromStatic);
   }
 
-  return products.map(fromStatic);
+  return applyCategoryOrdering(storefrontList, categoryOrders);
 }
 
 export async function getStorefrontProductBySlug(slug: string): Promise<StorefrontProduct | null> {

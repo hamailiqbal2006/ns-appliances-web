@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getAdminProducts, productImageUrl } from "@/lib/supabase-admin";
 import { getAdminCategories, resolveCategoryForProduct } from "@/lib/categories";
+import { getAllCategoryProductOrders } from "@/lib/category-order";
 import {
   resolveAvailabilityStatus,
   getAvailabilityPresentation,
@@ -19,6 +20,7 @@ export default async function ProductsAdminPage() {
     getAdminProducts(),
     getAdminCategories(accessToken),
   ]);
+  const categoryOrders = getAllCategoryProductOrders();
 
   const viewModels: ProductRowViewModel[] = rawProducts.map((product) => {
     const cat = resolveCategoryForProduct(
@@ -38,7 +40,9 @@ export default async function ProductsAdminPage() {
       name: product.name,
       slug: product.slug,
       imageUrl: productImageUrl(product.image_path),
+      categorySlug: product.category_slug,
       categoryName: cat.name,
+      subcategorySlug: product.subcategory_slug,
       subcategoryName:
         product.subcategory_slug && product.subcategory_slug !== cat.slug
           ? product.subcategory_slug
@@ -96,7 +100,7 @@ export default async function ProductsAdminPage() {
           </p>
         </div>
 
-        <ProductsTableClient products={viewModels} />
+        <ProductsTableClient products={viewModels} categories={categories} categoryOrders={categoryOrders} />
       </section>
     </>
   );

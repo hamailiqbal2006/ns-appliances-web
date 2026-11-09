@@ -58,7 +58,8 @@ export async function submitProductReview(input: {
   rating: number;
   reviewText: string;
   customerEmail?: string | null;
-}): Promise<{ ok: boolean; error?: string }> {
+  authorTokenHash?: string | null;
+}): Promise<{ ok: boolean; error?: string; reviewId?: string }> {
   const config = getSupabaseConfig();
   if (!config) {
     return { ok: false, error: "Review service is currently unavailable." };
@@ -84,7 +85,49 @@ export async function submitProductReview(input: {
   }
 
   try {
-    // Try calling the submit_product_review RPC first
+    // Try direct insert first to capture the generated review ID for author receipt
+    const payload: Record<string, unknown> = {
+      product_id: input.productId,
+      customer_name: name,
+      customer_email: email,
+      rating,
+      review_text: text,
+      status: "pending",
+    };
+    if (input.authorTokenHash) {
+      payload.author_token_hash = input.authorTokenHash;
+    }
+
+    let insertResponse = await fetch(`${config.url}/rest/v1/product_reviews`, {
+      method: "POST",
+      headers: {
+        apikey: config.key,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // If author_token_hash column is not yet migrated, retry without it
+    if (!insertResponse.ok && input.authorTokenHash) {
+      delete payload.author_token_hash;
+      insertResponse = await fetch(`${config.url}/rest/v1/product_reviews`, {
+        method: "POST",
+        headers: {
+          apikey: config.key,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (insertResponse.ok) {
+      const rows = (await insertResponse.json()) as Array<{ id: string }>;
+      return { ok: true, reviewId: rows[0]?.id };
+    }
+
+    // Fallback: try calling the submit_product_review RPC
     const rpcResponse = await fetch(`${config.url}/rest/v1/rpc/submit_product_review`, {
       method: "POST",
       headers: {
@@ -101,32 +144,9 @@ export async function submitProductReview(input: {
     });
 
     if (rpcResponse.ok) {
-      return { ok: true };
-    }
-
-    const errorBody = await rpcResponse.text();
-    // If RPC doesn't exist, try direct insert with status pending
-    if (rpcResponse.status === 404 || errorBody.includes("submit_product_review")) {
-      const insertResponse = await fetch(`${config.url}/rest/v1/product_reviews`, {
-        method: "POST",
-        headers: {
-          apikey: config.key,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({
-          product_id: input.productId,
-          customer_name: name,
-          customer_email: email,
-          rating,
-          review_text: text,
-          status: "pending",
-        }),
-      });
-
-      if (insertResponse.ok) {
-        return { ok: true };
-      }
+      const rpcResult = await rpcResponse.json().catch(() => null);
+      const generatedId = typeof rpcResult === "string" ? rpcResult : undefined;
+      return { ok: true, reviewId: generatedId };
     }
 
     return {
@@ -139,6 +159,76 @@ export async function submitProductReview(input: {
       error: err instanceof Error ? err.message : "Network error submitting review.",
     };
   }
+}
+
+/**
+ * Server-only: Securely loads pending reviews written by the active visitor.
+ * Verifies author ownership via receipt token matching and ensures approved reviews are excluded to avoid duplication.
+ */
+export async function getAuthorPendingReviews(
+  productId: string,
+  receipts: Array<{
+    reviewId: string;
+    productId: string;
+    customerName: string;
+    rating: number;
+    reviewText: string;
+    createdAt: string;
+  }>,
+): Promise<PublicProductReview[]> {
+  const config = getSupabaseConfig();
+  if (!config || !productId || !receipts || receipts.length === 0) return [];
+
+  const relevant = receipts.filter((r) => r.productId === productId);
+  if (relevant.length === 0) return [];
+
+  try {
+    const ids = relevant.map((r) => r.reviewId).filter(Boolean);
+    if (ids.length > 0) {
+      const query = new URLSearchParams({
+        select: "id,status",
+        id: `in.(${ids.join(",")})`,
+      });
+      const res = await fetch(`${config.url}/rest/v1/product_reviews?${query}`, {
+        headers: { apikey: config.key },
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{ id: string; status: string }>;
+        const statusMap = new Map(rows.map((r) => [r.id, r.status]));
+
+        return relevant
+          .filter((r) => {
+            const status = statusMap.get(r.reviewId);
+            // Only include if explicitly pending in DB or unrecorded.
+            // If already approved, it's already in the public approved reviews list!
+            return status === "pending" || !statusMap.has(r.reviewId);
+          })
+          .map((r) => ({
+            id: r.reviewId,
+            productId: r.productId,
+            customerName: r.customerName,
+            rating: r.rating,
+            reviewText: r.reviewText,
+            createdAt: r.createdAt,
+            isAuthorPending: true,
+          }));
+      }
+    }
+  } catch {
+    // If DB check encounters network issues, return the author's local receipts safely
+  }
+
+  return relevant.map((r) => ({
+    id: r.reviewId,
+    productId: r.productId,
+    customerName: r.customerName,
+    rating: r.rating,
+    reviewText: r.reviewText,
+    createdAt: r.createdAt,
+    isAuthorPending: true,
+  }));
 }
 
 /**

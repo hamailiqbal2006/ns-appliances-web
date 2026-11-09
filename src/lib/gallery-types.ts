@@ -18,6 +18,7 @@ export type PublicProductReview = {
   rating: number; // 1 to 5
   reviewText: string;
   createdAt: string;
+  isAuthorPending?: boolean;
 };
 
 export type AdminProductReview = PublicProductReview & {

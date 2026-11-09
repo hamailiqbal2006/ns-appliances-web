@@ -116,6 +116,7 @@ function specificationsFromText(value: string) {
 import {
   type ProductAvailability,
 } from "@/lib/product-availability";
+import { saveCategoryProductOrder } from "@/lib/category-order";
 
 function parseProduct(formData: FormData) {
   const name = text(formData.get("name"));
@@ -128,6 +129,8 @@ function parseProduct(formData: FormData) {
   const stockValue = text(formData.get("stock_quantity"));
   const rawAvailability = text(formData.get("availability_status"));
   const status = text(formData.get("status"));
+  const rawJuicerConfig = text(formData.get("juicer_configuration"));
+  const rawWashingCapacity = text(formData.get("washing_capacity"));
 
   if (!name || name.length > 160) throw new Error("Enter a product name of up to 160 characters.");
   if (!slug) throw new Error("Enter a valid URL slug using letters, numbers, and hyphens.");
@@ -148,6 +151,20 @@ function parseProduct(formData: FormData) {
     throw new Error("Price must be zero or greater.");
   }
 
+  let juicerConfiguration: string | null = null;
+  if (rawJuicerConfig && ["1-in-1", "2-in-1", "3-in-1", "4-in-1"].includes(rawJuicerConfig)) {
+    juicerConfiguration = rawJuicerConfig;
+  }
+
+  let washingCapacity: number | null = null;
+  if (rawWashingCapacity) {
+    const parsedCapacity = Number(rawWashingCapacity);
+    if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+      throw new Error("Washing capacity must be a positive number in kg.");
+    }
+    washingCapacity = parsedCapacity;
+  }
+
   // Determine availability status based on explicit selection or stock tracking rules
   let availability: ProductAvailability = "not_confirmed";
   if (
@@ -165,6 +182,8 @@ function parseProduct(formData: FormData) {
   const specifications = specificationsFromText(text(formData.get("specifications")));
   if (brand) specifications["Brand"] = brand;
   if (modelNumber) specifications["Model Number"] = modelNumber;
+  if (juicerConfiguration) specifications["Juicer Configuration"] = juicerConfiguration;
+  if (washingCapacity !== null) specifications["Washing Capacity"] = `${washingCapacity} kg`;
   specifications.availability_status = availability;
 
   if (availability === "out_of_stock") {
@@ -187,6 +206,8 @@ function parseProduct(formData: FormData) {
     subcategory_slug: subcategorySlug,
     brand: brand || null,
     model_number: modelNumber || null,
+    juicer_configuration: juicerConfiguration,
+    washing_capacity: washingCapacity,
     description: text(formData.get("description")) || null,
     specifications,
     price_pkr: price,
@@ -417,6 +438,31 @@ export async function deleteReviewAction(formData: FormData) {
   revalidatePath("/admin/reviews");
   revalidatePath("/products");
   revalidatePath("/products/[slug]", "page");
+}
+
+export async function saveCategoryProductOrderAction(
+  categorySlug: string,
+  orderedProductIds: string[],
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { accessToken } = await requireAdminForAction();
+    const result = await saveCategoryProductOrder(categorySlug, orderedProductIds, accessToken);
+    if (result.ok) {
+      updateTag("public-products");
+      updateTag("categories");
+      revalidatePath("/admin/products");
+      revalidatePath("/products");
+      revalidatePath("/category/[category]", "page");
+      revalidatePath("/category/[category]/[subcategory]", "page");
+      revalidatePath("/");
+    }
+    return result;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Failed to update category product order.",
+    };
+  }
 }
 
 export async function deleteProductAction(formData: FormData) {

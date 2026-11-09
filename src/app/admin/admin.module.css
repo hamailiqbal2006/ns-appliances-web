@@ -2693,8 +2693,22 @@
 
 .galleryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .galleryGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .galleryGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .galleryCard {
@@ -2823,10 +2837,35 @@
 
 .galleryCardActions {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.galleryPrimaryPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background-color: rgba(25, 29, 31, 0.035);
+  border: 1px dashed var(--admin-border);
+}
+
+.galleryPrimaryStatusText {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--admin-text-secondary);
+}
+
+.gallerySecondaryActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  width: 100%;
 }
 
 .galleryActionButton {
@@ -2834,8 +2873,8 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 5px 9px;
-  border-radius: 5px;
+  padding: 6px 8px;
+  border-radius: 6px;
   font-size: 11.5px;
   font-weight: 500;
   border: 1px solid var(--admin-border);
@@ -2843,6 +2882,7 @@
   color: var(--admin-text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .galleryActionButton:hover:not(:disabled) {
@@ -2856,11 +2896,12 @@
 }
 
 .galleryPrimaryButton {
-  flex: 1;
+  width: 100%;
   font-weight: 600;
   border-color: var(--admin-accent-border);
   color: var(--admin-accent-text);
   background-color: var(--admin-accent-muted);
+  padding: 6px 10px;
 }
 
 .galleryPrimaryButton:hover:not(:disabled) {
@@ -2870,10 +2911,10 @@
 }
 
 .galleryRemoveButton {
-  margin-left: auto;
   color: var(--admin-danger);
   border-color: var(--admin-danger-border);
   background-color: var(--admin-danger-bg);
+  font-weight: 500;
 }
 
 .galleryRemoveButton:hover:not(:disabled) {
@@ -4609,6 +4650,137 @@
   border: 2px solid #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Category Suggestion Banner & Category-Specific Attributes
+   -------------------------------------------------------------------------- */
+.categorySuggestionBanner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--admin-surface-accent, #f3f5f3);
+  border: 1px solid var(--admin-border-subtle, #d8deda);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-text-primary, #1e2926);
+}
+
+.categorySuggestionText {
+  flex: 1;
+  min-width: 220px;
+}
+
+.categorySuggestionBtn {
+  background: var(--admin-primary, #176044);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.categorySuggestionBtn:hover {
+  opacity: 0.9;
+}
+
+.categorySuggestionDismiss {
+  background: transparent;
+  color: var(--admin-text-secondary, #63736f);
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 6px;
+}
+
+.categorySuggestionDismiss:hover {
+  color: var(--admin-text-primary, #1e2926);
+}
+
+.categoryAttributesFieldset {
+  border: 1px solid var(--admin-border, #d8deda);
+  border-radius: 8px;
+  padding: 16px 20px;
+  background: var(--admin-surface, #ffffff);
+}
+
+.filterSelect {
+  border: 1px solid var(--admin-border, #ccd5d1);
+  border-radius: 7px;
+  background-color: var(--admin-surface, #ffffff);
+  color: var(--admin-text-primary, #1e2926);
+  font: inherit;
+  font-size: 13.5px;
+  padding: 8px 12px;
+  min-height: 40px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(23, 96, 68, 0.12);
+}
+
+.reorderNoticeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: var(--admin-surface-accent, #f4f6f4);
+  border: 1px solid var(--admin-border-subtle, #d8deda);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.reorderButtons {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.orderMoveBtn {
+  background: var(--admin-surface, #ffffff);
+  border: 1px solid var(--admin-border, #ccd5d1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--admin-text-primary, #1e2926);
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.orderMoveBtn:hover:not(:disabled) {
+  background: var(--admin-surface-hover, #eef2ee);
+  border-color: var(--admin-primary);
+}
+
+.orderMoveBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.orderRankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--admin-surface-accent, #eef2ee);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--admin-text-secondary, #4a5c56);
 }
 
 

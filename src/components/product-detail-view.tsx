@@ -13,6 +13,7 @@ import styles from "./product-detail.module.css";
 interface ProductDetailViewProps {
   product: StorefrontProduct;
   reviews: PublicProductReview[];
+  authorPendingReviews?: PublicProductReview[];
   whatsAppUrl: string;
   whatsappNumber?: string | null;
   phoneNumber?: string | null;
@@ -45,39 +46,72 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
 export function ProductDetailView({
   product,
   reviews,
+  authorPendingReviews = [],
   whatsAppUrl,
 }: ProductDetailViewProps) {
   const availability = product.availabilityStatus || "not_confirmed";
 
+  // Task 6: Compact status row with small dot and explicit copy
   const { availabilityLabel, availabilitySubtext } = useMemo(() => {
     switch (availability) {
       case "available":
         return {
-          availabilityLabel: "Available in Showroom",
-          availabilitySubtext: "Verified stock ready for viewing & purchase",
+          availabilityLabel: "In Stock",
+          availabilitySubtext: "Available at our showroom.",
         };
       case "out_of_stock":
         return {
-          availabilityLabel: "Currently Unavailable",
-          availabilitySubtext: "Contact showroom for restock schedule",
+          availabilityLabel: "Out of Stock",
+          availabilitySubtext: "Currently unavailable at showroom.",
         };
       case "not_confirmed":
       default:
         return {
-          availabilityLabel: "Showroom Availability",
-          availabilitySubtext: "Contact our showroom to confirm stock.",
+          availabilityLabel: "Check Availability",
+          availabilitySubtext: "Contact us to confirm current stock.",
         };
     }
   }, [availability]);
 
-  // Clean technical specifications table: exclude internal database keys
-  const specsEntries = Object.entries(product.specifications || {}).filter(
-    ([key, value]) =>
-      Boolean(value) &&
-      !/^(brand|model|model[\s_-]?number|availability|availability[\s_-]?status|is_primary|sort_order|storage_path|explicit_zero_stock|out_of_stock|id|created_at|updated_at)$/i.test(
-        key.trim(),
-      ),
-  );
+  // Task 7: Full approved name NS Home Appliances for NS-branded products
+  const displayBrand = useMemo(() => {
+    const b = product.brand?.trim();
+    if (!b || /^ns(\s*home|\s*appliances|\s*home\s*appliances)?$/i.test(b)) {
+      return "NS Home Appliances";
+    }
+    return b;
+  }, [product.brand]);
+
+  // Task 7: Subcategory validation (hide if duplicate, undefined, null or empty)
+  const hasDistinctSubcategory = useMemo(() => {
+    const sub = product.subcategory?.trim();
+    if (!sub) return false;
+    const lower = sub.toLowerCase();
+    if (lower === "undefined" || lower === "null" || lower === product.category.toLowerCase()) {
+      return false;
+    }
+    return true;
+  }, [product.subcategory, product.category]);
+
+  // Clean technical specifications table: exclude internal database keys and ensure juicer/washer attributes display
+  const specsEntries = useMemo(() => {
+    const raw: Record<string, string> = { ...(product.specifications || {}) };
+
+    if (product.juicerConfiguration && !raw["Juicer Configuration"]) {
+      raw["Juicer Configuration"] = product.juicerConfiguration;
+    }
+    if (product.washingCapacity && !raw["Washing Capacity"]) {
+      raw["Washing Capacity"] = product.washingCapacity;
+    }
+
+    return Object.entries(raw).filter(
+      ([key, value]) =>
+        Boolean(value) &&
+        !/^(brand|model|model[\s_-]?number|availability|availability[\s_-]?status|is_primary|sort_order|storage_path|explicit_zero_stock|out_of_stock|id|created_at|updated_at|washing_capacity_kg)$/i.test(
+          key.trim(),
+        ),
+    );
+  }, [product.specifications, product.juicerConfiguration, product.washingCapacity]);
 
   return (
     <div className={styles.detailPage}>
@@ -121,26 +155,34 @@ export function ProductDetailView({
 
           {/* Right Column: Clean Essential Product Information */}
           <div className={styles.infoColumn}>
-            {/* Header Block: Category kicker, Title, Brand & Model */}
+            {/* Header Block: Category & Subcategory, Title, Brand & Model */}
             <div className={styles.productHeader}>
-              {/* Hierarchy Level 1: Category Capsule Kicker */}
+              {/* Hierarchy Level 1: Category & Subcategory Capsule Kicker */}
               <div className={styles.categoryRow}>
+                <span className={styles.categoryLabel}>Category:</span>
                 <Link
                   href={`/products?category=${product.categorySlug}`}
                   className={styles.categoryKicker}
                 >
                   {product.category}
                 </Link>
+                {hasDistinctSubcategory && (
+                  <>
+                    <span className={styles.dotSeparator} aria-hidden="true">
+                      ·
+                    </span>
+                    <span className={styles.subcategoryLabel}>Subcategory:</span>
+                    <span className={styles.subcategoryKicker}>{product.subcategory}</span>
+                  </>
+                )}
               </div>
 
               {/* Hierarchy Level 2: Product Name */}
               <h1 className={styles.productTitle}>{product.name}</h1>
 
-              {/* Hierarchy Level 3: Brand & Model secondary row */}
+              {/* Hierarchy Level 3: Brand & Model secondary row with Key Attributes */}
               <div className={styles.brandModelRow}>
-                <span className={styles.brandBadge}>
-                  {product.brand || "NS"}
-                </span>
+                <span className={styles.brandBadge}>{displayBrand}</span>
                 {product.modelNumber ? (
                   <>
                     <span className={styles.dotSeparator} aria-hidden="true">
@@ -148,6 +190,26 @@ export function ProductDetailView({
                     </span>
                     <span className={styles.modelNumber}>
                       Model: {product.modelNumber}
+                    </span>
+                  </>
+                ) : null}
+                {product.juicerConfiguration ? (
+                  <>
+                    <span className={styles.dotSeparator} aria-hidden="true">
+                      ·
+                    </span>
+                    <span className={styles.attributeBadge}>
+                      Configuration: {product.juicerConfiguration}
+                    </span>
+                  </>
+                ) : null}
+                {product.washingCapacity ? (
+                  <>
+                    <span className={styles.dotSeparator} aria-hidden="true">
+                      ·
+                    </span>
+                    <span className={styles.attributeBadge}>
+                      Capacity: {product.washingCapacity}
                     </span>
                   </>
                 ) : null}
@@ -245,12 +307,13 @@ export function ProductDetailView({
             </section>
           )}
 
-          {/* Section 3: Redesigned Customer Reviews (Compact & Polished) */}
+          {/* Section 3: Customer Reviews */}
           <ProductReviews
             productId={product.id}
             productSlug={product.slug}
             productName={product.name}
             initialReviews={reviews}
+            authorPendingReviews={authorPendingReviews}
           />
         </div>
       </main>

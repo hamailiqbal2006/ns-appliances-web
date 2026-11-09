@@ -1,4 +1,4 @@
-﻿/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { startTransition, useActionState, useState, useMemo, useRef } from "react";
@@ -15,10 +15,107 @@ import styles from "../../admin.module.css";
 
 function specificationsToText(specifications: Record<string, string>) {
   if (!specifications) return "";
+  const ignoredKeys = new Set([
+    "Brand",
+    "brand",
+    "Model Number",
+    "model_number",
+    "Model",
+    "model",
+    "Juicer Configuration",
+    "Washing Capacity",
+    "washing_capacity_kg",
+    "availability_status",
+    "out_of_stock",
+    "explicit_zero_stock",
+  ]);
   return Object.entries(specifications)
-    .filter(([key]) => key !== "Brand" && key !== "Model Number" && key !== "Model")
+    .filter(([key]) => !ignoredKeys.has(key))
     .map(([key, value]) => `${key}: ${value}`)
     .join("\n");
+}
+
+function detectCategoryFromKeywords(name: string, categories: CategoryRecord[]): {
+  categorySlug: string;
+  subcategorySlug?: string;
+  confidenceName?: string;
+} | null {
+  const q = name.toLowerCase().trim();
+  if (!q) return null;
+
+  const patterns: Array<{
+    keywords: string[];
+    slugMatch: (cat: CategoryRecord) => boolean;
+  }> = [
+    {
+      keywords: ["washing machine", "washer", "twin tub", "front load", "top load", "spin dryer washer"],
+      slugMatch: (c) => c.slug === "washing-machines" || c.name.toLowerCase().includes("washing"),
+    },
+    {
+      keywords: ["juicer", "blender", "grinder", "chopper", "food processor"],
+      slugMatch: (c) => c.slug === "juicer-blenders" || c.name.toLowerCase().includes("juicer") || c.name.toLowerCase().includes("blender"),
+    },
+    {
+      keywords: ["room cooler", "air cooler", "desert cooler", "water cooler fan"],
+      slugMatch: (c) => c.slug === "room-coolers" || c.name.toLowerCase().includes("cooler"),
+    },
+    {
+      keywords: ["geyser", "water heater", "instant geyser", "electric geyser", "gas geyser"],
+      slugMatch: (c) => c.slug === "geysers" || c.name.toLowerCase().includes("geyser"),
+    },
+    {
+      keywords: ["pedestal fan", "stand fan", "bracket fan", "mist fan"],
+      slugMatch: (c) => c.slug === "pedestal-fans" || c.name.toLowerCase().includes("pedestal"),
+    },
+    {
+      keywords: ["ceiling fan", "deluxe fan"],
+      slugMatch: (c) => c.slug === "ceiling-fans" || c.name.toLowerCase().includes("ceiling"),
+    },
+    {
+      keywords: ["dryer", "spinner", "spin dryer", "clothes dryer"],
+      slugMatch: (c) => c.slug === "dryers" || c.name.toLowerCase().includes("dryer"),
+    },
+    {
+      keywords: ["iron", "dry iron", "steam iron", "press"],
+      slugMatch: (c) => c.slug === "iron-machines" || c.name.toLowerCase().includes("iron"),
+    },
+    {
+      keywords: ["almirah", "safe", "cupboard", "wardrobe", "metal safe", "locker"],
+      slugMatch: (c) => c.slug === "metal-safe-almirahs" || c.name.toLowerCase().includes("almirah") || c.name.toLowerCase().includes("safe"),
+    },
+  ];
+
+  for (const p of patterns) {
+    if (p.keywords.some((k) => q.includes(k))) {
+      const match = categories.find(p.slugMatch);
+      if (match) {
+        let subMatch: string | undefined = undefined;
+        if (match.subcategories) {
+          for (const sub of match.subcategories) {
+            if (q.includes(sub.name.toLowerCase()) || q.includes(sub.slug.toLowerCase())) {
+              subMatch = sub.slug;
+              break;
+            }
+          }
+        }
+        return {
+          categorySlug: match.slug,
+          subcategorySlug: subMatch,
+          confidenceName: match.name,
+        };
+      }
+    }
+  }
+
+  for (const c of categories) {
+    const cName = c.name.toLowerCase();
+    const singular = cName.replace(/s$/, "");
+    if (q.includes(cName) || (singular.length > 3 && q.includes(singular))) {
+      return { categorySlug: c.slug, confidenceName: c.name };
+    }
+  }
+
+  return null;
 }
 
 export type AdminGalleryItem = {
@@ -59,6 +156,31 @@ export function ProductForm({
   const [selectedCategorySlug, setSelectedCategorySlug] = useState(initialCategorySlug);
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState(product?.subcategory_slug ?? "");
   const [isActive, setIsActive] = useState(product?.status === "active");
+
+  const [productName, setProductName] = useState(product?.name ?? "");
+  const [userManuallySelectedCategory, setUserManuallySelectedCategory] = useState<boolean>(
+    Boolean(product?.id),
+  );
+  const [categorySuggestion, setCategorySuggestion] = useState<{
+    categorySlug: string;
+    subcategorySlug?: string;
+    categoryName: string;
+  } | null>(null);
+
+  const initialJuicerConfig =
+    (product as { juicer_configuration?: string | null })?.juicer_configuration ||
+    product?.specifications?.["Juicer Configuration"] ||
+    "";
+  const [juicerConfiguration, setJuicerConfiguration] = useState(initialJuicerConfig);
+
+  const initialWashingCapacity =
+    (product as { washing_capacity?: number | null })?.washing_capacity !== undefined &&
+    (product as { washing_capacity?: number | null })?.washing_capacity !== null
+      ? String((product as { washing_capacity?: number | null })?.washing_capacity)
+      : product?.specifications?.["Washing Capacity"]?.replace(/[^0-9.]/g, "") ||
+        product?.specifications?.["washing_capacity_kg"] ||
+        "";
+  const [washingCapacity, setWashingCapacity] = useState(initialWashingCapacity);
 
   const [galleryAutoplay, setGalleryAutoplay] = useState<boolean>(
     Boolean(product?.gallery_autoplay),
@@ -137,6 +259,43 @@ export function ProductForm({
   // Active category's subcategories
   const currentCategory = categories.find((c) => c.slug === selectedCategorySlug);
   const availableSubcategories = currentCategory?.subcategories ?? [];
+
+  const isJuicerCategory =
+    selectedCategorySlug === "juicer-blenders" ||
+    Boolean(currentCategory?.name.toLowerCase().includes("juicer")) ||
+    Boolean(currentCategory?.name.toLowerCase().includes("blender"));
+
+  const isWashingCategory =
+    selectedCategorySlug === "washing-machines" ||
+    selectedCategorySlug === "dryers" ||
+    Boolean(currentCategory?.name.toLowerCase().includes("washing")) ||
+    Boolean(currentCategory?.name.toLowerCase().includes("dryer"));
+
+  const handleNameChange = (val: string) => {
+    setProductName(val);
+    const detected = detectCategoryFromKeywords(val, categories);
+    if (detected) {
+      if (!userManuallySelectedCategory) {
+        setSelectedCategorySlug(detected.categorySlug);
+        if (detected.subcategorySlug) {
+          setSelectedSubcategorySlug(detected.subcategorySlug);
+        }
+        setCategorySuggestion(null);
+      } else {
+        if (detected.categorySlug !== selectedCategorySlug) {
+          setCategorySuggestion({
+            categorySlug: detected.categorySlug,
+            subcategorySlug: detected.subcategorySlug,
+            categoryName: detected.confidenceName || detected.categorySlug,
+          });
+        } else {
+          setCategorySuggestion(null);
+        }
+      }
+    } else {
+      setCategorySuggestion(null);
+    }
+  };
 
   // Drag and drop reordering
   const handleReorder = (fromIndex: number, toIndex: number) => {
@@ -424,7 +583,8 @@ export function ProductForm({
               name="name"
               required
               maxLength={160}
-              defaultValue={product?.name ?? ""}
+              value={productName}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. Super Asia Room Cooler Deluxe 5000"
             />
           </label>
@@ -450,8 +610,10 @@ export function ProductForm({
               required
               value={selectedCategorySlug}
               onChange={(e) => {
+                setUserManuallySelectedCategory(true);
                 setSelectedCategorySlug(e.target.value);
                 setSelectedSubcategorySlug("");
+                setCategorySuggestion(null);
               }}
             >
               {categories.map((category) => (
@@ -478,8 +640,85 @@ export function ProductForm({
               ))}
             </select>
           </label>
+
+          {categorySuggestion && (
+            <div className={styles.categorySuggestionBanner}>
+              <span className={styles.categorySuggestionText}>
+                Suggested category based on title: <strong>{categorySuggestion.categoryName}</strong>
+              </span>
+              <button
+                type="button"
+                className={styles.categorySuggestionBtn}
+                onClick={() => {
+                  setSelectedCategorySlug(categorySuggestion.categorySlug);
+                  if (categorySuggestion.subcategorySlug) {
+                    setSelectedSubcategorySlug(categorySuggestion.subcategorySlug);
+                  }
+                  setCategorySuggestion(null);
+                }}
+              >
+                Switch to {categorySuggestion.categoryName}
+              </button>
+              <button
+                type="button"
+                className={styles.categorySuggestionDismiss}
+                onClick={() => setCategorySuggestion(null)}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
       </fieldset>
+
+      {/* Category Technical Specifications (Juicer Configuration & Washing Capacity) */}
+      {(isJuicerCategory || isWashingCategory) && (
+        <fieldset className={styles.categoryAttributesFieldset}>
+          <legend>Category Technical Specifications</legend>
+          <div className={styles.fieldGrid}>
+            {isJuicerCategory && (
+              <label>
+                Juicer Configuration
+                <select
+                  name="juicer_configuration"
+                  value={juicerConfiguration}
+                  onChange={(e) => setJuicerConfiguration(e.target.value)}
+                >
+                  <option value="">Select configuration...</option>
+                  <option value="1-in-1">1-in-1 (Single Function / Juicer)</option>
+                  <option value="2-in-1">2-in-1 (Juicer + Blender)</option>
+                  <option value="3-in-1">3-in-1 (Juicer + Blender + Dry Mill)</option>
+                  <option value="4-in-1">4-in-1 (Juicer + Blender + Chopper + Mill)</option>
+                </select>
+                <span className={styles.fieldHelp}>
+                  Highlighted in Key Specifications for customer comparison.
+                </span>
+              </label>
+            )}
+
+            {isWashingCategory && (
+              <label>
+                Washing Capacity (kg)
+                <input
+                  name="washing_capacity"
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  max="50"
+                  value={washingCapacity}
+                  onChange={(e) => setWashingCapacity(e.target.value)}
+                  placeholder="e.g. 8, 9.5, 10, 12"
+                />
+                <span className={styles.fieldHelp}>
+                  Tub wash load rating in kilograms (e.g. 10 kg).
+                </span>
+              </label>
+            )}
+          </div>
+        </fieldset>
+      )}
+      {!isJuicerCategory && <input type="hidden" name="juicer_configuration" value="" />}
+      {!isWashingCategory && <input type="hidden" name="washing_capacity" value="" />}
 
       {/* 2. Brand, Model & Descriptions */}
       <fieldset>
@@ -723,7 +962,7 @@ export function ProductForm({
                       </label>
 
                       <div className={styles.galleryCardActions}>
-                        {!item.isPrimary && !isVideo && (
+                        {!item.isPrimary && !isVideo ? (
                           <button
                             type="button"
                             className={`${styles.galleryActionButton} ${styles.galleryPrimaryButton}`}
@@ -731,39 +970,47 @@ export function ProductForm({
                           >
                             Set as Primary
                           </button>
+                        ) : (
+                          <div className={styles.galleryPrimaryPlaceholder}>
+                            <span className={styles.galleryPrimaryStatusText}>
+                              {isVideo ? "Demonstration Video" : "Primary Cover Photograph"}
+                            </span>
+                          </div>
                         )}
 
-                        <button
-                          type="button"
-                          className={styles.galleryActionButton}
-                          onClick={() => handleMoveImage(idx, "up")}
-                          disabled={idx === 0}
-                          title="Move earlier in sequence"
-                          aria-label={`Move image ${idx + 1} earlier`}
-                        >
-                          &larr; Earlier
-                        </button>
+                        <div className={styles.gallerySecondaryActions}>
+                          <button
+                            type="button"
+                            className={styles.galleryActionButton}
+                            onClick={() => handleMoveImage(idx, "up")}
+                            disabled={idx === 0}
+                            title="Move earlier in sequence"
+                            aria-label={`Move image ${idx + 1} earlier`}
+                          >
+                            &larr; Earlier
+                          </button>
 
-                        <button
-                          type="button"
-                          className={styles.galleryActionButton}
-                          onClick={() => handleMoveImage(idx, "down")}
-                          disabled={idx === gallery.length - 1}
-                          title="Move later in sequence"
-                          aria-label={`Move image ${idx + 1} later`}
-                        >
-                          Later &rarr;
-                        </button>
+                          <button
+                            type="button"
+                            className={styles.galleryActionButton}
+                            onClick={() => handleMoveImage(idx, "down")}
+                            disabled={idx === gallery.length - 1}
+                            title="Move later in sequence"
+                            aria-label={`Move image ${idx + 1} later`}
+                          >
+                            Later &rarr;
+                          </button>
 
-                        <button
-                          type="button"
-                          className={`${styles.galleryActionButton} ${styles.galleryRemoveButton}`}
-                          onClick={() => handleRemoveImage(idx)}
-                          title="Remove from gallery"
-                          aria-label={`Remove image ${idx + 1}`}
-                        >
-                          Remove
-                        </button>
+                          <button
+                            type="button"
+                            className={`${styles.galleryActionButton} ${styles.galleryRemoveButton}`}
+                            onClick={() => handleRemoveImage(idx)}
+                            title="Remove from gallery"
+                            aria-label={`Remove image ${idx + 1}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

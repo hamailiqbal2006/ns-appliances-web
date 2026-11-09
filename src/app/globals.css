@@ -140,7 +140,8 @@
     inset: 0;
   }
   .hero-banner-artwork {
-    position: relative;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     max-width: 100%;

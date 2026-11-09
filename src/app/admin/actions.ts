@@ -221,7 +221,12 @@ function parseProduct(formData: FormData) {
 }
 
 import { saveProductImages } from "@/lib/supabase-admin";
-import { updateAdminReviewStatus, deleteAdminReview } from "@/lib/reviews";
+import {
+  updateAdminReviewStatus,
+  deleteAdminReview,
+  bulkUpdateAdminReviewStatus,
+  bulkDeleteAdminReviews,
+} from "@/lib/reviews";
 
 export async function saveProductAction(_: FormState, formData: FormData): Promise<FormState> {
   let savedProductId: string | null = null;
@@ -439,6 +444,49 @@ export async function deleteReviewAction(formData: FormData) {
   revalidatePath("/admin/reviews");
   revalidatePath("/products");
   revalidatePath("/products/[slug]", "page");
+}
+
+export async function bulkModerateReviewsAction(formData: FormData) {
+  const { accessToken } = await requireAdminForAction();
+  const rawIds = formData.get("ids");
+  let ids: string[] = [];
+  if (typeof rawIds === "string") {
+    try {
+      ids = JSON.parse(rawIds);
+    } catch {
+      ids = rawIds.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  const status = text(formData.get("status")) as "approved" | "rejected";
+  if (!ids || ids.length === 0 || !["approved", "rejected"].includes(status)) {
+    throw new Error("Invalid bulk review moderation request.");
+  }
+  await bulkUpdateAdminReviewStatus(ids, status, accessToken);
+  revalidatePath("/admin/reviews");
+  revalidatePath("/products");
+  revalidatePath("/products/[slug]", "page");
+  revalidatePath("/");
+}
+
+export async function bulkDeleteReviewsAction(formData: FormData) {
+  const { accessToken } = await requireAdminForAction();
+  const rawIds = formData.get("ids");
+  let ids: string[] = [];
+  if (typeof rawIds === "string") {
+    try {
+      ids = JSON.parse(rawIds);
+    } catch {
+      ids = rawIds.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  if (!ids || ids.length === 0) {
+    throw new Error("No reviews selected for deletion.");
+  }
+  await bulkDeleteAdminReviews(ids, accessToken);
+  revalidatePath("/admin/reviews");
+  revalidatePath("/products");
+  revalidatePath("/products/[slug]", "page");
+  revalidatePath("/");
 }
 
 export async function saveCategoryProductOrderAction(

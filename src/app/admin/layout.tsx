@@ -7,10 +7,10 @@ export const metadata: Metadata = {
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* Zero-flash anti-flicker theme initialization script */}
+      {/* Zero-flash anti-flicker theme initialization script: defaults to light mode for new visitors */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem('ns_admin_theme_v1');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.setAttribute('data-theme','dark');document.documentElement.classList.add('admin-dark');}else{document.documentElement.setAttribute('data-theme','light');document.documentElement.classList.remove('admin-dark');}}catch(e){}})()`,
+          __html: `(function(){try{var t=localStorage.getItem('ns_admin_theme_v1');var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.setAttribute('data-theme','dark');document.documentElement.classList.add('admin-dark');}else{document.documentElement.setAttribute('data-theme','light');document.documentElement.classList.remove('admin-dark');}}catch(e){}})()`,
         }}
       />
       {children}

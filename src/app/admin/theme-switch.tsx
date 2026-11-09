@@ -14,11 +14,11 @@ function getThemeSnapshot(): AdminTheme {
   } catch {
     // fallback
   }
-  return "system";
+  return "light";
 }
 
 function getServerThemeSnapshot(): AdminTheme {
-  return "system";
+  return "light";
 }
 
 function subscribeToTheme(callback: () => void) {

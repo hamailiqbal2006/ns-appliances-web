@@ -486,11 +486,11 @@ export function HomeExperience({
                         <>
                           {/* The blurred copy fills any viewport/artwork ratio gap without cropping the artwork itself. */}
                           <picture className="hero-banner-backdrop">
-                            {banner.imageUrl ? (
-                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
-                            ) : null}
                             {banner.mobileImageUrl ? (
                               <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
+                            ) : null}
+                            {banner.imageUrl ? (
+                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
                             ) : null}
                             <img
                               src={banner.imageUrl || banner.mobileImageUrl || ""}
@@ -501,11 +501,11 @@ export function HomeExperience({
                             />
                           </picture>
                           <picture className="hero-banner-picture">
-                            {banner.imageUrl ? (
-                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
-                            ) : null}
                             {banner.mobileImageUrl ? (
                               <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
+                            ) : null}
+                            {banner.imageUrl ? (
+                              <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
                             ) : null}
                             <img
                               className="hero-banner-artwork"

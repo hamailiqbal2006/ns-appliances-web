@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 import type { PublicProductReview, AdminProductReview, ReviewStatus } from "@/lib/gallery-types";
+export type { AdminProductReview, PublicProductReview, ReviewStatus };
 
 /**
  * Fetches approved reviews for a public product.
@@ -352,5 +353,63 @@ export async function deleteAdminReview(id: string, accessToken: string): Promis
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || "Could not delete review.");
+  }
+}
+
+/**
+ * Admin: Bulk update review status (approve or reject).
+ */
+export async function bulkUpdateAdminReviewStatus(
+  ids: string[],
+  status: "approved" | "rejected",
+  accessToken: string,
+): Promise<void> {
+  if (!ids || ids.length === 0) return;
+  const config = getSupabaseConfig();
+  if (!config) throw new Error("Supabase is not configured.");
+
+  if (status === "rejected") {
+    await bulkDeleteAdminReviews(ids, accessToken);
+    return;
+  }
+
+  const formattedIds = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+  const response = await fetch(`${config.url}/rest/v1/product_reviews?id=in.(${formattedIds})`, {
+    method: "PATCH",
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({ status: "approved", approved: true, updated_at: new Date().toISOString() }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Could not bulk update review status.");
+  }
+}
+
+/**
+ * Admin: Bulk delete reviews permanently.
+ */
+export async function bulkDeleteAdminReviews(ids: string[], accessToken: string): Promise<void> {
+  if (!ids || ids.length === 0) return;
+  const config = getSupabaseConfig();
+  if (!config) throw new Error("Supabase is not configured.");
+
+  const formattedIds = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+  const response = await fetch(`${config.url}/rest/v1/product_reviews?id=in.(${formattedIds})`, {
+    method: "DELETE",
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Could not bulk delete reviews.");
   }
 }

@@ -311,166 +311,315 @@ export function CategoryShowcaseForm({
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: "48px" }} aria-label="Reorder">#</th>
-                <th style={{ width: "72px" }}>Cutout</th>
-                <th>Category</th>
-                <th>Homepage Heading</th>
-                <th>Showcase Backgrounds</th>
-                <th style={{ width: "160px", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const effectiveImage = item.pendingPreviewUrl || item.imageUrl;
-                const leftBg = resolveCssBackground(item.leftBgType, item.leftBgColor, item.leftGradientEnd, item.leftGradientAngle);
-                const rightBg = resolveCssBackground(item.rightBgType, item.rightBgColor, item.rightGradientEnd, item.rightGradientAngle);
-                const isDragging = draggedIndex === index;
-                const isDragOver = dragOverIndex === index;
+        <div className={styles.showcaseDesktopTable}>
+          <div className={styles.tableWrap}>
+            <table style={{ minWidth: "100%", tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "52px" }} />
+                <col style={{ width: "72px" }} />
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "26%" }} />
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "160px" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ width: "52px", textAlign: "center" }} aria-label="Reorder">#</th>
+                  <th style={{ width: "72px", textAlign: "center" }}>Cutout</th>
+                  <th>Category</th>
+                  <th>Homepage Heading</th>
+                  <th>Showcase Backgrounds</th>
+                  <th style={{ width: "160px", textAlign: "right", paddingRight: "16px" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => {
+                  const effectiveImage = item.pendingPreviewUrl || item.imageUrl;
+                  const leftBg = resolveCssBackground(item.leftBgType, item.leftBgColor, item.leftGradientEnd, item.leftGradientAngle);
+                  const rightBg = resolveCssBackground(item.rightBgType, item.rightBgColor, item.rightGradientEnd, item.rightGradientAngle);
+                  const isDragging = draggedIndex === index;
+                  const isDragOver = dragOverIndex === index;
 
-                return (
-                  <tr
-                    key={item.categorySlug}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDrop={(e) => handleDrop(e, index)}
-                    onDragEnd={handleDragEnd}
-                    className={`${isDragging ? styles.trDragging : ""} ${isDragOver ? styles.trDragOver : ""}`}
-                    style={{ cursor: "grab" }}
-                  >
-                    <td>
-                      <span className={styles.dragHandle} title="Drag to reorder">
-                        ⋮⋮ {index + 1}
-                      </span>
-                    </td>
-                    <td>
-                      <div
-                        style={{
-                          width: "48px",
-                          height: "48px",
-                          borderRadius: "8px",
-                          backgroundColor: "#EDEBE7",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          overflow: "hidden",
-                          border: "1px solid var(--admin-border)",
-                        }}
-                      >
-                        {effectiveImage ? (
-                          <img
-                            src={effectiveImage}
-                            alt=""
+                  return (
+                    <tr
+                      key={item.categorySlug}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`${isDragging ? styles.trDragging : ""} ${isDragOver ? styles.trDragOver : ""}`}
+                      style={{ cursor: "grab" }}
+                    >
+                      <td style={{ textAlign: "center" }}>
+                        <span className={styles.dragHandle} title="Drag to reorder">
+                          ⋮⋮ {index + 1}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <div
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "8px",
+                            backgroundColor: "#EDEBE7",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
+                            border: "1px solid var(--admin-border)",
+                          }}
+                        >
+                          {effectiveImage ? (
+                            <img
+                              src={effectiveImage}
+                              alt=""
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>None</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
+                          {item.categoryName}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+                          slug: {item.categorySlug}
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--admin-surface-muted)",
+                            border: "1px solid var(--admin-border)",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            color: "var(--admin-text-primary)",
+                          }}
+                        >
+                          {item.displayHeading || item.categoryName}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div
+                            title={`Left: ${item.leftBgType} ${item.leftBgColor}`}
                             style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "contain",
+                              width: "36px",
+                              height: "22px",
+                              borderRadius: "4px 0 0 4px",
+                              background: leftBg,
+                              border: "1px solid var(--admin-border)",
+                              borderRight: "none",
                             }}
                           />
-                        ) : (
-                          <span style={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>None</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: "var(--admin-text)" }}>
-                        {item.categoryName}
-                      </div>
-                      <div style={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
-                        slug: {item.categorySlug}
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "3px 10px",
-                          borderRadius: "6px",
-                          backgroundColor: "var(--admin-surface-muted)",
-                          border: "1px solid var(--admin-border)",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: "var(--admin-text)",
-                        }}
-                      >
-                        {item.displayHeading || item.categoryName}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div
-                          title={`Left: ${item.leftBgType} ${item.leftBgColor}`}
-                          style={{
-                            width: "36px",
-                            height: "22px",
-                            borderRadius: "4px 0 0 4px",
-                            background: leftBg,
-                            border: "1px solid var(--admin-border)",
-                            borderRight: "none",
-                          }}
-                        />
-                        <div
-                          title={`Right: ${item.rightBgType} ${item.rightBgColor}`}
-                          style={{
-                            width: "36px",
-                            height: "22px",
-                            borderRadius: "0 4px 4px 0",
-                            background: rightBg,
-                            border: "1px solid var(--admin-border)",
-                            marginLeft: "-8px",
-                          }}
-                        />
-                        <span style={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>
-                          {item.leftBgType === "gradient" || item.rightBgType === "gradient" ? "Gradient" : "Solid"}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: "6px" }}>
-                        <button
-                          type="button"
-                          onClick={() => moveItem(index, -1)}
-                          disabled={index === 0}
-                          className={styles.secondaryButton}
-                          style={{ padding: "4px 8px", fontSize: "12px" }}
-                          aria-label={`Move ${item.categoryName} earlier`}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveItem(index, 1)}
-                          disabled={index === items.length - 1}
-                          className={styles.secondaryButton}
-                          style={{ padding: "4px 8px", fontSize: "12px" }}
-                          aria-label={`Move ${item.categoryName} later`}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveSlug(item.categorySlug);
-                            setIsDrawerOpen(true);
-                            setFileError(null);
-                          }}
-                          className={styles.secondaryButton}
-                          style={{ padding: "4px 12px", fontSize: "12px" }}
-                          id={`edit-showcase-${item.categorySlug}`}
-                        >
-                          Customize
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          <div
+                            title={`Right: ${item.rightBgType} ${item.rightBgColor}`}
+                            style={{
+                              width: "36px",
+                              height: "22px",
+                              borderRadius: "0 4px 4px 0",
+                              background: rightBg,
+                              border: "1px solid var(--admin-border)",
+                              marginLeft: "-8px",
+                            }}
+                          />
+                          <span style={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>
+                            {item.leftBgType === "gradient" || item.rightBgType === "gradient" ? "Gradient" : "Solid"}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: "right", paddingRight: "16px" }}>
+                        <div style={{ display: "inline-flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => moveItem(index, -1)}
+                            disabled={index === 0}
+                            className={styles.secondaryButton}
+                            style={{ padding: "4px 8px", fontSize: "12px" }}
+                            aria-label={`Move ${item.categoryName} earlier`}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItem(index, 1)}
+                            disabled={index === items.length - 1}
+                            className={styles.secondaryButton}
+                            style={{ padding: "4px 8px", fontSize: "12px" }}
+                            aria-label={`Move ${item.categoryName} later`}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveSlug(item.categorySlug);
+                              setIsDrawerOpen(true);
+                              setFileError(null);
+                            }}
+                            className={styles.secondaryButton}
+                            style={{ padding: "4px 12px", fontSize: "12px" }}
+                            id={`edit-showcase-${item.categorySlug}`}
+                          >
+                            Customize
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Responsive Category Showcase Cards */}
+        <div className={styles.showcaseCardList}>
+          {items.map((item, index) => {
+            const effectiveImage = item.pendingPreviewUrl || item.imageUrl;
+            const leftBg = resolveCssBackground(item.leftBgType, item.leftBgColor, item.leftGradientEnd, item.leftGradientAngle);
+            const rightBg = resolveCssBackground(item.rightBgType, item.rightBgColor, item.rightGradientEnd, item.rightGradientAngle);
+
+            return (
+              <article key={item.categorySlug} className={styles.showcaseCard}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      backgroundColor: "var(--admin-surface-muted)",
+                      border: "1px solid var(--admin-border)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "var(--admin-text-secondary)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    #{index + 1}
+                  </span>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "8px",
+                      backgroundColor: "#EDEBE7",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      border: "1px solid var(--admin-border)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {effectiveImage ? (
+                      <img
+                        src={effectiveImage}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>None</span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--admin-text-primary)" }}>
+                      {item.categoryName}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+                      slug: {item.categorySlug}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap", fontSize: "12.5px" }}>
+                  <div>
+                    <span style={{ color: "var(--admin-text-muted)", fontSize: "11px", display: "block" }}>Heading:</span>
+                    <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
+                      {item.displayHeading || item.categoryName}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ color: "var(--admin-text-muted)", fontSize: "11px" }}>Backgrounds:</span>
+                    <div
+                      title={`Left: ${item.leftBgType} ${item.leftBgColor}`}
+                      style={{
+                        width: "28px",
+                        height: "18px",
+                        borderRadius: "4px 0 0 4px",
+                        background: leftBg,
+                        border: "1px solid var(--admin-border)",
+                        borderRight: "none",
+                      }}
+                    />
+                    <div
+                      title={`Right: ${item.rightBgType} ${item.rightBgColor}`}
+                      style={{
+                        width: "28px",
+                        height: "18px",
+                        borderRadius: "0 4px 4px 0",
+                        background: rightBg,
+                        border: "1px solid var(--admin-border)",
+                        marginLeft: "-6px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", borderTop: "1px solid var(--admin-border-subtle)", paddingTop: "10px" }}>
+                  <div style={{ display: "inline-flex", gap: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, -1)}
+                      disabled={index === 0}
+                      className={styles.secondaryButton}
+                      style={{ padding: "4px 10px", fontSize: "12px" }}
+                      aria-label={`Move ${item.categoryName} earlier`}
+                    >
+                      ↑ Earlier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, 1)}
+                      disabled={index === items.length - 1}
+                      className={styles.secondaryButton}
+                      style={{ padding: "4px 10px", fontSize: "12px" }}
+                      aria-label={`Move ${item.categoryName} later`}
+                    >
+                      ↓ Later
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSlug(item.categorySlug);
+                      setIsDrawerOpen(true);
+                      setFileError(null);
+                    }}
+                    className={styles.primaryButton}
+                    style={{ padding: "4px 14px", fontSize: "12px" }}
+                  >
+                    Customize
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

@@ -1,6 +1,4 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
 
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 import type { PublicProductReview, AdminProductReview, ReviewStatus } from "@/lib/gallery-types";
@@ -163,33 +161,6 @@ export async function submitProductReview(input: {
   }
 }
 
-const REJECTED_REVIEWS_FILE = path.join(process.cwd(), "src", "data", "rejected-reviews.json");
-
-export function getRejectedReviewIds(): Set<string> {
-  try {
-    if (fs.existsSync(REJECTED_REVIEWS_FILE)) {
-      const raw = fs.readFileSync(REJECTED_REVIEWS_FILE, "utf-8");
-      const list = JSON.parse(raw);
-      if (Array.isArray(list)) return new Set(list);
-    }
-  } catch {
-    // Graceful fallback
-  }
-  return new Set();
-}
-
-export function recordRejectedReviewId(id: string): void {
-  try {
-    const current = getRejectedReviewIds();
-    current.add(id);
-    const dir = path.dirname(REJECTED_REVIEWS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(REJECTED_REVIEWS_FILE, JSON.stringify(Array.from(current), null, 2), "utf-8");
-  } catch (err) {
-    console.warn("[reviews] Could not record rejected review id:", err);
-  }
-}
-
 /**
  * Server-only: Securely loads pending reviews written by the active visitor.
  * Verifies author ownership via receipt token matching and ensures approved reviews are excluded to avoid duplication.
@@ -208,22 +179,15 @@ export async function getAuthorPendingReviews(
   const config = getSupabaseConfig();
   if (!config || !productId || !receipts || receipts.length === 0) return [];
 
-  const rejectedIds = getRejectedReviewIds();
-  // Exclude reviews that have been rejected / permanently deleted by an administrator
-  const relevant = receipts.filter(
-    (r) => r.productId === productId && !rejectedIds.has(r.reviewId),
-  );
+  const relevant = receipts.filter((r) => r.productId === productId);
   if (relevant.length === 0) return [];
 
   try {
     const ids = relevant.map((r) => r.reviewId).filter(Boolean);
     if (ids.length > 0) {
-      // Query approved reviews to filter out reviews that have already been approved
-      // (so they are rendered via approved initialReviews and not duplicated here)
       const query = new URLSearchParams({
-        select: "id",
+        select: "id,status",
         id: `in.(${ids.join(",")})`,
-        status: "eq.approved",
       });
       const res = await fetch(`${config.url}/rest/v1/product_reviews?${query}`, {
         headers: { apikey: config.key },
@@ -231,11 +195,17 @@ export async function getAuthorPendingReviews(
       });
 
       if (res.ok) {
-        const approvedRows = (await res.json()) as Array<{ id: string }>;
-        const approvedIds = new Set(approvedRows.map((r) => r.id));
+        const rows = (await res.json()) as Array<{ id: string; status: string }>;
+        const statusMap = new Map(rows.map((r) => [r.id, r.status]));
 
         return relevant
-          .filter((r) => !approvedIds.has(r.reviewId))
+          .filter((r) => {
+            const status = statusMap.get(r.reviewId);
+            // Strictly check that the review still exists in Supabase and is pending.
+            // If approved, it is already rendered in initialReviews.
+            // If rejected (deleted), it no longer exists in Supabase and must disappear.
+            return status === "pending";
+          })
           .map((r) => ({
             id: r.reviewId,
             productId: r.productId,
@@ -248,18 +218,10 @@ export async function getAuthorPendingReviews(
       }
     }
   } catch {
-    // If DB check fails, return relevant un-rejected receipts safely
+    return [];
   }
 
-  return relevant.map((r) => ({
-    id: r.reviewId,
-    productId: r.productId,
-    customerName: r.customerName,
-    rating: r.rating,
-    reviewText: r.reviewText,
-    createdAt: r.createdAt,
-    isAuthorPending: true,
-  }));
+  return [];
 }
 
 /**
@@ -378,9 +340,6 @@ export async function updateAdminReviewStatus(
 export async function deleteAdminReview(id: string, accessToken: string): Promise<void> {
   const config = getSupabaseConfig();
   if (!config) throw new Error("Supabase is not configured.");
-
-  // Permanently invalidate author receipts for this review id so it immediately disappears and never reappears
-  recordRejectedReviewId(id);
 
   const response = await fetch(`${config.url}/rest/v1/product_reviews?id=eq.${encodeURIComponent(id)}`, {
     method: "DELETE",

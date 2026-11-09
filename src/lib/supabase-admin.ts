@@ -1156,7 +1156,10 @@ export async function saveCategoryShowcaseSettings(
   try {
     const parsed = JSON.parse(errorText);
     if (parsed && typeof parsed.message === "string") {
-      if (parsed.code === "PGRST205" || parsed.message.includes("homepage_category_showcase")) {
+      // Only report a missing migration when PostgREST or Postgres confirms that
+      // this relation is absent. Permission, session, validation, and network
+      // errors must remain actionable instead of being mislabeled as migration work.
+      if (parsed.code === "PGRST205" || parsed.code === "42P01") {
         errorMessage =
           "Database migration pending: Please run supabase/migrations/20261109_homepage_category_showcase.sql in your Supabase SQL Editor.";
       } else {

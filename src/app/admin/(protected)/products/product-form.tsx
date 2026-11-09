@@ -60,6 +60,13 @@ export function ProductForm({
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState(product?.subcategory_slug ?? "");
   const [isActive, setIsActive] = useState(product?.status === "active");
 
+  const [galleryAutoplay, setGalleryAutoplay] = useState<boolean>(
+    Boolean(product?.gallery_autoplay),
+  );
+  const [galleryInterval, setGalleryInterval] = useState<number>(
+    product?.gallery_interval_seconds ?? 5,
+  );
+
   const initialAvailability = useMemo(() => resolveAvailabilityStatus(product), [product]);
   const [availability, setAvailability] = useState<ProductAvailability>(initialAvailability);
   const [stockQuantity, setStockQuantity] = useState<string>(() => {
@@ -901,6 +908,79 @@ export function ProductForm({
               />
             </div>
           )}
+        </div>
+      </fieldset>
+
+      {/* Product Gallery Settings */}
+      <fieldset>
+        <legend>Product Gallery Settings</legend>
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 16px",
+              background: "var(--admin-surface)",
+              border: "1px solid var(--admin-border)",
+              borderRadius: "8px",
+            }}
+          >
+            <div>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: "13.5px",
+                  color: "var(--admin-text-primary)",
+                }}
+              >
+                Auto-rotate product images
+              </strong>
+              <span
+                style={{
+                  fontSize: "12.5px",
+                  color: "var(--admin-text-secondary)",
+                }}
+              >
+                Automatically advance gallery photographs on the product detail page.
+              </span>
+            </div>
+            <input
+              type="hidden"
+              name="gallery_autoplay"
+              value={galleryAutoplay ? "true" : "false"}
+            />
+            <AdminSwitch
+              checked={galleryAutoplay}
+              onChange={(checked) => setGalleryAutoplay(checked)}
+              ariaLabel="Toggle automatic product image rotation"
+            />
+          </div>
+
+          <label style={{ display: "grid", gap: "6px" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "var(--admin-text-primary)",
+              }}
+            >
+              Change image every
+            </span>
+            <select
+              name="gallery_interval_seconds"
+              value={galleryInterval}
+              onChange={(e) => setGalleryInterval(Number(e.target.value))}
+              disabled={!galleryAutoplay}
+            >
+              <option value={3}>3 seconds</option>
+              <option value={5}>5 seconds</option>
+              <option value={10}>10 seconds</option>
+            </select>
+            <span className={styles.fieldHelp}>
+              Select rotation interval. Default is 5 seconds. If a product has only one distinct photograph, rotation stays static.
+            </span>
+          </label>
         </div>
       </fieldset>
 

@@ -8,9 +8,16 @@ import styles from "./product-detail-gallery.module.css";
 interface ProductDetailGalleryProps {
   images: ProductGalleryImage[];
   productName: string;
+  autoplay?: boolean;
+  intervalSeconds?: number;
 }
 
-export function ProductDetailGallery({ images, productName }: ProductDetailGalleryProps) {
+export function ProductDetailGallery({
+  images,
+  productName,
+  autoplay = false,
+  intervalSeconds = 5,
+}: ProductDetailGalleryProps) {
   // Ensure the image marked Primary in the admin portal is always the initial displayed image
   const primaryIdx = useMemo(() => {
     const idx = images.findIndex((img) => img.isPrimary);
@@ -19,6 +26,12 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
 
   const [prevImages, setPrevImages] = useState(images);
   const [selectedIndex, setSelectedIndex] = useState<number>(primaryIdx);
+  const [timerResetKey, setTimerResetKey] = useState<number>(0);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [isInteracting, setIsInteracting] = useState<boolean>(false);
+  const [isTabVisible, setIsTabVisible] = useState<boolean>(true);
+  const [isInViewport, setIsInViewport] = useState<boolean>(true);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
 
   // Synchronize index if images prop changes between renders without cascading effects
   if (prevImages !== images) {
@@ -26,12 +39,9 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
     setSelectedIndex(primaryIdx);
   }
 
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-
-  // References for focus restoration, swipe detection, thumbnail scrolling, and video control
-  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  // References for container intersection, swipe detection, thumbnail scrolling, and video control
+  const galleryRootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const lightboxVideoRef = useRef<HTMLVideoElement>(null);
   const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -39,13 +49,38 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
   const activeImage = images[selectedIndex] ?? null;
   const totalImages = images.length;
 
+  // Identify distinct non-video images for automatic rotation
+  const distinctImages = useMemo(() => {
+    const seen = new Set<string>();
+    return images.filter((img) => {
+      const key = img.url || img.storagePath || img.id;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [images]);
+
+  // If a product has only one distinct photograph, the slider must remain static regardless of setting
+  const canAutoplay = Boolean(
+    autoplay && distinctImages.length > 1 && totalImages > 1,
+  );
+
+  // Valid interval: exactly 3, 5, or 10 seconds. Default 5 seconds.
+  const intervalMs = useMemo(() => {
+    const validSec =
+      intervalSeconds === 3 || intervalSeconds === 5 || intervalSeconds === 10
+        ? intervalSeconds
+        : 5;
+    return validSec * 1000;
+  }, [intervalSeconds]);
+
   // Immediate, race-condition free selection handler
   const handleSelectImage = useCallback(
     (index: number) => {
       if (index < 0 || index >= totalImages) return;
       if (videoRef.current) videoRef.current.pause();
-      if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
       setSelectedIndex(index);
+      setTimerResetKey((prev) => prev + 1); // Reset timer on manual selection
     },
     [totalImages],
   );
@@ -54,15 +89,15 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
   const handleNext = useCallback(() => {
     if (totalImages <= 1) return;
     if (videoRef.current) videoRef.current.pause();
-    if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
     setSelectedIndex((prev: number) => (prev + 1) % totalImages);
+    setTimerResetKey((prev) => prev + 1);
   }, [totalImages]);
 
   const handlePrev = useCallback(() => {
     if (totalImages <= 1) return;
     if (videoRef.current) videoRef.current.pause();
-    if (lightboxVideoRef.current) lightboxVideoRef.current.pause();
     setSelectedIndex((prev: number) => (prev - 1 + totalImages) % totalImages);
+    setTimerResetKey((prev) => prev + 1);
   }, [totalImages]);
 
   // Auto-scroll active thumbnail into view
@@ -77,15 +112,73 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
     }
   }, [selectedIndex]);
 
-  // Pause videos on page leave or unmount
+  // Pause videos on unmount
   useEffect(() => {
     const activeVideo = videoRef.current;
-    const activeLightboxVideo = lightboxVideoRef.current;
     return () => {
       activeVideo?.pause();
-      activeLightboxVideo?.pause();
     };
   }, []);
+
+  // Track document visibility to pause autoplay when tab is inactive
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(document.visibilityState !== "hidden");
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Track viewport intersection to pause autoplay when scrolled out of view
+  useEffect(() => {
+    const el = galleryRootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInViewport(entry.isIntersecting);
+      },
+      { threshold: 0.25 },
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Managed automatic image rotation timer
+  useEffect(() => {
+    if (!canAutoplay) return;
+    if (isHovered || isInteracting || !isTabVisible || !isInViewport) return;
+
+    // Respect user's reduced motion preference
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setSelectedIndex((prev) => (prev + 1) % totalImages);
+    }, intervalMs);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [
+    canAutoplay,
+    intervalMs,
+    totalImages,
+    timerResetKey,
+    isHovered,
+    isInteracting,
+    isTabVisible,
+    isInViewport,
+  ]);
 
   // Keyboard navigation on main stage
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -95,16 +188,12 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       handlePrev();
-    } else if (e.key === "Enter" || e.key === " ") {
-      if (activeImage?.mediaType !== "video") {
-        e.preventDefault();
-        setIsLightboxOpen(true);
-      }
     }
   };
 
   // Touch swipe support for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
+    setIsInteracting(true);
     touchStartX.current = e.targetTouches[0].clientX;
   };
 
@@ -113,6 +202,7 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
   };
 
   const handleTouchEnd = () => {
+    setIsInteracting(false);
     if (touchStartX.current === null || touchEndX.current === null) return;
     const diff = touchStartX.current - touchEndX.current;
     if (Math.abs(diff) > 40) {
@@ -125,33 +215,6 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
     touchStartX.current = null;
     touchEndX.current = null;
   };
-
-  // Lightbox key listeners & scroll lock
-  useEffect(() => {
-    if (!isLightboxOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    const triggerEl = expandButtonRef.current;
-    document.body.style.overflow = "hidden";
-
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsLightboxOpen(false);
-      } else if (e.key === "ArrowRight") {
-        handleNext();
-      } else if (e.key === "ArrowLeft") {
-        handlePrev();
-      }
-    };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", handleGlobalKeyDown);
-      triggerEl?.focus();
-    };
-  }, [isLightboxOpen, handleNext, handlePrev]);
 
   // Handle zero images gracefully
   if (totalImages === 0 || !activeImage) {
@@ -172,7 +235,9 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
-            <p className={styles.emptyStageText}>Showroom image pending confirmation</p>
+            <p className={styles.emptyStageText}>
+              Showroom image pending confirmation
+            </p>
           </div>
         </div>
       </div>
@@ -181,8 +246,25 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
 
   const mediaKey = activeImage.id || activeImage.storagePath || activeImage.url;
 
+  // Content-aware framing:
+  // Square/wide studio photos (aspectRatio >= 0.85) contain outer studio margins:
+  // Apply a calibrated 1.15 scale to fill ~89% of stage height with 36px top & 32px bottom clearance.
+  // Tall portrait cutouts (aspectRatio < 0.85) already occupy full height: scale remains 1.0.
+  const isTempPortrait =
+    typeof activeImage.url === "string" &&
+    activeImage.url.includes("/products/temp/");
+  const isSquareOrWide =
+    aspectRatio !== null ? aspectRatio >= 0.85 : !isTempPortrait;
+  const effectiveScale = isSquareOrWide ? 1.15 : 1.0;
+
   return (
-    <div className={styles.galleryRoot} aria-label={`${productName} image gallery`}>
+    <div
+      ref={galleryRootRef}
+      className={styles.galleryRoot}
+      aria-label={`${productName} image gallery`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Hidden preloader for neighboring images to ensure instantaneous navigation without blank frames */}
       {totalImages > 1 && (
         <div className="sr-only" aria-hidden="true">
@@ -196,8 +278,8 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                 key={`preload-adj-${img.id || img.url}`}
                 src={img.url}
                 alt=""
-                width={500}
-                height={500}
+                width={600}
+                height={600}
                 priority
               />
             ))}
@@ -208,21 +290,22 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
       <div
         className={styles.stageContainer}
         tabIndex={0}
-        role={activeImage.mediaType === "video" ? "region" : "button"}
+        role={activeImage.mediaType === "video" ? "region" : "group"}
         aria-label={
           activeImage.mediaType === "video"
             ? `${activeImage.altText || productName} video player`
-            : `View enlarged ${activeImage.altText || productName}`
+            : `${activeImage.altText || productName} photograph ${selectedIndex + 1} of ${totalImages}`
         }
-        onClick={() => {
-          if (activeImage.mediaType !== "video") {
-            setIsLightboxOpen(true);
-          }
-        }}
         onKeyDown={handleKeyDown}
-        onTouchStart={activeImage.mediaType === "video" ? undefined : handleTouchStart}
-        onTouchMove={activeImage.mediaType === "video" ? undefined : handleTouchMove}
-        onTouchEnd={activeImage.mediaType === "video" ? undefined : handleTouchEnd}
+        onTouchStart={
+          activeImage.mediaType === "video" ? undefined : handleTouchStart
+        }
+        onTouchMove={
+          activeImage.mediaType === "video" ? undefined : handleTouchMove
+        }
+        onTouchEnd={
+          activeImage.mediaType === "video" ? undefined : handleTouchEnd
+        }
       >
         {activeImage.mediaType === "video" ? (
           <div className={styles.stageVideoWrap}>
@@ -234,12 +317,20 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
               preload="metadata"
               poster={activeImage.posterUrl}
               src={activeImage.url}
-              aria-label={activeImage.altText || `${productName} product demonstration video`}
+              aria-label={
+                activeImage.altText ||
+                `${productName} product demonstration video`
+              }
               className={styles.stageVideo}
             />
           </div>
         ) : (
-          <div className={styles.stageImageWrap}>
+          <div
+            className={styles.stageImageWrap}
+            style={
+              { "--detail-scale": effectiveScale } as React.CSSProperties
+            }
+          >
             {activeImage.url.startsWith("/") ? (
               <Image
                 key={`stage-${mediaKey}`}
@@ -247,8 +338,14 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                 alt={activeImage.altText || productName}
                 fill
                 priority
-                sizes="(max-width: 768px) 92vw, (max-width: 1200px) 46vw, 560px"
+                sizes="(max-width: 768px) 96vw, (max-width: 1200px) 58vw, 680px"
                 className={`${styles.stageImage} ${styles.stageImageActive}`}
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.currentTarget;
+                  if (naturalWidth && naturalHeight) {
+                    setAspectRatio(naturalWidth / naturalHeight);
+                  }
+                }}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -258,29 +355,16 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                 alt={activeImage.altText || productName}
                 className={`${styles.stageImage} ${styles.stageImageActive}`}
                 style={{ width: "100%", height: "100%" }}
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.currentTarget;
+                  if (naturalWidth && naturalHeight) {
+                    setAspectRatio(naturalWidth / naturalHeight);
+                  }
+                }}
               />
             )}
           </div>
         )}
-
-        {/* Expand / Lightbox Trigger Button */}
-        <button
-          type="button"
-          ref={expandButtonRef}
-          className={styles.expandButton}
-          aria-label={activeImage.mediaType === "video" ? "Expand video viewer" : "Enlarge image"}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsLightboxOpen(true);
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 3 21 3 21 9" />
-            <polyline points="9 21 3 21 3 15" />
-            <line x1="21" y1="3" x2="14" y2="10" />
-            <line x1="3" y1="21" x2="10" y2="14" />
-          </svg>
-        </button>
 
         {/* Navigation Arrows for Multiple Images/Videos */}
         {totalImages > 1 && (
@@ -288,26 +372,44 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
             <button
               type="button"
               className={`${styles.stageArrow} ${styles.stageArrowPrev}`}
-              aria-label="Previous gallery item"
+              aria-label="Previous gallery photograph"
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrev();
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
             <button
               type="button"
               className={`${styles.stageArrow} ${styles.stageArrowNext}`}
-              aria-label="Next gallery item"
+              aria-label="Next gallery photograph"
               onClick={(e) => {
                 e.stopPropagation();
                 handleNext();
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
@@ -316,7 +418,7 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
 
         {/* Counter Badge */}
         {totalImages > 1 && (
-          <div className={styles.counterBadge}>
+          <div className={styles.counterBadge} aria-live="polite">
             {selectedIndex + 1} / {totalImages}
           </div>
         )}
@@ -344,9 +446,11 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                 aria-label={
                   isVideo
                     ? `Show video demonstration ${idx + 1} of ${totalImages}`
-                    : `Show image ${idx + 1} of ${totalImages}`
+                    : `Show photograph ${idx + 1} of ${totalImages}`
                 }
-                className={`${styles.thumbnailButton} ${isSelected ? styles.thumbnailActive : ""}`}
+                className={`${styles.thumbnailButton} ${
+                  isSelected ? styles.thumbnailActive : ""
+                }`}
                 onClick={() => handleSelectImage(idx)}
               >
                 {img.posterUrl ? (
@@ -357,7 +461,9 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                     sizes="76px"
                     className={styles.thumbnailImage}
                   />
-                ) : img.url.startsWith("/") && !img.url.endsWith(".mp4") && !img.url.endsWith(".webm") ? (
+                ) : img.url.startsWith("/") &&
+                  !img.url.endsWith(".mp4") &&
+                  !img.url.endsWith(".webm") ? (
                   <Image
                     src={img.url}
                     alt=""
@@ -386,10 +492,17 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
                   />
                 )}
 
-                {/* Obvious Video Play Icon Overlay */}
+                {/* Video Play Icon Overlay */}
                 {isVideo && (
-                  <span className={styles.thumbnailPlayOverlay} aria-hidden="true">
-                    <svg className={styles.thumbnailPlayIcon} viewBox="0 0 24 24" fill="currentColor">
+                  <span
+                    className={styles.thumbnailPlayOverlay}
+                    aria-hidden="true"
+                  >
+                    <svg
+                      className={styles.thumbnailPlayIcon}
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
                       <polygon points="8 5 19 12 8 19" />
                     </svg>
                   </span>
@@ -397,110 +510,6 @@ export function ProductDetailGallery({ images, productName }: ProductDetailGalle
               </button>
             );
           })}
-        </div>
-      )}
-
-      {/* Fullscreen Lightbox Modal */}
-      {isLightboxOpen && (
-        <div
-          className={styles.lightboxOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${productName} media viewer`}
-          onClick={() => {
-            lightboxVideoRef.current?.pause();
-            setIsLightboxOpen(false);
-          }}
-        >
-          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-            {/* Close Button */}
-            <button
-              type="button"
-              className={styles.lightboxCloseButton}
-              aria-label="Close media viewer"
-              onClick={() => {
-                lightboxVideoRef.current?.pause();
-                setIsLightboxOpen(false);
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-
-            {/* Modal Stage (Image or Video) */}
-            <div className={styles.lightboxImageStage}>
-              {activeImage.mediaType === "video" ? (
-                <video
-                  key={`lightbox-video-${mediaKey}`}
-                  ref={lightboxVideoRef}
-                  controls
-                  playsInline
-                  autoPlay
-                  preload="metadata"
-                  src={activeImage.url}
-                  poster={activeImage.posterUrl}
-                  aria-label={activeImage.altText || `${productName} video demonstration`}
-                  className={styles.lightboxVideo}
-                />
-              ) : activeImage.url.startsWith("/") ? (
-                <Image
-                  key={`lightbox-${mediaKey}`}
-                  src={activeImage.url}
-                  alt={activeImage.altText || productName}
-                  fill
-                  priority
-                  sizes="92vw"
-                  className={styles.lightboxImage}
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={`lightbox-img-${mediaKey}`}
-                  src={activeImage.url}
-                  alt={activeImage.altText || productName}
-                  className={styles.lightboxImage}
-                />
-              )}
-            </div>
-
-            {/* Modal Prev/Next Navigation */}
-            {totalImages > 1 && (
-              <>
-                <button
-                  type="button"
-                  className={`${styles.lightboxArrow} ${styles.lightboxArrowPrev}`}
-                  aria-label="Previous media"
-                  onClick={handlePrev}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.lightboxArrow} ${styles.lightboxArrowNext}`}
-                  aria-label="Next media"
-                  onClick={handleNext}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              </>
-            )}
-
-            {/* Modal Footer Info */}
-            <div className={styles.lightboxFooter}>
-              <span className={styles.lightboxCaption}>{activeImage.altText || productName}</span>
-              {totalImages > 1 && (
-                <span className={styles.lightboxCounter}>
-                  {selectedIndex + 1} / {totalImages}
-                </span>
-              )}
-            </div>
-          </div>
         </div>
       )}
     </div>

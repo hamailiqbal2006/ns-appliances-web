@@ -22,6 +22,10 @@ import {
   type ProductAvailability,
   resolveAvailabilityStatus,
 } from "./product-availability";
+import {
+  resolveProductGallerySettings,
+  saveProductGallerySettingsFallback,
+} from "./product-gallery-settings";
 
 export type { ProductAvailability };
 
@@ -42,6 +46,8 @@ export type AdminProduct = {
   updated_at: string;
   brand?: string | null;
   model_number?: string | null;
+  gallery_autoplay?: boolean | null;
+  gallery_interval_seconds?: number | null;
 };
 
 export type StoreSettings = {
@@ -213,15 +219,27 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
   const baseSelect =
     "id,slug,name,category_slug,subcategory_slug,description,specifications,price_pkr,stock_quantity,status,image_path,created_at,updated_at";
   const enhancedSelect = `${baseSelect},availability_status`;
+  const fullSelect = `${enhancedSelect},gallery_autoplay,gallery_interval_seconds`;
 
   let response = await supabaseFetch(
     `/rest/v1/products?${new URLSearchParams({
-      select: enhancedSelect,
+      select: fullSelect,
       order: "updated_at.desc",
     })}`,
     {},
     accessToken,
   );
+
+  if (!response.ok) {
+    response = await supabaseFetch(
+      `/rest/v1/products?${new URLSearchParams({
+        select: enhancedSelect,
+        order: "updated_at.desc",
+      })}`,
+      {},
+      accessToken,
+    );
+  }
 
   if (!response.ok) {
     response = await supabaseFetch(
@@ -236,10 +254,19 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
 
   if (!response.ok) throw new Error("Could not load products from Supabase.");
   const rows = (await response.json()) as AdminProduct[];
-  return rows.map((p) => ({
-    ...p,
-    availability_status: resolveAvailabilityStatus(p),
-  }));
+  return rows.map((p) => {
+    const gallerySettings = resolveProductGallerySettings(
+      p.id,
+      p.gallery_autoplay,
+      p.gallery_interval_seconds,
+    );
+    return {
+      ...p,
+      availability_status: resolveAvailabilityStatus(p),
+      gallery_autoplay: gallerySettings.autoplay,
+      gallery_interval_seconds: gallerySettings.intervalSeconds,
+    };
+  });
 }
 
 export async function getAdminProduct(id: string): Promise<AdminProduct | null> {
@@ -247,16 +274,29 @@ export async function getAdminProduct(id: string): Promise<AdminProduct | null> 
   const baseSelect =
     "id,slug,name,category_slug,subcategory_slug,description,specifications,price_pkr,stock_quantity,status,image_path,created_at,updated_at";
   const enhancedSelect = `${baseSelect},availability_status`;
+  const fullSelect = `${enhancedSelect},gallery_autoplay,gallery_interval_seconds`;
 
   let response = await supabaseFetch(
     `/rest/v1/products?${new URLSearchParams({
-      select: enhancedSelect,
+      select: fullSelect,
       id: `eq.${id}`,
       limit: "1",
     })}`,
     {},
     accessToken,
   );
+
+  if (!response.ok) {
+    response = await supabaseFetch(
+      `/rest/v1/products?${new URLSearchParams({
+        select: enhancedSelect,
+        id: `eq.${id}`,
+        limit: "1",
+      })}`,
+      {},
+      accessToken,
+    );
+  }
 
   if (!response.ok) {
     response = await supabaseFetch(
@@ -274,9 +314,18 @@ export async function getAdminProduct(id: string): Promise<AdminProduct | null> 
   const rows = (await response.json()) as AdminProduct[];
   const found = rows[0] ?? null;
   if (!found) return null;
+
+  const gallerySettings = resolveProductGallerySettings(
+    found.id,
+    found.gallery_autoplay,
+    found.gallery_interval_seconds,
+  );
+
   return {
     ...found,
     availability_status: resolveAvailabilityStatus(found),
+    gallery_autoplay: gallerySettings.autoplay,
+    gallery_interval_seconds: gallerySettings.intervalSeconds,
   };
 }
 
@@ -414,6 +463,8 @@ export async function saveAdminProduct(
     brand?: string | null;
     model_number?: string | null;
     availability_status?: ProductAvailability | null;
+    gallery_autoplay?: boolean | null;
+    gallery_interval_seconds?: number | null;
   },
   accessToken: string,
   id?: string,
@@ -456,6 +507,8 @@ export async function saveAdminProduct(
       errorText.includes("brand") ||
       errorText.includes("model_number") ||
       errorText.includes("availability_status") ||
+      errorText.includes("gallery_autoplay") ||
+      errorText.includes("gallery_interval_seconds") ||
       errorText.includes("column") ||
       errorText.includes("not-null")
     ) {
@@ -463,6 +516,8 @@ export async function saveAdminProduct(
       delete (corePayload as Record<string, unknown>).brand;
       delete (corePayload as Record<string, unknown>).model_number;
       delete (corePayload as Record<string, unknown>).availability_status;
+      delete (corePayload as Record<string, unknown>).gallery_autoplay;
+      delete (corePayload as Record<string, unknown>).gallery_interval_seconds;
 
       // If database still requires an integer stock_quantity (not null):
       if (corePayload.stock_quantity === null || corePayload.stock_quantity === undefined) {
@@ -487,9 +542,34 @@ export async function saveAdminProduct(
   }
 
   const saved = ((await response.json()) as AdminProduct[])[0];
+
+  // Save gallery settings to resilient fallback mapping
+  if (typeof product.gallery_autoplay === "boolean") {
+    saveProductGallerySettingsFallback(
+      saved.id,
+      product.gallery_autoplay,
+      product.gallery_interval_seconds ?? 5,
+    );
+    if (saved.slug) {
+      saveProductGallerySettingsFallback(
+        saved.slug,
+        product.gallery_autoplay,
+        product.gallery_interval_seconds ?? 5,
+      );
+    }
+  }
+
+  const gallerySettings = resolveProductGallerySettings(
+    saved.id,
+    saved.gallery_autoplay ?? product.gallery_autoplay,
+    saved.gallery_interval_seconds ?? product.gallery_interval_seconds,
+  );
+
   return {
     ...saved,
     availability_status: resolveAvailabilityStatus(saved),
+    gallery_autoplay: gallerySettings.autoplay,
+    gallery_interval_seconds: gallerySettings.intervalSeconds,
   };
 }
 

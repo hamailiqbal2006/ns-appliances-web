@@ -71,6 +71,13 @@
   gap: 18px;
 }
 
+/* Product Header Block */
+.productHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* Category Kicker */
 .categoryRow {
   display: flex;
@@ -104,7 +111,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   background: rgba(25, 29, 31, 0.035);
   border: 1px solid rgba(25, 29, 31, 0.08);
   border-radius: 8px;
@@ -112,25 +119,22 @@
 }
 
 .availabilityDot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .dot_available {
   background-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
 }
 
 .dot_out_of_stock {
   background-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
 }
 
 .dot_not_confirmed {
-  background-color: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+  background-color: #71717a;
 }
 
 .availabilityLabelText {
@@ -382,12 +386,46 @@
 /* Responsive Breakdown for Tablets and Mobile */
 @media (max-width: 960px) {
   .productHeroGrid {
-    grid-template-columns: 1fr;
-    gap: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 40px;
+  }
+
+  .infoColumn {
+    display: contents;
+  }
+
+  .productHeader {
+    order: 1;
+    width: 100%;
+    margin-bottom: 20px;
+    gap: 12px;
   }
 
   .galleryColumn {
+    order: 2;
     position: static;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .availabilityRow {
+    order: 3;
+    margin-bottom: 16px;
+  }
+
+  .priceSection {
+    order: 4;
+    width: 100%;
+    padding: 12px 0 8px 0;
+    margin-bottom: 20px;
+  }
+
+  .actionSection {
+    order: 5;
+    width: 100%;
+    margin-bottom: 32px;
   }
 }
 

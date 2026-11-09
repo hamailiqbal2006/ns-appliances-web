@@ -175,6 +175,11 @@ function parseProduct(formData: FormData) {
     delete specifications.explicit_zero_stock;
   }
 
+  const galleryAutoplay = formData.get("gallery_autoplay") === "true";
+  const rawInterval = Number(formData.get("gallery_interval_seconds"));
+  const galleryIntervalSeconds =
+    rawInterval === 3 || rawInterval === 5 || rawInterval === 10 ? rawInterval : 5;
+
   return {
     slug,
     name,
@@ -187,6 +192,8 @@ function parseProduct(formData: FormData) {
     price_pkr: price,
     stock_quantity: stock,
     availability_status: availability,
+    gallery_autoplay: galleryAutoplay,
+    gallery_interval_seconds: galleryIntervalSeconds,
     status: status as "draft" | "active" | "archived",
   };
 }

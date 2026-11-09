@@ -20,6 +20,7 @@ import {
   resolveAvailabilityStatus,
   getAvailabilityPresentation,
 } from "./product-availability";
+import { resolveProductGallerySettings } from "./product-gallery-settings";
 
 export type { ProductAvailability };
 export { resolveAvailabilityStatus, getAvailabilityPresentation };
@@ -50,6 +51,8 @@ export type StorefrontProduct = {
   reservationProductId: string | null;
   reviewsCount?: number;
   averageRating?: number | null;
+  galleryAutoplay: boolean;
+  galleryIntervalSeconds: 3 | 5 | 10;
 };
 
 const staticAssignments: Record<string, { categorySlug: string; subcategorySlug: string }> = {
@@ -267,6 +270,8 @@ function fromStatic(product: Product): StorefrontProduct {
     availabilityStatus: "not_confirmed",
     source: "static",
     reservationProductId: null,
+    galleryAutoplay: resolveProductGallerySettings(product.slug).autoplay,
+    galleryIntervalSeconds: resolveProductGallerySettings(product.slug).intervalSeconds,
   };
 }
 
@@ -325,6 +330,13 @@ function fromManaged(
     ...(customScale && !isNaN(customScale) ? { scale: customScale } : {}),
   };
 
+  const gallerySettings = resolveProductGallerySettings(
+    product.id || product.slug,
+    product.gallery_autoplay,
+    product.gallery_interval_seconds,
+    product.slug,
+  );
+
   return {
     id: product.id,
     slug: product.slug,
@@ -349,6 +361,8 @@ function fromManaged(
     availabilityStatus: resolveAvailabilityStatus(product),
     source: "managed",
     reservationProductId: product.id,
+    galleryAutoplay: gallerySettings.autoplay,
+    galleryIntervalSeconds: gallerySettings.intervalSeconds,
   };
 }
 
@@ -359,11 +373,12 @@ async function getManagedProducts(): Promise<AdminProduct[]> {
   const baseSelect =
     "id,slug,name,category_slug,subcategory_slug,description,specifications,price_pkr,stock_quantity,status,image_path,created_at,updated_at";
   const enhancedSelect = `${baseSelect},availability_status`;
+  const fullSelect = `${enhancedSelect},gallery_autoplay,gallery_interval_seconds`;
 
   try {
     let response = await fetch(
       `${config.url}/rest/v1/products?${new URLSearchParams({
-        select: enhancedSelect,
+        select: fullSelect,
         status: "eq.active",
         order: "updated_at.desc",
       })}`,
@@ -372,6 +387,21 @@ async function getManagedProducts(): Promise<AdminProduct[]> {
         next: { revalidate: 60, tags: ["public-products"] },
       },
     );
+
+    // If Postgres doesn't have the new gallery columns yet, fallback to enhancedSelect
+    if (!response.ok) {
+      response = await fetch(
+        `${config.url}/rest/v1/products?${new URLSearchParams({
+          select: enhancedSelect,
+          status: "eq.active",
+          order: "updated_at.desc",
+        })}`,
+        {
+          headers: { apikey: config.key },
+          next: { revalidate: 60, tags: ["public-products"] },
+        },
+      );
+    }
 
     // If Postgres doesn't have the column yet, fallback to baseSelect
     if (!response.ok) {

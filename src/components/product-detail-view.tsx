@@ -64,8 +64,8 @@ export function ProductDetailView({
       case "not_confirmed":
       default:
         return {
-          availabilityLabel: "Availability to be Confirmed",
-          availabilitySubtext: "Inquire via WhatsApp to verify live stock",
+          availabilityLabel: "Showroom Availability",
+          availabilitySubtext: "Contact our showroom to confirm stock.",
         };
     }
   }, [availability]);
@@ -114,46 +114,49 @@ export function ProductDetailView({
             <ProductDetailGallery
               images={product.galleryImages}
               productName={product.name}
+              autoplay={product.galleryAutoplay}
+              intervalSeconds={product.galleryIntervalSeconds}
             />
           </div>
 
           {/* Right Column: Clean Essential Product Information */}
           <div className={styles.infoColumn}>
-            {/* Hierarchy Level 1: Category Capsule Kicker */}
-            <div className={styles.categoryRow}>
-              <Link
-                href={`/products?category=${product.categorySlug}`}
-                className={styles.categoryKicker}
-              >
-                {product.category}
-              </Link>
-            </div>
-
-            {/* Hierarchy Level 2: Product Name */}
-            <h1 className={styles.productTitle}>{product.name}</h1>
-
-            {/* Hierarchy Level 3: Brand & Model secondary row */}
-            {(product.brand || product.modelNumber) && (
-              <div className={styles.brandModelRow}>
-                {product.brand && (
-                  <span className={styles.brandBadge}>{product.brand}</span>
-                )}
-                {product.brand && product.modelNumber && (
-                  <span className={styles.dotSeparator} aria-hidden="true">
-                    ·
-                  </span>
-                )}
-                {product.modelNumber && (
-                  <span className={styles.modelNumber}>
-                    Model: {product.modelNumber}
-                  </span>
-                )}
+            {/* Header Block: Category kicker, Title, Brand & Model */}
+            <div className={styles.productHeader}>
+              {/* Hierarchy Level 1: Category Capsule Kicker */}
+              <div className={styles.categoryRow}>
+                <Link
+                  href={`/products?category=${product.categorySlug}`}
+                  className={styles.categoryKicker}
+                >
+                  {product.category}
+                </Link>
               </div>
-            )}
+
+              {/* Hierarchy Level 2: Product Name */}
+              <h1 className={styles.productTitle}>{product.name}</h1>
+
+              {/* Hierarchy Level 3: Brand & Model secondary row */}
+              <div className={styles.brandModelRow}>
+                <span className={styles.brandBadge}>
+                  {product.brand || "NS"}
+                </span>
+                {product.modelNumber ? (
+                  <>
+                    <span className={styles.dotSeparator} aria-hidden="true">
+                      ·
+                    </span>
+                    <span className={styles.modelNumber}>
+                      Model: {product.modelNumber}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+            </div>
 
             {/* Hierarchy Level 4: Compact Integrated Availability Status Row */}
             <div
-              className={`${styles.availabilityRow} ${styles[`avail_${availability}`]}`}
+              className={styles.availabilityRow}
               role="status"
               aria-label={`Showroom availability: ${availabilityLabel}. ${availabilitySubtext}`}
             >

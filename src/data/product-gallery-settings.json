@@ -1,0 +1,58 @@
+{
+  "bdf0c4b4-521d-4c23-81cf-7c69896357ed": {
+    "autoplay": true,
+    "intervalSeconds": 3
+  },
+  "washing-machine-1": {
+    "autoplay": true,
+    "intervalSeconds": 3
+  },
+  "6be51210-816e-4fec-8a0f-6c52ef5073cd": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "washing-machine-10": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "1851340f-281a-4ab0-a38d-ce072060dc12": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "washing-machine-11": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "f8c1b616-7e65-48ed-9fb4-99ad2779e5ab": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "washing-machine-12": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "fedcbdfd-802d-4e19-a814-aba700a194ab": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "washing-machine-13": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "b75b3c0e-6b10-4858-8759-b6d2e398b00f": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "iron-1": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "1eb3504e-7f9e-4a7a-9511-f93345c9760a": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  },
+  "iron-2": {
+    "autoplay": false,
+    "intervalSeconds": 5
+  }
+}

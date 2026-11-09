@@ -317,6 +317,14 @@ function fromManaged(
     null;
   const coverImage = primaryImage?.url || primaryUrl;
 
+  const customScale = product.specifications?.image_scale
+    ? parseFloat(product.specifications.image_scale)
+    : undefined;
+  const art: ArtDirection = {
+    ...fallbackArt,
+    ...(customScale && !isNaN(customScale) ? { scale: customScale } : {}),
+  };
+
   return {
     id: product.id,
     slug: product.slug,
@@ -331,7 +339,7 @@ function fromManaged(
     modelNumber,
     image: coverImage,
     galleryImages: gallery,
-    art: fallbackArt,
+    art,
     palette: fallbackPalette,
     note: "Published product details are managed by NS Home Appliances.",
     description: product.description,

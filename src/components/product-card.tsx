@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import type { StorefrontProduct } from "@/lib/public-catalog";
 import styles from "./product-card.module.css";
@@ -83,6 +83,7 @@ export function ProductCard({
               name={product.name}
               className={styles.cardImage}
               priority={priority}
+              artScale={product.art?.scale}
             />
           </div>
 
@@ -154,6 +155,7 @@ export function ProductCard({
             name={product.name}
             className={styles.cardImage}
             priority={priority}
+            artScale={product.art?.scale}
           />
         </div>
 
@@ -205,18 +207,45 @@ export function ProductImageCanvas({
   name,
   className,
   priority = false,
+  artScale,
 }: {
   image: string | null;
   secondaryImage?: string | null;
   name: string;
   className?: string;
   priority?: boolean;
+  artScale?: number;
 }) {
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth && img.naturalHeight) {
+      setAspectRatio(img.naturalWidth / img.naturalHeight);
+    }
+  };
+
   if (image) {
     const hasSecondary = Boolean(secondaryImage);
 
+    // Studio square/wide photos (aspectRatio >= 0.85) have horizontal/vertical studio margins:
+    // apply smart framing scale (1.15) to fill ~90% of visual canvas without clipping dials/feet.
+    // Tall portrait cutouts (aspectRatio < 0.85) already occupy full height: scale remains 1.0.
+    // When aspectRatio is not yet known (before image load / SSR), default to 1.15 for managed URLs or 1.0 for known portrait temp paths.
+    const isTempPortrait = typeof image === "string" && image.includes("/products/temp/");
+    const isSquareOrWide = aspectRatio !== null ? aspectRatio >= 0.85 : !isTempPortrait;
+    const effectiveScale =
+      artScale && artScale !== 1.0
+        ? artScale
+        : isSquareOrWide
+          ? 1.15
+          : 1.0;
+
     return (
-      <div className={styles.imageInnerWrap}>
+      <div
+        className={styles.imageInnerWrap}
+        style={{ "--product-scale": effectiveScale } as React.CSSProperties}
+      >
         {image.startsWith("/") ? (
           <Image
             src={image}
@@ -226,6 +255,7 @@ export function ProductImageCanvas({
             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 400px"
             className={`${className || ""} ${styles.cardImage} ${styles.cardImagePrimary} ${hasSecondary ? styles.hasSecondary : ""}`}
             style={{ objectFit: "contain" }}
+            onLoad={handleImageLoad}
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
@@ -235,11 +265,12 @@ export function ProductImageCanvas({
             className={`${className || ""} ${styles.cardImage} ${styles.cardImagePrimary} ${hasSecondary ? styles.hasSecondary : ""}`}
             loading={priority ? "eager" : "lazy"}
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            onLoad={handleImageLoad}
           />
         )}
 
-        {secondaryImage && (
-          secondaryImage.startsWith("/") ? (
+        {secondaryImage &&
+          (secondaryImage.startsWith("/") ? (
             <Image
               src={secondaryImage}
               alt={`${name} — alternate showcase view`}
@@ -258,8 +289,7 @@ export function ProductImageCanvas({
               loading="lazy"
               style={{ width: "100%", height: "100%", objectFit: "contain" }}
             />
-          )
-        )}
+          ))}
       </div>
     );
   }

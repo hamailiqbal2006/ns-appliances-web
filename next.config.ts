@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
+    agentUpgrade: "security",
     // Banner saves may contain up to six independently validated 5 MB images
     // (three desktop and three mobile), plus multipart form overhead.
     serverActions: {

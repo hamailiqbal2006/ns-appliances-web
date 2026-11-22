@@ -13,11 +13,12 @@ export interface SiteFooterProps {
   className?: string;
   onCategoryClick?: (index: number) => void;
   onSectionClick?: (id: string) => void;
+  categoryLinks?: Array<{ slug: string; name: string }>;
 }
 
 export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
   function SiteFooter(
-    { className = "", onCategoryClick, onSectionClick },
+    { className = "", onCategoryClick, onSectionClick, categoryLinks = categories },
     ref
   ) {
     const pathname = usePathname();
@@ -126,7 +127,7 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(
             <div className="site-footer-col">
               <h3 className="site-footer-col-heading">Categories</h3>
               <ul className="site-footer-link-list">
-                {categories.map((cat, idx) => (
+                {categoryLinks.map((cat, idx) => (
                   <li key={cat.slug}>
                     <Link
                       href="/#categories"

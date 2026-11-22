@@ -4,7 +4,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CategoryCatalog } from "@/components/category-catalog";
 import { getStorefrontProducts } from "@/lib/public-catalog";
-import { getStorefrontCategories, resolveCategoryForProduct } from "@/lib/categories";
+import { getStorefrontCategories, findCategoryForRoute } from "@/lib/categories";
 import { categories as editorialCategories } from "@/data/catalog";
 import styles from "@/components/category-catalog.module.css";
 
@@ -26,7 +26,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { category: categorySlug, subcategory: subcategorySlug } = await params;
   const allCategories = await getStorefrontCategories();
-  const cat = resolveCategoryForProduct(categorySlug, subcategorySlug, allCategories);
+  const cat = findCategoryForRoute(categorySlug, subcategorySlug, allCategories);
+  if (!cat) notFound();
 
   return {
     title: "NS Home Appliances",
@@ -51,7 +52,7 @@ export default async function SubcategoryPage({
     getStorefrontCategories(),
   ]);
 
-  const cat = resolveCategoryForProduct(categorySlug, subcategorySlug, allCategories);
+  const cat = findCategoryForRoute(categorySlug, subcategorySlug, allCategories);
   if (!cat) notFound();
 
   return (

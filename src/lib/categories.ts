@@ -3,7 +3,7 @@ import "server-only";
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 import {
   DEFAULT_CATEGORIES,
-  resolveCategoryForProduct,
+  findCategoryForProduct,
   type CategoryRecord,
 } from "./category-types";
 
@@ -11,7 +11,7 @@ export * from "./category-types";
 
 /**
  * Fetches all categories for the public storefront.
- * Tries Supabase first; if unmigrated or fails, falls back gracefully to DEFAULT_CATEGORIES.
+ * Defaults are for an unconfigured demo only. A managed empty catalog stays empty.
  */
 export async function getStorefrontCategories(): Promise<CategoryRecord[]> {
   const config = getSupabaseConfig();
@@ -29,14 +29,11 @@ export async function getStorefrontCategories(): Promise<CategoryRecord[]> {
       next: { revalidate: 300, tags: ["categories"] },
     });
 
-    if (!response.ok) return DEFAULT_CATEGORIES;
+    if (!response.ok) return [];
     const data = (await response.json()) as CategoryRecord[];
-    if (Array.isArray(data) && data.length > 0) {
-      return data;
-    }
-    return DEFAULT_CATEGORIES;
+    return Array.isArray(data) ? data : [];
   } catch {
-    return DEFAULT_CATEGORIES;
+    return [];
   }
 }
 
@@ -107,7 +104,8 @@ export async function getAdminCategories(accessToken?: string): Promise<{
       }
 
       for (const p of products) {
-        const resolved = resolveCategoryForProduct(p.category_slug, p.subcategory_slug, baseCategories);
+        const resolved = findCategoryForProduct(p.category_slug, p.subcategory_slug, baseCategories);
+        if (!resolved) continue;
         counts.set(resolved.slug, (counts.get(resolved.slug) ?? 0) + 1);
       }
 
@@ -124,7 +122,8 @@ export async function getAdminCategories(accessToken?: string): Promise<{
   }
 
   return {
-    categories: baseCategories.map((cat) => ({ ...cat, product_count: 0 })),
+    // Unknown counts must not be interpreted as an empty category by mutations.
+    categories: baseCategories.map((cat) => ({ ...cat, product_count: undefined })),
     isDatabaseConnected,
   };
 }
@@ -201,6 +200,7 @@ export async function saveAdminCategory(
   }
 
   const result = (await response.json()) as CategoryRecord[];
+  if (!result[0]) throw new Error("This category could not be updated. Reload the category list and try again.");
   return result[0];
 }
 
@@ -216,11 +216,26 @@ export async function deleteAdminCategory(
   if (!config) throw new Error("Admin backend is not configured.");
 
   // Check product count first
-  const { categories } = await getAdminCategories(accessToken);
-  const target = categories.find((c) => c.id === id || c.slug === categorySlug);
-  if (target && (target.product_count ?? 0) > 0) {
+  const { categories, isDatabaseConnected } = await getAdminCategories(accessToken);
+  if (!isDatabaseConnected) throw new Error("Cannot verify this category. Please reload and try again.");
+  const target = categories.find((c) => c.id === id && c.slug === categorySlug);
+  if (!target) throw new Error("This category no longer exists. Reload the category list.");
+  const slugs = [target.slug, ...target.subcategories.map((sub) => sub.slug)];
+  if (target.slug === "iron-machines") slugs.push("irons", "iron");
+  if (target.slug === "dryer-machines") slugs.push("dryers", "dryer");
+  if (target.slug === "juicer-blenders") slugs.push("juicers-blenders", "juicers", "blenders");
+  const quoted = [...new Set(slugs)].map((slug) => `"${slug.replace(/["\\]/g, "\\$&")}"`).join(",");
+  const query = new URLSearchParams({ select: "id", or: `(category_slug.in.(${quoted}),subcategory_slug.in.(${quoted}))`, limit: "1" });
+  const productsResponse = await fetch(`${config.url}/rest/v1/products?${query}`, {
+    headers: { apikey: config.key, Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  if (!productsResponse.ok) throw new Error("Cannot verify assigned products. No category was deleted. Please try again.");
+  const assignedProducts = await productsResponse.json();
+  if (!Array.isArray(assignedProducts)) throw new Error("Cannot verify assigned products. No category was deleted.");
+  if (assignedProducts.length > 0) {
     throw new Error(
-      `Cannot delete category '${target.name}' because it contains ${target.product_count} products. Reassign or remove its products first.`,
+      `Cannot delete category '${target.name}' because products are assigned to it. Reassign or remove its products first.`,
     );
   }
 
@@ -229,6 +244,7 @@ export async function deleteAdminCategory(
     headers: {
       apikey: config.key,
       Authorization: `Bearer ${accessToken}`,
+      Prefer: "return=representation",
     },
     cache: "no-store",
   });
@@ -236,5 +252,9 @@ export async function deleteAdminCategory(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || "Could not delete category.");
+  }
+  const deleted = await response.json();
+  if (!Array.isArray(deleted) || !deleted.some((row: CategoryRecord) => row.id === id)) {
+    throw new Error("No category was deleted. Reload the page and check your access.");
   }
 }

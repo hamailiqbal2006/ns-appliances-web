@@ -2,22 +2,35 @@ import { NextResponse } from "next/server";
 import { searchCatalog } from "@/data/catalog-search";
 import { getStorefrontProducts } from "@/lib/public-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase-admin";
+import { getStorefrontCategories, findCategoryForRoute } from "@/lib/categories";
 
 export async function GET(request: Request) {
   const rawQuery = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (rawQuery.length < 2 || rawQuery.length > 100) return NextResponse.json([]);
 
   const normalized = rawQuery.toLocaleLowerCase();
-  // Categories remain searchable through the canonical category map, but demo
-  // product links must never resurface once the managed catalog is connected.
-  const staticResults = searchCatalog(rawQuery).filter(
-    (item) => item.type === "Category" || !isSupabaseConfigured(),
-  );
+  const categories = await getStorefrontCategories();
+  // Retain Roman Urdu intent matching, but resolve its links against live categories.
+  const staticResults = searchCatalog(rawQuery).flatMap((item) => {
+    if (item.type !== "Category") return isSupabaseConfigured() ? [] : [item];
+    const [, , group, slug] = item.href.split("/");
+    const category = findCategoryForRoute(group, slug ?? null, categories);
+    return category ? [{ ...item, title: category.name,
+      href: `/category/${category.editorial_group}/${category.slug}` }] : [];
+  });
   const intentCategoryLinks = new Set(
     staticResults.filter((item) => item.type === "Category").map((item) => item.href.toLowerCase()),
   );
 
   const tokens = normalized.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
+  const categoryResults = categories.filter((category) => {
+    const searchable = `${category.name} ${category.slug} ${category.description ?? ""} ${category.subcategories.map((sub) => sub.name).join(" ")}`.toLowerCase();
+    return tokens.length > 0 && tokens.every((token) => searchable.includes(token));
+  }).map((category) => ({
+    id: `category:${category.id}`, title: category.name,
+    detail: "Appliance category", href: `/category/${category.editorial_group}/${category.slug}`,
+    type: "Category" as const,
+  }));
 
   const storefrontProducts = await getStorefrontProducts();
   const managedResults = storefrontProducts
@@ -60,7 +73,7 @@ export async function GET(request: Request) {
     }));
 
   // Merge managed products with static results, prioritizing managed products
-  const results = [...managedResults, ...staticResults].filter(
+  const results = [...managedResults, ...categoryResults, ...staticResults].filter(
     (result, index, all) => all.findIndex((item) => item.href === result.href) === index,
   );
 

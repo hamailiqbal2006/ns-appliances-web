@@ -9,7 +9,7 @@ import styles from "../../admin.module.css";
 
 function subcategoriesToText(subcategories: CategoryRecord["subcategories"]) {
   if (!subcategories || !subcategories.length) return "";
-  return subcategories.map((sub) => sub.name).join("\n");
+  return subcategories.map((sub) => `${sub.name}:${sub.slug}`).join("\n");
 }
 
 export function CategoryForm({ category }: { category?: CategoryRecord }) {
@@ -150,7 +150,8 @@ export function CategoryForm({ category }: { category?: CategoryRecord }) {
               placeholder="Juicer Blender — 2-in-1&#10;Juicer Blender — 3-in-1&#10;Juicer Blender — 4-in-1"
             />
             <span id="cat-subs-help" className={styles.fieldHelp}>
-              Enter one subcategory per line. Slugs are automatically generated for each subcategory.
+              Enter one subcategory per line as Name:slug. Keep existing slugs to preserve product links;
+              new names without a slug get one automatically.
             </span>
           </label>
         </div>

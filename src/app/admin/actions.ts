@@ -40,6 +40,7 @@ import {
 } from "@/lib/announcement-bar";
 import {
   deleteAdminCategory,
+  getAdminCategory,
   EDITORIAL_GROUPS,
   saveAdminCategory,
   type EditorialGroup,
@@ -587,7 +588,7 @@ export async function bulkDeleteProductsAction(productIds: string[]): Promise<{
 
 /* Category Management Actions */
 
-function parseSubcategories(raw: string): SubcategoryItem[] {
+function parseSubcategories(raw: string, previous: SubcategoryItem[] = []): SubcategoryItem[] {
   return raw
     .split("\n")
     .map((line) => line.trim())
@@ -596,10 +597,28 @@ function parseSubcategories(raw: string): SubcategoryItem[] {
       // Format can be "Subcategory Name" or "Subcategory Name:slug"
       const parts = line.split(":");
       const name = parts[0].trim();
-      const slug = cleanSlug(parts[1]?.trim() || name);
+      const existing = previous.find((sub) => sub.name === name);
+      const slug = cleanSlug(parts[1]?.trim() || existing?.slug || name);
       return { name, slug };
     })
     .filter((sub) => sub.name.length > 0 && sub.slug.length > 0);
+}
+
+function invalidateCategoryViews() {
+  updateTag("categories");
+  updateTag("category-showcase");
+  updateTag("public-products");
+  revalidatePath("/admin");
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/categories/[id]", "page");
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/new");
+  revalidatePath("/admin/category-showcase");
+  revalidatePath("/products");
+  revalidatePath("/products/[slug]", "page");
+  revalidatePath("/category/[category]", "page");
+  revalidatePath("/category/[category]/[subcategory]", "page");
+  revalidatePath("/");
 }
 
 export async function saveCategoryAction(_: FormState, formData: FormData): Promise<FormState> {
@@ -611,8 +630,8 @@ export async function saveCategoryAction(_: FormState, formData: FormData): Prom
     const editorialGroup = text(formData.get("editorial_group")) as EditorialGroup;
     const description = text(formData.get("description")) || null;
     const displayOrderValue = text(formData.get("display_order"));
-    const displayOrder = displayOrderValue ? parseInt(displayOrderValue, 10) : 0;
-    const isActive = formData.get("is_active") === "on";
+    const displayOrder = displayOrderValue ? Number(displayOrderValue) : 0;
+    const isActive = ["on", "true"].includes(text(formData.get("is_active")));
     const subcategoriesRaw = text(formData.get("subcategories"));
 
     if (!name || name.length > 100) {
@@ -624,8 +643,22 @@ export async function saveCategoryAction(_: FormState, formData: FormData): Prom
     if (!EDITORIAL_GROUPS.some((g) => g.slug === editorialGroup)) {
       return { error: "Select a valid editorial presentation group (Cooling, Laundry, Kitchen & Everyday, Home)." };
     }
+    if (!Number.isSafeInteger(displayOrder) || displayOrder < 0 || displayOrder > 2147483647) {
+      return { error: "Display order must be a non-negative whole number." };
+    }
 
-    const subcategories = parseSubcategories(subcategoriesRaw);
+    const previous = id ? await getAdminCategory(id, accessToken) : null;
+    if (id && !previous) return { error: "This category no longer exists. Reload the category list." };
+    if (previous && previous.slug !== slug && previous.product_count === undefined) {
+      return { error: "Cannot verify assigned products. Please try again before changing this category's URL slug." };
+    }
+    if (previous && previous.slug !== slug && (previous.product_count ?? 0) > 0) {
+      return { error: "Reassign this category's products before changing its URL slug. You can still change its display name." };
+    }
+    const subcategories = parseSubcategories(subcategoriesRaw, previous?.subcategories);
+    if (new Set(subcategories.map((sub) => sub.slug)).size !== subcategories.length) {
+      return { error: "Each subcategory must have a different URL slug." };
+    }
 
     await saveAdminCategory(
       {
@@ -634,36 +667,31 @@ export async function saveCategoryAction(_: FormState, formData: FormData): Prom
         slug,
         description,
         editorial_group: editorialGroup,
-        display_order: Number.isNaN(displayOrder) ? 0 : displayOrder,
+        display_order: displayOrder,
         is_active: isActive,
         subcategories,
       },
       accessToken,
     );
 
-    revalidatePath("/admin");
-    revalidatePath("/admin/categories");
-    revalidatePath("/admin/products");
-    revalidatePath("/admin/products/new");
-    revalidatePath("/products");
-    revalidatePath("/");
-    redirect("/admin/categories");
+    invalidateCategoryViews();
   } catch (error) {
     return { error: error instanceof Error ? error.message : "The category could not be saved." };
   }
+  redirect("/admin/categories");
 }
 
-export async function deleteCategoryAction(formData: FormData) {
-  const id = text(formData.get("id"));
-  const slug = text(formData.get("slug"));
-  if (!id) throw new Error("A category identifier is required.");
-  const { accessToken } = await requireAdminForAction();
-  await deleteAdminCategory(id, slug, accessToken);
-  revalidatePath("/admin");
-  revalidatePath("/admin/categories");
-  revalidatePath("/admin/products");
-  revalidatePath("/products");
-  revalidatePath("/");
+export async function deleteCategoryAction(_: FormState, formData: FormData): Promise<FormState> {
+  try {
+    const id = text(formData.get("id"));
+    const slug = text(formData.get("slug"));
+    if (!id) throw new Error("A category identifier is required.");
+    const { accessToken } = await requireAdminForAction();
+    await deleteAdminCategory(id, slug, accessToken);
+    invalidateCategoryViews();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The category could not be deleted." };
+  }
   redirect("/admin/categories");
 }
 

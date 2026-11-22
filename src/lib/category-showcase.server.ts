@@ -2,9 +2,11 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseConfig } from "./supabase-admin";
+import { getStorefrontCategories } from "./categories";
 import {
   getDefaultCategoryShowcase,
   mergeShowcaseRows,
+  bindShowcaseCategories,
   type CategoryShowcaseItem,
   type CategoryShowcaseRow,
 } from "./category-showcase";
@@ -13,10 +15,12 @@ import {
 export async function getHomepageCategoryShowcase(): Promise<CategoryShowcaseItem[]> {
   "use cache";
   cacheLife("minutes");
-  cacheTag("category-showcase");
+  cacheTag("category-showcase", "categories");
 
   const config = getSupabaseConfig();
-  if (!config) return getDefaultCategoryShowcase();
+  const categories = await getStorefrontCategories();
+  const bind = (items: CategoryShowcaseItem[]) => bindShowcaseCategories(items, categories, true);
+  if (!config) return bind(getDefaultCategoryShowcase());
 
   try {
     const query = new URLSearchParams({
@@ -28,11 +32,11 @@ export async function getHomepageCategoryShowcase(): Promise<CategoryShowcaseIte
       headers: { apikey: config.key },
     });
 
-    if (!response.ok) return getDefaultCategoryShowcase();
+    if (!response.ok) return bind(getDefaultCategoryShowcase());
     const rows = (await response.json()) as CategoryShowcaseRow[];
-    return mergeShowcaseRows(rows);
+    return bind(mergeShowcaseRows(rows));
   } catch {
-    return getDefaultCategoryShowcase();
+    return bind(getDefaultCategoryShowcase());
   }
 }
 
@@ -41,7 +45,9 @@ export async function getAdminCategoryShowcase(accessToken: string | null): Prom
   items: CategoryShowcaseItem[];
   isDatabaseReady: boolean;
 }> {
-  const defaults = getDefaultCategoryShowcase();
+  const categories = await getStorefrontCategories();
+  const bind = (items: CategoryShowcaseItem[]) => bindShowcaseCategories(items, categories);
+  const defaults = bind(getDefaultCategoryShowcase());
   const config = getSupabaseConfig();
   if (!config || !accessToken) {
     return { items: defaults, isDatabaseReady: false };
@@ -63,7 +69,7 @@ export async function getAdminCategoryShowcase(accessToken: string | null): Prom
 
     if (response.ok) {
       const rows = (await response.json()) as CategoryShowcaseRow[];
-      return { items: mergeShowcaseRows(rows), isDatabaseReady: true };
+      return { items: bind(mergeShowcaseRows(rows)), isDatabaseReady: true };
     }
 
     // The showcase is intentionally public-readable. An expired admin token
@@ -76,7 +82,7 @@ export async function getAdminCategoryShowcase(accessToken: string | null): Prom
     if (!publicResponse.ok) return { items: defaults, isDatabaseReady: false };
 
     const rows = (await publicResponse.json()) as CategoryShowcaseRow[];
-    return { items: mergeShowcaseRows(rows), isDatabaseReady: true };
+    return { items: bind(mergeShowcaseRows(rows)), isDatabaseReady: true };
   } catch {
     return { items: defaults, isDatabaseReady: false };
   }

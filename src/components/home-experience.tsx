@@ -52,7 +52,7 @@ export function HomeExperience({
   const coverSettleLine = useRef<HTMLDivElement>(null);
   const categoryTrack = useRef<HTMLElement>(null);
   const showcaseList = useMemo(
-    () => (categoryShowcase && categoryShowcase.length > 0 ? categoryShowcase : getDefaultCategoryShowcase()),
+    () => categoryShowcase ?? getDefaultCategoryShowcase(),
     [categoryShowcase],
   );
   const [activeCategory, setActiveCategory] = useState(0);
@@ -584,7 +584,7 @@ export function HomeExperience({
         <div className="layer-spacer" aria-hidden="true" />
 
         {/* LAYER 3: STATIONARY CATEGORY SHOWCASE */}
-        <section
+        {showcaseList.length > 0 ? <section
           id="categories"
           className="category-track cover-panel"
           ref={categoryTrack}
@@ -691,7 +691,7 @@ export function HomeExperience({
               ))}
             </div>
           </div>
-        </section>
+        </section> : null}
 
         {/* LAYER 4: VISIT OUR STORE CINEMATIC STAGE */}
         <section
@@ -759,6 +759,7 @@ export function HomeExperience({
           <SiteFooter
             ref={siteFooterRef}
             variant="glass-overlay"
+            categoryLinks={showcaseList.map((item) => ({ slug: item.categorySlug, name: item.displayHeading }))}
             onCategoryClick={(index) => {
               const track = categoryTrack.current;
               if (!track) return;

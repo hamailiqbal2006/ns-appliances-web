@@ -375,6 +375,7 @@
    3. Content Canvas & Responsive Spacing
    -------------------------------------------------------------------------- */
 .content {
+  min-width: 0;
   min-height: calc(100svh - 60px);
   margin: 0 auto;
   padding: 32px 36px;
@@ -766,6 +767,44 @@
 
 .tableWrap tbody tr:hover td {
   background-color: var(--admin-surface-muted);
+}
+
+.categoryTableWrap {
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.categoryTableWrap:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: -2px;
+}
+
+.categoryTableWrap table {
+  min-width: 920px;
+  table-layout: fixed;
+}
+
+.categoryTableWrap th,
+.categoryTableWrap td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.categoryTableWrap th:nth-child(1) { width: 21%; }
+.categoryTableWrap th:nth-child(2) { width: 19%; }
+.categoryTableWrap th:nth-child(3) { width: 14%; }
+.categoryTableWrap th:nth-child(4) { width: 13%; }
+.categoryTableWrap th:nth-child(5) { width: 6%; }
+.categoryTableWrap th:nth-child(6) { width: 10%; }
+.categoryTableWrap th:nth-child(7) { width: 8%; }
+.categoryTableWrap th:nth-child(8) { width: 9%; }
+
+.categoryTableWrap code {
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Explicit Table Column Sizing & Alignments */
@@ -4389,6 +4428,7 @@
    Modern Shell, Sticky TopBar & Responsive Canvas
    -------------------------------------------------------------------------- */
 .mainContainer {
+  min-width: 0;
   margin-left: 240px;
   display: flex;
   flex-direction: column;

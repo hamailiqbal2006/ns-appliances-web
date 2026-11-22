@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useActionState, useState, useRef } from "react";
 import { deleteCategoryAction } from "../../actions";
 import styles from "../../admin.module.css";
 import { ConfirmationModal } from "../confirmation-modal";
@@ -17,6 +17,7 @@ export function DeleteCategoryForm({
   productCount: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [state, formAction, pending] = useActionState(deleteCategoryAction, { error: null });
   const formRef = useRef<HTMLFormElement>(null);
   const hasProducts = productCount > 0;
 
@@ -34,7 +35,7 @@ export function DeleteCategoryForm({
     <>
       <form
         ref={formRef}
-        action={deleteCategoryAction}
+        action={formAction}
         className={styles.inlineDelete}
       >
         <input type="hidden" name="id" value={id} />
@@ -51,11 +52,13 @@ export function DeleteCategoryForm({
             type="button"
             onClick={handleTriggerClick}
             className={styles.dangerButton}
+            disabled={pending}
           >
-            Delete category
+            {pending ? "Deleting..." : "Delete category"}
           </button>
         )}
       </form>
+      {state.error ? <p className={styles.formError} role="alert">{state.error}</p> : null}
 
       <ConfirmationModal
         isOpen={isOpen}

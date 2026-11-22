@@ -164,6 +164,44 @@ export function normalizeCategorySlug(slug: string): string {
   return s;
 }
 
+/** Resolve real assignments without moving missing or archived categories elsewhere. */
+export function findCategoryForProduct(
+  categorySlug: string,
+  subcategorySlug: string | null | undefined,
+  allCategories: CategoryRecord[],
+): CategoryRecord | null {
+  const category = normalizeCategorySlug(categorySlug);
+  const subcategory = subcategorySlug ? normalizeCategorySlug(subcategorySlug) : null;
+  const direct = allCategories.find((item) => item.slug === category);
+  if (direct) return direct;
+  // Only editorial-group assignments use the legacy subcategory mapping.
+  if (!EDITORIAL_GROUPS.some((group) => group.slug === category)) return null;
+  return allCategories.find((item) => item.editorial_group === category && (
+    item.slug === subcategory || item.subcategories.some((sub) => sub.slug === subcategory)
+  )) ?? null;
+}
+
+/** Public routes must match the requested category, never an arbitrary fallback. */
+export function findCategoryForRoute(
+  categorySlug: string,
+  subcategorySlug: string | null,
+  allCategories: CategoryRecord[],
+): CategoryRecord | null {
+  if (!subcategorySlug) {
+    const normalized = normalizeCategorySlug(categorySlug);
+    return allCategories.find((item) => item.slug === normalized) ??
+      allCategories.find((item) => item.editorial_group === normalized) ?? null;
+  }
+  const match = findCategoryForProduct(categorySlug, subcategorySlug, allCategories);
+  if (!match) return null;
+  const category = normalizeCategorySlug(categorySlug);
+  const subcategory = normalizeCategorySlug(subcategorySlug);
+  return (match.editorial_group === category && match.slug === subcategory) ||
+    (match.slug === category && match.subcategories.some((sub) => sub.slug === subcategory)) ||
+    (match.editorial_group === category && match.subcategories.some((sub) => sub.slug === subcategory))
+    ? match : null;
+}
+
 /**
  * Resolves which canonical category a product belongs to, supporting both
  * direct category slugs and legacy editorial-group/subcategory assignments.

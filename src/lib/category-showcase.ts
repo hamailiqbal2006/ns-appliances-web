@@ -1,4 +1,5 @@
 import { categories as defaultCategories } from "@/data/catalog";
+import type { CategoryRecord } from "./category-types";
 
 export type BackgroundType = "solid" | "gradient";
 
@@ -86,6 +87,22 @@ export function getDefaultCategoryShowcase(): CategoryShowcaseItem[] {
     defaultRightBg: cat.palette.panel,
     defaultInk: cat.palette.ink,
   }));
+}
+
+/** Keep the approved presentation, with links sourced from the managed catalog. */
+export function bindShowcaseCategories(
+  items: CategoryShowcaseItem[],
+  categories: CategoryRecord[],
+  omitEmptyGroups = false,
+): CategoryShowcaseItem[] {
+  const bound = items.map((item) => ({
+    ...item,
+    subcategories: categories
+      .filter((category) => category.is_active && category.editorial_group === item.categorySlug)
+      .sort((a, b) => a.display_order - b.display_order)
+      .map((category) => ({ name: category.name, slug: category.slug })),
+  }));
+  return omitEmptyGroups ? bound.filter((item) => item.subcategories.length > 0) : bound;
 }
 
 /** Relative luminance calculation according to WCAG 2.1 specifications */

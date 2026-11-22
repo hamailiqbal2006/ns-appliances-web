@@ -51,11 +51,11 @@ export default async function CategoriesAdminPage() {
           </p>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} ${styles.categoryTableWrap}`} tabIndex={0} role="region" aria-label="Category records table">
           <table>
             <thead>
               <tr>
-                <th scope="col" style={{ width: "24%" }}>Category</th>
+                <th scope="col">Category</th>
                 <th scope="col">Slug</th>
                 <th scope="col">Editorial Group</th>
                 <th scope="col">Subcategories</th>
@@ -68,6 +68,9 @@ export default async function CategoriesAdminPage() {
               </tr>
             </thead>
             <tbody>
+              {categories.length === 0 ? (
+                <tr><td colSpan={8}>No categories yet. Add a category to begin organizing your catalog.</td></tr>
+              ) : null}
               {categories.map((cat) => (
                 <tr key={cat.id}>
                   <td>
@@ -108,7 +111,7 @@ export default async function CategoriesAdminPage() {
                   </td>
                   <td>
                     <span style={{ fontWeight: 600, color: "var(--admin-text-primary)" }}>
-                      {cat.product_count}
+                      {cat.product_count ?? "Unavailable"}
                     </span>
                   </td>
                   <td style={{ textAlign: "right" }}>

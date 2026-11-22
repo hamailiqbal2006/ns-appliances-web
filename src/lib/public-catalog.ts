@@ -11,6 +11,7 @@ import {
   DEFAULT_CATEGORIES,
   getStorefrontCategories,
   resolveCategoryForProduct,
+  findCategoryForProduct,
 } from "@/lib/categories";
 
 import type { ProductGalleryImage } from "@/lib/gallery-types";
@@ -606,7 +607,9 @@ export async function getStorefrontProducts(): Promise<StorefrontProduct[]> {
   if (isSupabaseConfigured()) {
     const productIds = managed.map((p) => p.id).filter(Boolean);
     const galleryMap = await getManagedProductGalleries(productIds);
-    storefrontList = managed.map((product) =>
+    storefrontList = managed.filter((product) =>
+      findCategoryForProduct(product.category_slug, product.subcategory_slug, categories) !== null,
+    ).map((product) =>
       fromManaged(product, categories, galleryMap[product.id]),
     );
   } else {
@@ -619,7 +622,7 @@ export async function getStorefrontProducts(): Promise<StorefrontProduct[]> {
 export async function getStorefrontProductBySlug(slug: string): Promise<StorefrontProduct | null> {
   const all = await getStorefrontProducts();
   let found = all.find((product) => product.slug === slug);
-  if (!found) {
+  if (!found && !isSupabaseConfigured()) {
     const staticMatch = products.find((product) => product.slug === slug);
     if (staticMatch) {
       found = fromStatic(staticMatch);

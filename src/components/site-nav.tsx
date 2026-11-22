@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { searchCatalog, type CatalogSearchResult } from "@/data/catalog-search";
+import type { CatalogSearchResult } from "@/data/catalog-search";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -88,9 +88,9 @@ export function SiteNav({
     }
   }, [searchOpen]);
 
-  const fallbackSearchResults = useMemo(() => searchCatalog(searchQuery), [searchQuery]);
   const cleanQuery = searchQuery.trim();
-  const searchResults = remoteSearchResults?.query === cleanQuery ? remoteSearchResults.results : fallbackSearchResults;
+  const searchLoading = cleanQuery.length >= 2 && remoteSearchResults?.query !== cleanQuery;
+  const searchResults = remoteSearchResults?.query === cleanQuery ? remoteSearchResults.results : [];
 
   useEffect(() => {
     if (cleanQuery.length < 2) return;
@@ -99,7 +99,9 @@ export function SiteNav({
       fetch(`/api/catalog-search?q=${encodeURIComponent(cleanQuery)}`, { signal: controller.signal })
         .then((response) => response.ok ? response.json() : Promise.reject())
         .then((results: CatalogSearchResult[]) => setRemoteSearchResults({ query: cleanQuery, results }))
-        .catch(() => {});
+        .catch(() => {
+          if (!controller.signal.aborted) setRemoteSearchResults({ query: cleanQuery, results: [] });
+        });
     }, 180);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }, [cleanQuery]);
@@ -643,7 +645,7 @@ export function SiteNav({
                       ))}
                     </div>
                   ) : (
-                    <p className="nav-search-empty">No matching products or categories</p>
+                    <p className="nav-search-empty" role="status">{searchLoading ? "Searching..." : "No matching products or categories"}</p>
                   )}
                 </div>
               )}

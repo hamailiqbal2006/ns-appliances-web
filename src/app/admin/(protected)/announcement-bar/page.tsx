@@ -3,7 +3,6 @@ import { getAdminAnnouncementBar } from "@/lib/announcement-bar";
 import { AnnouncementBarEditorForm } from "./announcement-bar-editor-form";
 import styles from "../../admin.module.css";
 
-export const instant = false;
 
 export default async function AnnouncementBarPage() {
   const token = (await cookies()).get("ns-admin-access")?.value ?? null;

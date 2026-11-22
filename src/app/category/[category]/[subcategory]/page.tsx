@@ -8,7 +8,6 @@ import { getStorefrontCategories, findCategoryForRoute } from "@/lib/categories"
 import { categories as editorialCategories } from "@/data/catalog";
 import styles from "@/components/category-catalog.module.css";
 
-export const instant = false;
 
 export function generateStaticParams() {
   return editorialCategories.flatMap((category) =>

@@ -7,7 +7,6 @@ import styles from "../admin.module.css";
 export const metadata: Metadata = {
   title: "Recover Password | NS Home Appliances",
 };
-export const instant = false;
 
 export default function ForgotPasswordPage() {
   return (

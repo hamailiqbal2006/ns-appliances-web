@@ -11,7 +11,6 @@ import { ProductsTableClient, type ProductRowViewModel } from "./products-table-
 import styles from "../../admin.module.css";
 
 // This route reads the administrator's session before rendering.
-export const instant = false;
 
 export default async function ProductsAdminPage() {
   const cookieStore = await cookies();

@@ -4,7 +4,6 @@ import { CategoryForm } from "../category-form";
 import styles from "../../../admin.module.css";
 
 // This route is protected by a session-aware parent layout.
-export const instant = false;
 
 export default async function NewCategoryPage() {
   await requireAdmin();

@@ -8,7 +8,6 @@ import { SHOWROOM_LOCATION } from "@/lib/showroom-location";
 import styles from "./contact.module.css";
 
 // Read live store settings when published by admin; otherwise fallback to approved contact details
-export const instant = false;
 export const metadata: Metadata = {
   title: "NS Home Appliances",
   description:

@@ -14,7 +14,6 @@ import {
 import styles from "../admin.module.css";
 
 // This route reads the administrator's session before rendering.
-export const instant = false;
 
 export default async function AdminDashboard() {
   const cookieStore = await cookies();

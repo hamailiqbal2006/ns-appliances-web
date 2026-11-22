@@ -25,8 +25,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
+  images: {
+    unoptimized: true,
+  },
   experimental: {
     agentUpgrade: "security",
     // Banner saves may contain up to six independently validated 5 MB images

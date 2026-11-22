@@ -7,7 +7,6 @@ import { CategoryForm } from "../category-form";
 import { DeleteCategoryForm } from "../delete-category-form";
 import styles from "../../../admin.module.css";
 
-export const instant = false;
 
 export default async function EditCategoryPage({
   params,

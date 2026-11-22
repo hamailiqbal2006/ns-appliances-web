@@ -8,7 +8,6 @@ import { getPublicStoreSettings } from "@/lib/supabase-admin";
 import { hasRecognizedCustomerCookie } from "@/lib/customer-recognition";
 import { getCanonicalProductUrl, getProductInquiryWhatsAppUrl } from "@/lib/product-inquiry.server";
 
-export const instant = false;
 
 export async function generateMetadata({
   params,

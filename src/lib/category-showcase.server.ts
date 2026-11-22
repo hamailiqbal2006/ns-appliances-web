@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseConfig } from "./supabase-admin";
 import { getStorefrontCategories } from "./categories";
 import {
@@ -13,10 +12,6 @@ import {
 
 /** Public homepage source for category showcase configuration */
 export async function getHomepageCategoryShowcase(): Promise<CategoryShowcaseItem[]> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("category-showcase", "categories");
-
   const config = getSupabaseConfig();
   const categories = await getStorefrontCategories();
   const bind = (items: CategoryShowcaseItem[]) => bindShowcaseCategories(items, categories, true);
@@ -30,6 +25,7 @@ export async function getHomepageCategoryShowcase(): Promise<CategoryShowcaseIte
 
     const response = await fetch(`${config.url}/rest/v1/homepage_category_showcase?${query}`, {
       headers: { apikey: config.key },
+      next: { revalidate: 300, tags: ["category-showcase", "categories"] },
     });
 
     if (!response.ok) return bind(getDefaultCategoryShowcase());

@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 
 export type AnnouncementTheme =
@@ -109,9 +108,6 @@ function hydrate(rows: AnnouncementMessageRow[]): AnnouncementMessage[] {
 }
 
 export async function getAnnouncementBar(): Promise<AnnouncementBar> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("announcement-bar");
   const config = getSupabaseConfig();
   if (!config) {
     return {
@@ -126,18 +122,18 @@ export async function getAnnouncementBar(): Promise<AnnouncementBar> {
   try {
     const messagesPromise = fetch(
       `${config.url}/rest/v1/announcement_bar_messages?select=id,message,is_active,sort_order&is_active=eq.true&order=sort_order.asc`,
-      { headers: { apikey: config.key } },
+      { headers: { apikey: config.key }, next: { revalidate: 300, tags: ["announcement-bar"] } },
     );
 
     let settingsResponse = await fetch(
       `${config.url}/rest/v1/announcement_bar_settings?select=enabled,theme,separator,speed&singleton=eq.true`,
-      { headers: { apikey: config.key } },
+      { headers: { apikey: config.key }, next: { revalidate: 300, tags: ["announcement-bar"] } },
     );
 
     if (!settingsResponse.ok) {
       settingsResponse = await fetch(
         `${config.url}/rest/v1/announcement_bar_settings?select=enabled&singleton=eq.true`,
-        { headers: { apikey: config.key } },
+        { headers: { apikey: config.key }, next: { revalidate: 300, tags: ["announcement-bar"] } },
       );
     }
 

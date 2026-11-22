@@ -7,7 +7,6 @@ import { ReviewsTable } from "./reviews-table";
 import styles from "../../admin.module.css";
 
 // This route reads the administrator's session before rendering.
-export const instant = false;
 
 export default async function AdminReviewsPage({
   searchParams,

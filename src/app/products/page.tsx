@@ -13,7 +13,6 @@ export const metadata: Metadata = {
     "Explore appliances available from NS Home Appliances — room coolers, washing machines, dryers, fans, kitchen appliances, and water heaters.",
 };
 
-export const instant = false;
 
 export default async function ProductsPage({
   searchParams,

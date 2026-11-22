@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { DEFAULT_WELCOME_POPUP_CONFIG, type WelcomePopupConfig } from "@/lib/welcome-popup";
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 
@@ -47,9 +46,6 @@ export function defaultWelcomePopupAdminConfig(): WelcomePopupAdminConfig {
 
 /** Public settings are the only welcome-popup records readable without an admin session. */
 export async function getWelcomePopupConfig(): Promise<WelcomePopupConfig> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("welcome-popup");
   const config = getSupabaseConfig();
   if (!config) return DEFAULT_WELCOME_POPUP_CONFIG;
   try {
@@ -60,6 +56,7 @@ export async function getWelcomePopupConfig(): Promise<WelcomePopupConfig> {
     });
     const response = await fetch(`${config.url}/rest/v1/welcome_popup_settings?${query}`, {
       headers: { apikey: config.key },
+      next: { revalidate: 300, tags: ["welcome-popup"] },
     });
     if (!response.ok) return DEFAULT_WELCOME_POPUP_CONFIG;
     const row = (await response.json() as WelcomePopupRow[])[0];

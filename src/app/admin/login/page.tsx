@@ -10,7 +10,6 @@ import styles from "../admin.module.css";
 export const metadata: Metadata = {
   title: "Admin Sign In | NS Home Appliances",
 };
-export const instant = false;
 
 export default async function AdminLoginPage({
   searchParams,

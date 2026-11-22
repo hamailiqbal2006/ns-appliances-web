@@ -6,7 +6,6 @@ import { ProductForm } from "../product-form";
 import styles from "../../../admin.module.css";
 
 // This route reads the administrator's session before rendering.
-export const instant = false;
 
 export default async function NewProductPage() {
   await requireAdmin();

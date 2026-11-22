@@ -3,7 +3,6 @@ import styles from "../admin.module.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Set a new password | NS Home Appliances" };
-export const instant = false;
 
 export default function ResetPasswordPage() {
   return (

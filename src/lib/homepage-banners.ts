@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseConfig } from "@/lib/supabase-admin";
 
 export type HomepageSliderSettings = {
@@ -150,16 +149,13 @@ function hydrate(rows: HomepageBannerRow[]): HomepageBanner[] {
 
 /** Public homepage slider settings source. Falls back to 3 banners, 5s interval if unconfigured. */
 export async function getHomepageSliderSettings(): Promise<HomepageSliderSettings> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("homepage-banner-settings");
   const config = getSupabaseConfig();
   if (!config) return DEFAULT_SLIDER_SETTINGS;
 
   try {
     const response = await fetch(
       `${config.url}/rest/v1/homepage_banner_settings?select=banner_count,interval_seconds&singleton=eq.true&limit=1`,
-      { headers: { apikey: config.key } },
+      { headers: { apikey: config.key }, next: { revalidate: 300, tags: ["homepage-banner-settings"] } },
     );
     if (!response.ok) return DEFAULT_SLIDER_SETTINGS;
     const rows = (await response.json()) as Array<{ banner_count: number; interval_seconds: number }>;
@@ -212,9 +208,6 @@ export async function getAdminHomepageSliderSettings(accessToken: string | null)
 
 /** Public homepage source. Missing or invalid configuration keeps the approved hero intact. */
 export async function getHomepageBanners(): Promise<HomepageBanner[]> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("homepage-banners");
   const config = getSupabaseConfig();
   if (!config) return defaultHomepageBanners();
 
@@ -225,6 +218,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
     });
     let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key },
+      next: { revalidate: 300, tags: ["homepage-banners"] },
     });
     // Fallback if title column is not yet applied
     if (!response.ok && response.status === 400) {
@@ -234,6 +228,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
       });
       response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
         headers: { apikey: config.key },
+        next: { revalidate: 300, tags: ["homepage-banners"] },
       });
     }
     // Resilient fallback if is_enabled column is not yet applied
@@ -244,6 +239,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
       });
       response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
         headers: { apikey: config.key },
+        next: { revalidate: 300, tags: ["homepage-banners"] },
       });
     }
     // Resilient fallback if mobile_image_path column is not yet applied

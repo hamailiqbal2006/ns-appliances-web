@@ -5,7 +5,6 @@ import {
 } from "@/lib/homepage-banners";
 import { BannerEditorForm } from "./banner-editor-form";
 
-export const instant = false;
 
 export default async function HomepageBannersPage() {
   const token = (await cookies()).get("ns-admin-access")?.value ?? null;

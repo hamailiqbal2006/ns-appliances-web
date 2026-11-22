@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getStorefrontCategories, findCategoryForRoute } from "@/lib/categories";
 
-export const instant = false;
 
 export default async function CategoryRedirectPage({
   params,

@@ -3,6 +3,7 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { uploadShowcaseMedia } from "@/lib/showcase-media-client";
 import {
   type CategoryShowcaseItem,
   resolveCssBackground,
@@ -59,7 +60,9 @@ export function CategoryShowcaseForm({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [state, formAction, pending] = useActionState(saveCategoryShowcaseAction, { error: null });
+  const [state, formAction, saving] = useActionState(saveCategoryShowcaseAction, { error: null });
+  const [uploading, setUploading] = useState(false);
+  const pending = saving || uploading;
 
   const [items, setItems] = useState<EditorCategoryItem[]>(() => prepareItems(initialItems));
   const initialSnapshot = useMemo(() => computeSnapshot(prepareItems(initialItems)), [initialItems]);
@@ -217,42 +220,43 @@ export function CategoryShowcaseForm({
   };
 
   // Form submit handler
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (pending) return;
     setFileError(null);
-
-    const formData = new FormData();
-    const payload = items.map((it, idx) => ({
-      categorySlug: it.categorySlug,
-      displayHeading: it.displayHeading,
-      sortOrder: idx,
-      leftBgType: it.leftBgType,
-      leftBgColor: it.leftBgColor,
-      leftGradientEnd: it.leftGradientEnd,
-      leftGradientAngle: it.leftGradientAngle,
-      rightBgType: it.rightBgType,
-      rightBgColor: it.rightBgColor,
-      rightGradientEnd: it.rightGradientEnd,
-      rightGradientAngle: it.rightGradientAngle,
-      imagePath: it.imagePath,
-      imageScale: it.imageScale,
-      imageX: it.imageX,
-      imageY: it.imageY,
-      removeImage: it.removeImage,
-    }));
-
-    formData.append("showcase_configuration", JSON.stringify(payload));
-
-    // Append pending upload files
-    for (const it of items) {
-      if (it.pendingFile) {
-        formData.append(`image_file_${it.categorySlug}`, it.pendingFile);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      const payload = items.map((it, idx) => ({
+        categorySlug: it.categorySlug,
+        displayHeading: it.displayHeading,
+        sortOrder: idx,
+        leftBgType: it.leftBgType,
+        leftBgColor: it.leftBgColor,
+        leftGradientEnd: it.leftGradientEnd,
+        leftGradientAngle: it.leftGradientAngle,
+        rightBgType: it.rightBgType,
+        rightBgColor: it.rightBgColor,
+        rightGradientEnd: it.rightGradientEnd,
+        rightGradientAngle: it.rightGradientAngle,
+        imageScale: it.imageScale,
+        imageX: it.imageX,
+        imageY: it.imageY,
+        removeImage: it.removeImage,
+      }));
+      formData.append("showcase_configuration", JSON.stringify(payload));
+      for (const it of items) {
+        if (it.pendingFile) {
+          const path = await uploadShowcaseMedia(it.pendingFile, "category", it.categorySlug);
+          formData.append(`image_path_${it.categorySlug}`, path);
+        }
       }
+      startTransition(() => formAction(formData));
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Image upload failed. Please retry.");
+    } finally {
+      setUploading(false);
     }
-
-    startTransition(() => {
-      formAction(formData);
-    });
   };
 
   return (
@@ -268,9 +272,9 @@ export function CategoryShowcaseForm({
         </div>
 
         <div className={styles.headerActions}>
-          {state.error && (
+          {(state.error || fileError) && (
             <span style={{ color: "var(--admin-danger)", fontSize: "13px", fontWeight: 500 }}>
-              &bull; {state.error}
+              &bull; {fileError || state.error}
             </span>
           )}
           {state.success && !isDirty && (
@@ -284,7 +288,7 @@ export function CategoryShowcaseForm({
             className={styles.primaryButton}
             id="save-category-showcase-btn"
           >
-            {pending ? "Saving Changes..." : "Save Changes"}
+            {uploading ? "Uploading images…" : saving ? "Saving Changes..." : "Save Changes"}
           </button>
         </div>
       </div>

@@ -15,8 +15,7 @@ import {
   assertProductGalleryReady,
   assertHomepageBannersReady,
   assertAnnouncementBarReady,
-  deleteHomepageBanner,
-  deleteHomepageBannerImage,
+  deleteHomepageBannerImages,
   saveHomepageBanners,
   saveHomepageSliderSettings,
   saveAnnouncementBar,
@@ -24,6 +23,8 @@ import {
   uploadProductImage,
   uploadProductVideo,
   uploadCategoryShowcaseImage,
+  verifyShowcaseMediaPath,
+  cleanupReplacedShowcaseMedia,
   saveCategoryShowcaseSettings,
   deleteAdminCustomerLead,
   deleteAdminCustomerLeadsBulk,
@@ -32,6 +33,7 @@ import {
   type CustomerLeadStatus,
 } from "@/lib/supabase-admin";
 import { getAdminHomepageBanners } from "@/lib/homepage-banners";
+import { getAdminCategoryShowcase } from "@/lib/category-showcase.server";
 import {
   getAdminAnnouncementBar,
   sanitizeTheme,
@@ -814,7 +816,6 @@ export async function saveBannerSliderSettingsAction(_: FormState, formData: For
  * Persists slider settings, new/deleted banners, reordering, titles, active states, and image uploads atomically.
  */
 export async function saveAllBannerChangesAction(_: FormState, formData: FormData): Promise<FormState> {
-  const uploadedPaths: string[] = [];
   try {
     const { accessToken } = await requireAdminForAction();
     await assertHomepageBannersReady(accessToken);
@@ -840,6 +841,7 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
 
     // Current banners in database
     const current = await getAdminHomepageBanners(accessToken);
+    if (!current.isReady) throw new Error("Unable to read the saved homepage banners. Please try again.");
     const existing = new Map(current.banners.map((banner) => [banner.id, banner]));
 
     const nextSlots: Array<{
@@ -852,7 +854,6 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
     }> = [];
 
     const pathsToRemove: string[] = [];
-    const deletedBannerKeys: string[] = [];
 
     for (const change of changes) {
       const prev = existing.get(change.slot_key);
@@ -862,9 +863,11 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
       const desktopFile = formData.get(`banner_desktop_${change.slot_key}`);
       let imagePath = removeDesktop ? null : (prev?.imagePath ?? null);
 
-      if (!removeDesktop && desktopFile instanceof File && desktopFile.size > 0) {
+      const desktopPath = text(formData.get(`banner_desktop_path_${change.slot_key}`));
+      if (!removeDesktop && desktopPath) {
+        imagePath = await verifyShowcaseMediaPath(desktopPath, "desktop", change.slot_key, accessToken);
+      } else if (!removeDesktop && desktopFile instanceof File && desktopFile.size > 0) {
         imagePath = await uploadHomepageBannerImage(desktopFile, change.slot_key, accessToken, "desktop");
-        uploadedPaths.push(imagePath);
       }
       if (prev?.imagePath && prev.imagePath !== imagePath) {
         pathsToRemove.push(prev.imagePath);
@@ -875,9 +878,11 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
       const mobileFile = formData.get(`banner_mobile_${change.slot_key}`);
       let mobileImagePath = removeMobile ? null : (prev?.mobileImagePath ?? null);
 
-      if (!removeMobile && mobileFile instanceof File && mobileFile.size > 0) {
+      const mobilePath = text(formData.get(`banner_mobile_path_${change.slot_key}`));
+      if (!removeMobile && mobilePath) {
+        mobileImagePath = await verifyShowcaseMediaPath(mobilePath, "mobile", change.slot_key, accessToken);
+      } else if (!removeMobile && mobileFile instanceof File && mobileFile.size > 0) {
         mobileImagePath = await uploadHomepageBannerImage(mobileFile, change.slot_key, accessToken, "mobile");
-        uploadedPaths.push(mobileImagePath);
       }
       if (prev?.mobileImagePath && prev.mobileImagePath !== mobileImagePath) {
         pathsToRemove.push(prev.mobileImagePath);
@@ -899,27 +904,19 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
     const nextKeys = new Set(nextSlots.map((s) => s.slot_key));
     for (const [key, banner] of existing.entries()) {
       if (!nextKeys.has(key)) {
-        deletedBannerKeys.push(key);
         if (banner.imagePath) pathsToRemove.push(banner.imagePath);
         if (banner.mobileImagePath) pathsToRemove.push(banner.mobileImagePath);
       }
     }
 
-    // 3. Persist slider settings
-    await saveHomepageSliderSettings(clampedBannerCount, intervalSeconds, accessToken);
-
-    // 4. Persist all banner slots atomically
-    await saveHomepageBanners(nextSlots, accessToken);
-
-    // 5. Explicitly remove only banners the administrator removed from the draft.
-    // The bulk upsert deliberately retains omitted rows to prevent accidental deletion.
-    if (deletedBannerKeys.length > 0) {
-      await Promise.all(deletedBannerKeys.map((slotKey) => deleteHomepageBanner(slotKey, accessToken)));
-    }
+    // Persist the banner rows, deletions and slider settings in one transaction.
+    await saveHomepageBanners(nextSlots, clampedBannerCount, intervalSeconds, accessToken);
 
     // 6. Cleanup replaced or deleted media only after database success
     if (pathsToRemove.length > 0) {
-      await Promise.all(pathsToRemove.map((path) => deleteHomepageBannerImage(path, accessToken).catch(() => undefined)));
+      const retained = new Set(nextSlots.flatMap((slot) => [slot.image_path, slot.mobile_image_path]));
+      const obsolete = [...new Set(pathsToRemove)].filter((path) => !retained.has(path));
+      await deleteHomepageBannerImages(obsolete, accessToken).catch((error) => console.warn("Banner media cleanup deferred", error));
     }
 
     // 7. Invalidate caches and revalidate
@@ -930,13 +927,8 @@ export async function saveAllBannerChangesAction(_: FormState, formData: FormDat
 
     return { error: null, success: true };
   } catch (error) {
-    // If saving failed, clean up any newly uploaded files to prevent orphaned storage objects
-    const accessToken = await (async () => {
-      try { return (await requireAdminForAction()).accessToken; } catch { return null; }
-    })();
-    if (accessToken && uploadedPaths.length > 0) {
-      await Promise.all(uploadedPaths.map((p) => deleteHomepageBannerImage(p, accessToken).catch(() => undefined)));
-    }
+    // A failed response does not prove that the database write failed.
+    // Keep uploaded objects available for retry, including committed media.
     return {
       error: error instanceof Error ? error.message : "The homepage banners could not be saved.",
       success: false,
@@ -1113,6 +1105,8 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
     }
 
     const canonicalCategorySlugs = ["cooling", "laundry", "kitchen-everyday", "home"] as const;
+    const current = await getAdminCategoryShowcase(accessToken);
+    if (!current.isDatabaseReady) throw new Error("Unable to read the saved category showcase. Please try again.");
     const seenCategorySlugs = new Set<string>();
     const payload: Array<{
       category_slug: string;
@@ -1143,14 +1137,17 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
       }
       seenCategorySlugs.add(slug);
 
-      let imagePath = (typeof item.imagePath === "string" ? item.imagePath : null);
+      let imagePath = current.items.find((entry) => entry.categorySlug === slug)?.imagePath ?? null;
       if (item.removeImage) {
         imagePath = null;
       }
 
       // Check if a new file was uploaded for this category
       const file = formData.get(`image_file_${slug}`);
-      if (file instanceof File && file.size > 0) {
+      const uploadedPath = text(formData.get(`image_path_${slug}`));
+      if (uploadedPath && !item.removeImage) {
+        imagePath = await verifyShowcaseMediaPath(uploadedPath, "category", slug, accessToken);
+      } else if (file instanceof File && file.size > 0 && !item.removeImage) {
         imagePath = await uploadCategoryShowcaseImage(file, slug, accessToken);
       }
 
@@ -1178,6 +1175,9 @@ export async function saveCategoryShowcaseAction(_: FormState, formData: FormDat
     }
 
     await saveCategoryShowcaseSettings(payload, accessToken);
+    const retained = new Set(payload.map((item) => item.image_path));
+    const replaced = current.items.flatMap((item) => item.imagePath && !retained.has(item.imagePath) ? [item.imagePath] : []);
+    await cleanupReplacedShowcaseMedia(replaced, accessToken).catch((error) => console.warn("Showcase media cleanup deferred", error));
     updateTag("category-showcase");
     revalidatePath("/");
     revalidatePath("/admin/category-showcase");

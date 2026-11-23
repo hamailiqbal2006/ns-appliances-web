@@ -25,7 +25,7 @@ export async function getHomepageCategoryShowcase(): Promise<CategoryShowcaseIte
 
     const response = await fetch(`${config.url}/rest/v1/homepage_category_showcase?${query}`, {
       headers: { apikey: config.key },
-      next: { revalidate: 300, tags: ["category-showcase", "categories"] },
+      cache: "no-store",
     });
 
     if (!response.ok) return bind(getDefaultCategoryShowcase());

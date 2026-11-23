@@ -9,6 +9,7 @@ export default async function CategoryShowcasePage() {
 
   return (
     <CategoryShowcaseForm
+      key={JSON.stringify(items)}
       initialItems={items}
       isDatabaseReady={isDatabaseReady}
     />

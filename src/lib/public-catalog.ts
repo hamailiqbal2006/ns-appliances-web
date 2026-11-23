@@ -413,7 +413,7 @@ async function getManagedProducts(): Promise<AdminProduct[]> {
       })}`,
       {
         headers: { apikey: config.key },
-        next: { revalidate: 60, tags: ["public-products"] },
+        cache: "no-store",
       },
     );
 
@@ -427,7 +427,7 @@ async function getManagedProducts(): Promise<AdminProduct[]> {
         })}`,
         {
           headers: { apikey: config.key },
-          next: { revalidate: 60, tags: ["public-products"] },
+          cache: "no-store",
         },
       );
     }
@@ -442,7 +442,7 @@ async function getManagedProducts(): Promise<AdminProduct[]> {
         })}`,
         {
           headers: { apikey: config.key },
-          next: { revalidate: 60, tags: ["public-products"] },
+          cache: "no-store",
         },
       );
     }
@@ -467,7 +467,7 @@ async function getManagedProductGallery(productId: string): Promise<ProductGalle
     });
     const res = await fetch(`${config.url}/rest/v1/product_images?${query}`, {
       headers: { apikey: config.key },
-      next: { revalidate: 60, tags: [`product-images-${productId}`] },
+      cache: "no-store",
     });
     if (!res.ok) return [];
     const rows = (await res.json()) as Array<{
@@ -512,7 +512,7 @@ async function getManagedProductGalleries(
     });
     const res = await fetch(`${config.url}/rest/v1/product_images?${query}`, {
       headers: { apikey: config.key },
-      next: { revalidate: 60, tags: ["product-images-all"] },
+      cache: "no-store",
     });
     if (!res.ok) return {};
     const rows = (await res.json()) as Array<{

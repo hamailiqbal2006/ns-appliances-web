@@ -1,0 +1,20 @@
+.page {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: clamp(24px, 5vw, 72px);
+  background: #eeeae1;
+  color: #172323;
+  font-family: var(--font-geist), Arial, sans-serif;
+}
+.brand { width: fit-content; font-weight: 600; font-size: 1.1rem; }
+.content { align-self: center; justify-self: center; text-align: center; max-width: 42rem; padding: 48px 0; }
+.code { font-size: clamp(7rem, 24vw, 19rem); font-weight: 700; letter-spacing: -.09em; line-height: .9; color: #782b36; margin-right: .09em; }
+.content h1 { margin: 28px 0 12px; font-size: clamp(1.8rem, 5vw, 3.5rem); letter-spacing: -.05em; line-height: 1.1; font-weight: 650; }
+.content p { margin: 0 auto; max-width: 30rem; font-size: 1rem; line-height: 1.6; }
+.actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border: 1px solid #172323; border-radius: 999px; font-size: .9rem; font-weight: 600; }
+.primary { background: #172323; color: #fff; }
+.secondary { background: transparent; }
+.page a:focus-visible { outline: 2px solid #782b36; outline-offset: 5px; }
+@media (max-width: 380px) { .actions { flex-direction: column; } }

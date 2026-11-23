@@ -26,7 +26,7 @@ export async function getStorefrontCategories(): Promise<CategoryRecord[]> {
 
     const response = await fetch(`${config.url}/rest/v1/categories?${query}`, {
       headers: { apikey: config.key },
-      next: { revalidate: 300, tags: ["categories"] },
+      cache: "no-store",
     });
 
     if (!response.ok) return [];

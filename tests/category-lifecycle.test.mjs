@@ -13,18 +13,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // No database credentials, production records, or extra test packages are needed.
 function harness(initial = []) {
   const db = { categories: structuredClone(initial), products: [], calls: [], tags: [], paths: [],
-    connected: true, productReadFails: false, categoryReadFails: false, noDelete: false, noUpdate: false };
+    connected: true, productReadFails: false, categoryReadFails: false, noDelete: false, noUpdate: false,
+    showcase: [], verifiedMedia: [], savedShowcase: null };
   const cache = new Map();
   const admin = {
     getSupabaseConfig: () => db.connected ? { url: 'https://catalog.test', key: 'test-public-key' } : null,
     isSupabaseConfigured: () => db.connected,
     requireAdminForAction: async () => ({ accessToken: 'test-session', admin: { id: 'admin' } }),
     productImageUrl: () => null,
+    verifyShowcaseMediaPath: async (path, kind, slot) => { db.verifiedMedia.push({ path, kind, slot }); return path; },
+    saveCategoryShowcaseSettings: async payload => { db.savedShowcase = payload; },
+    cleanupReplacedShowcaseMedia: async () => {},
   };
   async function fetchMock(input, init = {}) {
-    const url = new URL(input);
+    const url = new URL(input, 'https://catalog.test');
     const method = init.method || 'GET';
     db.calls.push({ url, method, init });
+    if (url.pathname === '/api/admin/showcase-media-upload') return Response.json({ path: 'category-showcase/cooling-12345678-1234-1234-1234-123456789012.png', uploadUrl: 'https://storage.test/upload' });
+    if (url.hostname === 'storage.test') return new Response(null, { status: 200 });
+    if (url.pathname.endsWith('/homepage_category_showcase')) return Response.json(db.showcase);
     if (url.pathname.endsWith('/categories')) {
       if (method === 'GET') {
         if (db.categoryReadFails) return Response.json({ message: 'unavailable' }, { status: 503 });
@@ -60,7 +67,7 @@ function harness(initial = []) {
   }
   function load(relative) {
     let filename = path.resolve(__dirname, '..', relative);
-    if (!path.extname(filename)) filename += '.ts';
+    if (!fs.existsSync(filename)) filename += '.ts';
     if (cache.has(filename)) return cache.get(filename).exports;
     const moduleShim = { exports: {} };
     cache.set(filename, moduleShim);
@@ -99,6 +106,47 @@ function harness(initial = []) {
 const category = (overrides = {}) => ({ id: 'cat1', name: 'Washing Machines', slug: 'washing-machines',
   editorial_group: 'laundry', display_order: 2, is_active: true, description: null,
   subcategories: [{ name: 'Single Tub Washer', slug: 'single-tub' }], ...overrides });
+
+test('showcase image saves use scoped uploaded references and preserve existing media', async () => {
+  const { db, load } = harness([category()]);
+  const oldPath = 'category-showcase/laundry-12345678-1234-1234-1234-123456789012.png';
+  const newPath = 'category-showcase/cooling-12345678-1234-1234-1234-123456789012.webp';
+  db.showcase = [{ category_slug: 'laundry', sort_order: 0, image_path: oldPath }];
+  const { saveCategoryShowcaseAction } = load('src/app/admin/actions.ts');
+  const form = new FormData();
+  form.set('showcase_configuration', JSON.stringify(['cooling', 'laundry', 'kitchen-everyday', 'home'].map(categorySlug => ({ categorySlug, imagePath: 'untrusted-client-path' }))));
+  form.set('image_path_cooling', newPath);
+  const result = await saveCategoryShowcaseAction({ error: null }, form);
+  assert.equal(result.success, true, result.error);
+  assert.equal(db.savedShowcase.find(row => row.category_slug === 'laundry').image_path, oldPath);
+  assert.equal(db.savedShowcase.find(row => row.category_slug === 'cooling').image_path, newPath);
+  assert.equal(db.verifiedMedia.length, 1);
+});
+
+test('showcase media references stay within their intended bucket and slot', () => {
+  const { load } = harness();
+  const { isShowcaseMediaPath, showcaseMediaTarget } = load('src/lib/showcase-media.ts');
+  const uuid = '12345678-1234-1234-1234-123456789012';
+  assert.equal(showcaseMediaTarget('desktop', 'banner_4').bucket, 'homepage-banners');
+  assert.equal(isShowcaseMediaPath(`category-showcase/cooling-${uuid}.png`, 'category', 'cooling'), true);
+  assert.equal(isShowcaseMediaPath(`category-showcase/laundry-${uuid}.png`, 'category', 'cooling'), false);
+  assert.equal(isShowcaseMediaPath(`banner/m-${uuid}.png`, 'desktop', 'banner_4'), false);
+  assert.throws(() => showcaseMediaTarget('desktop', '../other'));
+});
+
+test('showcase uploads send only metadata to the Worker and reuse successful uploads on retry', async () => {
+  const { db, load } = harness();
+  const { uploadShowcaseMedia } = load('src/lib/showcase-media-client.ts');
+  const photo = new File([new Uint8Array(1024)], 'cutout.png', { type: 'image/png' });
+  const first = await uploadShowcaseMedia(photo, 'category', 'cooling');
+  assert.equal(await uploadShowcaseMedia(photo, 'category', 'cooling'), first);
+  assert.equal(db.calls.length, 2);
+  assert.equal(db.calls[0].method, 'POST');
+  assert.deepEqual(JSON.parse(db.calls[0].init.body), { kind: 'category', slot: 'cooling', contentType: 'image/png', size: 1024 });
+  assert.equal(db.calls[1].method, 'PUT');
+  assert.equal(db.calls[1].url.hostname, 'storage.test');
+  assert.equal(db.calls[1].init.body, photo);
+});
 function form(overrides = {}) {
   const result = new FormData();
   Object.entries({ name: 'New Fans', slug: 'new-fans', editorial_group: 'cooling',

@@ -155,7 +155,7 @@ export async function getHomepageSliderSettings(): Promise<HomepageSliderSetting
   try {
     const response = await fetch(
       `${config.url}/rest/v1/homepage_banner_settings?select=banner_count,interval_seconds&singleton=eq.true&limit=1`,
-      { headers: { apikey: config.key }, next: { revalidate: 300, tags: ["homepage-banner-settings"] } },
+      { headers: { apikey: config.key }, cache: "no-store" },
     );
     if (!response.ok) return DEFAULT_SLIDER_SETTINGS;
     const rows = (await response.json()) as Array<{ banner_count: number; interval_seconds: number }>;
@@ -218,7 +218,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
     });
     let response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
       headers: { apikey: config.key },
-      next: { revalidate: 300, tags: ["homepage-banners"] },
+      cache: "no-store",
     });
     // Fallback if title column is not yet applied
     if (!response.ok && response.status === 400) {
@@ -228,7 +228,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
       });
       response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
         headers: { apikey: config.key },
-        next: { revalidate: 300, tags: ["homepage-banners"] },
+        cache: "no-store",
       });
     }
     // Resilient fallback if is_enabled column is not yet applied
@@ -239,7 +239,7 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
       });
       response = await fetch(`${config.url}/rest/v1/homepage_banners?${query}`, {
         headers: { apikey: config.key },
-        next: { revalidate: 300, tags: ["homepage-banners"] },
+        cache: "no-store",
       });
     }
     // Resilient fallback if mobile_image_path column is not yet applied

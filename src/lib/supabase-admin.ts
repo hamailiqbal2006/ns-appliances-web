@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { isShowcaseMediaPath, showcaseMediaTarget, type ShowcaseMediaKind } from "./showcase-media";
 
 const ACCESS_COOKIE = "ns-admin-access";
 const MAX_SESSION_AGE = 60 * 60;
@@ -1090,6 +1091,75 @@ export async function saveHomepageSliderSettings(
   throw new Error(errorMessage);
 }
 
+export async function createShowcaseMediaUploadUrl(
+  input: { kind: ShowcaseMediaKind; slot: string; contentType: string; size: number },
+  accessToken: string,
+) {
+  const config = getSupabaseConfig();
+  if (!config) throw new Error("Admin backend is not configured.");
+  if (!["image/png", "image/webp", "image/jpeg"].includes(input.contentType) || !Number.isSafeInteger(input.size) || input.size <= 0 || input.size > 5 * 1024 * 1024) {
+    throw new Error("Choose a PNG, WebP, or JPEG image up to 5 MB.");
+  }
+  const { bucket, prefix } = showcaseMediaTarget(input.kind, input.slot);
+  const extension = input.contentType === "image/png" ? "png" : input.contentType === "image/webp" ? "webp" : "jpg";
+  const path = `${prefix}${crypto.randomUUID()}.${extension}`;
+  const response = await supabaseFetch(`/storage/v1/object/upload/sign/${bucket}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-upsert": "false" },
+    body: "{}",
+  }, accessToken);
+  if (!response.ok) throw new Error(await storageUploadError(response, "showcase image"));
+  const payload = await response.json() as { url?: string };
+  if (!payload.url?.startsWith("/object/upload/sign/")) throw new Error("Storage did not return an upload URL.");
+  return { path, uploadUrl: new URL(`/storage/v1${payload.url}`, config.url).toString() };
+}
+
+export async function verifyShowcaseMediaPath(path: string, kind: ShowcaseMediaKind, slot: string, accessToken: string) {
+  if (!isShowcaseMediaPath(path, kind, slot)) throw new Error("The uploaded image reference is invalid.");
+  const { bucket } = showcaseMediaTarget(kind, slot);
+  // Fetch only the image header for validation, never the full artwork.
+  const response = await supabaseFetch(`/storage/v1/object/authenticated/${bucket}/${path}`, {
+    headers: { Range: "bytes=0-131071" },
+  }, accessToken);
+  if (!response.ok || !response.body) throw new Error("Could not verify the uploaded image. Please retry.");
+  const size = Number(response.status === 206 ? response.headers.get("content-range")?.split("/").at(-1) : response.headers.get("content-length"));
+  const mime = response.headers.get("content-type")?.split(";")[0] ?? "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (length < 131072) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const part = value.slice(0, 131072 - length);
+      chunks.push(part);
+      length += part.length;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  if (!Number.isSafeInteger(size) || size <= 0 || size > 5 * 1024 * 1024) throw new Error("The uploaded image must be 5 MB or smaller.");
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  const file = new File([bytes], path, { type: mime });
+  const result = kind === "category" ? await validateImage(file) : await validateBannerImage(file, kind);
+  if (!result.ok) throw new Error(result.error);
+  return path;
+}
+
+export async function cleanupReplacedShowcaseMedia(paths: string[], accessToken: string) {
+  const candidates = [...new Set(paths)].filter((path) => /^category-showcase\/[a-z-]+-[0-9a-f-]{36}\.(png|jpg|webp)$/.test(path));
+  const { unreferenced } = await findUnreferencedProductStoragePaths(candidates, accessToken);
+  for (const path of unreferenced) {
+    const query = new URLSearchParams({ select: "id", image_path: `eq.${path}`, limit: "1" });
+    const response = await supabaseFetch(`/rest/v1/homepage_category_showcase?${query}`, {}, accessToken);
+    if (response.ok && (await response.json() as unknown[]).length === 0) {
+      await deleteProductImagesFromStorage([path], accessToken);
+    }
+  }
+}
+
 export async function uploadCategoryShowcaseImage(
   file: File,
   categorySlug: string,
@@ -1181,58 +1251,15 @@ export async function saveHomepageBanners(
     is_enabled?: boolean;
     title?: string | null;
   }>,
+  bannerCount: number,
+  intervalSeconds: number,
   accessToken: string,
 ) {
-  let response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
+  const response = await supabaseFetch("/rest/v1/rpc/save_homepage_banner_configuration", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ p_slots: slots }),
+    body: JSON.stringify({ p_slots: slots, p_banner_count: bannerCount, p_interval_seconds: intervalSeconds }),
   }, accessToken);
-
-  // Resilient fallback 1: If database RPC does not yet take 'title', retry without title
-  if (!response.ok) {
-    const fallbackSlotsNoTitle = slots.map(({ slot_key, sort_order, image_path, mobile_image_path, is_enabled }) => ({
-      slot_key,
-      sort_order,
-      image_path,
-      mobile_image_path,
-      is_enabled: is_enabled ?? true,
-    }));
-    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ p_slots: fallbackSlotsNoTitle }),
-    }, accessToken);
-  }
-
-  // Resilient fallback 2: If database has not yet been upgraded with is_enabled
-  if (!response.ok) {
-    const fallbackSlotsNoEnabled = slots.map(({ slot_key, sort_order, image_path, mobile_image_path }) => ({
-      slot_key,
-      sort_order,
-      image_path,
-      mobile_image_path,
-    }));
-    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ p_slots: fallbackSlotsNoEnabled }),
-    }, accessToken);
-  }
-
-  // Resilient fallback 3: If database has not yet been upgraded with mobile_image_path
-  if (!response.ok) {
-    const fallbackSlotsMinimal = slots.map(({ slot_key, sort_order, image_path }) => ({
-      slot_key,
-      sort_order,
-      image_path,
-    }));
-    response = await supabaseFetch("/rest/v1/rpc/update_homepage_banners", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ p_slots: fallbackSlotsMinimal }),
-    }, accessToken);
-  }
 
   if (!response.ok) {
     const errText = await response.text();
@@ -1240,8 +1267,8 @@ export async function saveHomepageBanners(
     try {
       const parsed = JSON.parse(errText);
       if (parsed?.message) {
-        if (parsed.message.includes("three") || parsed.message.includes("Invalid homepage banner configuration")) {
-          msg = "Your database schema currently requires migration 14 to save custom or extended banner slots. Please execute supabase/migrations/20261108_homepage_banner_redesign.sql in your Supabase SQL Editor.";
+        if (parsed.code === "PGRST202") {
+          msg = "Banner setup update required. Apply supabase/admin-media-policies.sql in Supabase SQL Editor.";
         } else {
           msg = parsed.message;
         }
@@ -1253,25 +1280,20 @@ export async function saveHomepageBanners(
   }
 }
 
-export async function deleteHomepageBannerImage(path: string, accessToken: string) {
+export async function deleteHomepageBannerImages(paths: string[], accessToken: string) {
+  if (paths.length === 0) return;
+  const current = await supabaseFetch("/rest/v1/homepage_banners?select=image_path,mobile_image_path", {}, accessToken);
+  if (!current.ok) return;
+  const rows = await current.json() as Array<{ image_path: string | null; mobile_image_path: string | null }>;
+  const referenced = new Set(rows.flatMap((row) => [row.image_path, row.mobile_image_path]));
+  const obsolete = [...new Set(paths)].filter((path) => !referenced.has(path));
+  if (!obsolete.length) return;
   const response = await supabaseFetch("/storage/v1/object/homepage-banners", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prefixes: [path] }),
+    body: JSON.stringify({ prefixes: obsolete }),
   }, accessToken);
   if (!response.ok) throw new Error("The previous banner file could not be removed from storage.");
-}
-
-export async function deleteHomepageBanner(slotKey: string, accessToken: string) {
-  const response = await supabaseFetch(
-    `/rest/v1/homepage_banners?slot_key=eq.${encodeURIComponent(slotKey)}`,
-    {
-      method: "DELETE",
-      headers: { Prefer: "return=minimal" },
-    },
-    accessToken,
-  );
-  if (!response.ok) throw new Error("The banner could not be removed.");
 }
 
 export function productImageUrl(path: string | null) {
@@ -1662,7 +1684,7 @@ async function validateImage(file: File): Promise<{ ok: true } | { ok: false; er
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   const isPng = bytes.slice(0, 8).every((byte, index) => byte === [137, 80, 78, 71, 13, 10, 26, 10][index]);
   const isWebp = new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP";
-  return isJpeg || isPng || isWebp
+  return (file.type === "image/jpeg" && isJpeg) || (file.type === "image/png" && bytes.length >= 8 && isPng) || (file.type === "image/webp" && isWebp)
     ? { ok: true }
     : { ok: false, error: "The uploaded file does not appear to be a valid image." };
 }
@@ -1693,7 +1715,7 @@ function dimensionsFromImage(bytes: Uint8Array, mime: string): { width: number; 
     const chunk = new TextDecoder().decode(bytes.slice(12, 16));
     if (chunk === "VP8X") return { width: 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16), height: 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16) };
     if (chunk === "VP8L" && bytes.length >= 26 && bytes[20] === 0x2f) return { width: 1 + bytes[21] + ((bytes[22] & 0x3f) << 8), height: 1 + (bytes[22] >> 6) + (bytes[23] << 2) + ((bytes[24] & 0x0f) << 10) };
-    if (chunk === "VP8 " && bytes.length >= 34) return { width: read16(30) & 0x3fff, height: read16(32) & 0x3fff };
+    if (chunk === "VP8 " && bytes.length >= 34) return { width: (bytes[30] | bytes[31] << 8) & 0x3fff, height: (bytes[32] | bytes[33] << 8) & 0x3fff };
   }
   return null;
 }

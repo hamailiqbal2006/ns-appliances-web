@@ -31,7 +31,6 @@ export async function GET(
   if (!config || !path) return new NextResponse(null, { status: 404 });
 
   const accessToken = (await cookies()).get("ns-admin-access")?.value;
-  const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${config.key}`;
   const response = await fetch(
     `${config.url}/storage/v1/object/authenticated/product-images/${path
       .split("/")
@@ -40,9 +39,9 @@ export async function GET(
     {
       headers: {
         apikey: config.key,
-        Authorization: authHeader,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
-      next: { revalidate: 3600 },
+      cache: "no-store",
     },
   );
 
@@ -55,7 +54,7 @@ export async function GET(
       // shared cache. Anonymous responses are already constrained by Storage RLS.
       "Cache-Control": accessToken
         ? "private, no-store"
-        : "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+        : "public, max-age=0, must-revalidate",
       "X-Content-Type-Options": "nosniff",
     },
   });

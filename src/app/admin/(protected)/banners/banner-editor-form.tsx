@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { uploadShowcaseMedia } from "@/lib/showcase-media-client";
 import type { HomepageBanner, HomepageSliderSettings } from "@/lib/homepage-banners";
 import { saveAllBannerChangesAction } from "../../actions";
 import { AdminSwitch } from "../../admin-switch";
@@ -118,7 +119,9 @@ export function BannerEditorForm({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [state, formAction, pending] = useActionState(saveAllBannerChangesAction, { error: null });
+  const [state, formAction, saving] = useActionState(saveAllBannerChangesAction, { error: null });
+  const [uploading, setUploading] = useState(false);
+  const pending = uploading || saving;
 
   // Baseline items initialized once from server props
   const [items, setItems] = useState<EditorBanner[]>(() => prepare(banners));
@@ -330,37 +333,42 @@ export function BannerEditorForm({
   };
 
   // Form submission: Collects all files and configurations into a single payload
-  const handleSaveAll = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveAll = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (pending) return;
     setFileError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("slider_banner_count", String(Math.max(1, Math.min(10, enabledBannerCount))));
+      formData.append("slider_interval_seconds", String(effectiveInterval));
 
-    const formData = new FormData();
-    formData.append("slider_banner_count", String(Math.max(1, Math.min(10, enabledBannerCount))));
-    formData.append("slider_interval_seconds", String(effectiveInterval));
+      const configPayload = items.map((item, sortOrder) => ({
+        slot_key: item.id,
+        title: item.title,
+        sort_order: sortOrder,
+        is_enabled: item.isEnabled,
+        remove_desktop_artwork: item.removeDesktopArtwork,
+        remove_mobile_artwork: item.removeMobileArtwork,
+      }));
+      formData.append("banner_configuration", JSON.stringify(configPayload));
 
-    const configPayload = items.map((item, sortOrder) => ({
-      slot_key: item.id,
-      title: item.title,
-      sort_order: sortOrder,
-      is_enabled: item.isEnabled,
-      remove_desktop_artwork: item.removeDesktopArtwork,
-      remove_mobile_artwork: item.removeMobileArtwork,
-    }));
-    formData.append("banner_configuration", JSON.stringify(configPayload));
-
-    // Append newly selected files
-    for (const item of items) {
-      if (item.desktopFile) {
-        formData.append(`banner_desktop_${item.id}`, item.desktopFile);
+      for (const item of items) {
+        if (item.desktopFile) {
+          const path = await uploadShowcaseMedia(item.desktopFile, "desktop", item.id);
+          formData.append(`banner_desktop_path_${item.id}`, path);
+        }
+        if (item.mobileFile) {
+          const path = await uploadShowcaseMedia(item.mobileFile, "mobile", item.id);
+          formData.append(`banner_mobile_path_${item.id}`, path);
+        }
       }
-      if (item.mobileFile) {
-        formData.append(`banner_mobile_${item.id}`, item.mobileFile);
-      }
+      startTransition(() => formAction(formData));
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Image upload failed. Please retry.");
+    } finally {
+      setUploading(false);
     }
-
-    startTransition(() => {
-      formAction(formData);
-    });
   };
 
   return (
@@ -1024,9 +1032,9 @@ export function BannerEditorForm({
             </span>
           )}
 
-          {state.error && (
+          {(state.error || fileError) && (
             <span style={{ color: "#dc2626", fontSize: "12.5px", fontWeight: 500, marginLeft: "12px" }}>
-              &bull; {state.error}
+              &bull; {fileError || state.error}
             </span>
           )}
           {state.success && !isDirty && (
@@ -1047,7 +1055,7 @@ export function BannerEditorForm({
                 <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                 <path d="M12 2a10 10 0 0 1 10 10" />
               </svg>
-              Saving All Changes...
+              {uploading ? "Uploading images…" : "Saving All Changes..."}
             </>
           ) : (
             "Save All Changes"
